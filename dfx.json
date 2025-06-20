@@ -1,0 +1,37 @@
+{
+  "canisters": {
+    "internet_identity": {
+      "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",
+      "frontend": {},
+      "remote": {
+        "id": {
+          "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai"
+        }
+      },
+      "type": "custom",
+      "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz"
+    },
+    "pico_backend": {
+      "main": "src/pico_backend/main.mo",
+      "type": "motoko"
+    },
+    "pico_frontend": {
+      "dependencies": [
+        "pico_backend"
+      ],
+      "source": [
+        "src/pico_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "pico_frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
