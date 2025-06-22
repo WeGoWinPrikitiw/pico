@@ -9,7 +9,7 @@ export default {
       fontFamily: {
         'lexend': ['Lexend Deca', 'sans-serif'],
         'montserrat': ['Montserrat', 'sans-serif'],
-        'sans': ['Lexend Deca', 'sans-serif'], // Override default sans font
+        'sans': ['montserrat', 'sans-serif'], // Override default sans font
       },
     },
   },

@@ -14,7 +14,7 @@
 @custom-variant dark (&:is(.dark *));
 
 body {
-  font-family: "Lexend Deca", sans-serif;
+  font-family: "Montserrat", sans-serif;
   font-size: 1.5rem;
 }
 
