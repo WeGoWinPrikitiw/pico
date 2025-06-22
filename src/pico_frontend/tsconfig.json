@@ -25,7 +25,8 @@
     "useDefineForClassFields": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "declarations/*": ["../declarations/*"]
     }
   },
   "include": [

@@ -1,16 +1,35 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import App from '../App';
+import { MemoryRouter } from 'react-router-dom';
+import { AppRoutes } from '../components/app-routes.tsx';
 import { StrictMode } from 'react';
 
 describe('App', () => {
-  it('renders as expected', () => {
+  it('renders landing page by default', () => {
     render(
       <StrictMode>
-        <App />
+        <MemoryRouter initialEntries={['/']}>
+          <AppRoutes />
+        </MemoryRouter>
       </StrictMode>,
     );
-    expect(document.body.innerHTML).toMatchInlineSnapshot('"<div><main><img src="/logo2.svg" alt="DFINITY logo"><br><br><form action="#"><label for="name">Enter your name: &nbsp;</label><input id="name" alt="Name" type="text"><button type="submit">Click Me!</button></form><section id="greeting"></section></main></div>"');
-    expect(1).toEqual(1);
+    
+    // Check if the landing page elements are present
+    expect(screen.getByText(/Welcome to/)).toBeInTheDocument();
+    expect(screen.getByText(/Pico/)).toBeInTheDocument();
+  });
+
+  it('renders app page when navigating to /app', () => {
+    render(
+      <StrictMode>
+        <MemoryRouter initialEntries={['/app']}>
+          <AppRoutes />
+        </MemoryRouter>
+      </StrictMode>,
+    );
+    
+    // Check if the app page elements are present
+    expect(screen.getByText(/Pico Greeter/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Enter your name/)).toBeInTheDocument();
   });
 });
