@@ -108,6 +108,8 @@ actor PicoBackend {
         }
     };
 
+
+
     public query func get_nft(token_id: Nat): async ?NFTInfo {
         nfts.get(token_id)
     };

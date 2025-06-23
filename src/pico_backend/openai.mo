@@ -18,7 +18,7 @@ module {
         headers : [HttpHeader];
         body : ?[Nat8];
         method : HttpMethod;
-        transform : ?TransformRawResponseFunction;
+        transform : ?{function : shared query ({ status : Nat; headers : [HttpHeader]; body : [Nat8] }) -> async ({ status : Nat; headers : [HttpHeader]; body : [Nat8] }); context : [Nat8]};
     };
 
     public type HttpHeader = {
@@ -53,10 +53,10 @@ module {
     // OpenAI specific types
     public type OpenAIImageRequest = {
         prompt: Text;
-        model: Text; // "dall-e-2" or "dall-e-3"
-        size: Text; // "1024x1024", "1792x1024", "1024x1792"
+        model: Text; // "dall-e-3" or "dall-e-2"
+        size: Text; // "256x256", "512x512", "1024x1024", "1792x1024", "1024x1792"
         quality: Text; // "standard" or "hd"
-        n: Nat; // number of images (1-10 for DALL-E 2, only 1 for DALL-E 3)
+        n: Nat; // Number of images to generate (1-10)
         response_format: Text; // "url" or "b64_json"
     };
 
@@ -85,8 +85,6 @@ module {
         http_request : HttpRequestArgs -> async HttpResponsePayload;
     } = actor ("aaaaa-aa");
 
-
-
     // Simple JSON parsing function to extract image URL
     private func extractImageUrl(jsonText: Text) : Result.Result<Text, Text> {
         // Look for "url": pattern in the JSON response
@@ -102,8 +100,8 @@ module {
                             let urlPartsArray = Iter.toArray(urlParts);
                             if (urlPartsArray.size() >= 2) {
                                 // The URL should be between the first two quotes
-                                let url = urlPartsArray[1];
-                                #ok(url)
+                                let imageUrl = urlPartsArray[1];
+                                #ok(imageUrl)
                             } else {
                                 #err("Could not parse URL from response")
                             }
@@ -189,6 +187,8 @@ module {
             #err("HTTP request failed: " # Error.message(error))
         }
     };
+
+
 
     // Simplified image generation for testing (without HTTP outcalls)
     public func generateImageMock(prompt: Text) : async Text {
