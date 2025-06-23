@@ -31,6 +31,8 @@ actor PicoBackend {
     // State
     private stable var nextTokenId: Nat = 1;
     private stable var nftEntries: [(Nat, NFTInfo)] = [];
+    
+    // OpenAI API Key - will be set during deployment automatically
     private stable var openaiApiKey: ?Text = null;
     
     private var nfts = HashMap.HashMap<Nat, NFTInfo>(10, Nat.equal, natHash);
@@ -72,11 +74,18 @@ actor PicoBackend {
         #ok(tokenId)
     };
 
-    // Set OpenAI API Key (only callable by the owner/deployer)
-    public func set_openai_api_key(apiKey: Text): async Result.Result<(), Text> {
-        // In production, you might want to add more sophisticated access control
-        openaiApiKey := ?apiKey;
-        #ok(())
+    // Initialize OpenAI API Key from environment (called during deployment)
+    public func init_openai_api_key(apiKey: Text): async Result.Result<(), Text> {
+        // Only allow initialization if key is not already set
+        switch (openaiApiKey) {
+            case (null) {
+                openaiApiKey := ?apiKey;
+                #ok(())
+            };
+            case (?_) {
+                #err("OpenAI API key already initialized")
+            };
+        }
     };
 
     public func generate_ai_image(prompt: Text): async Result.Result<Text, Text> {
