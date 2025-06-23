@@ -8,6 +8,8 @@ import Nat "mo:base/Nat";
 import Nat32 "mo:base/Nat32";
 import Text "mo:base/Text";
 import Hash "mo:base/Hash";
+import Error "mo:base/Error";
+import OpenAI "openai";
 
 actor PicoBackend {
 
@@ -29,6 +31,7 @@ actor PicoBackend {
     // State
     private stable var nextTokenId: Nat = 1;
     private stable var nftEntries: [(Nat, NFTInfo)] = [];
+    private stable var openaiApiKey: ?Text = null;
     
     private var nfts = HashMap.HashMap<Nat, NFTInfo>(10, Nat.equal, natHash);
 
@@ -69,9 +72,40 @@ actor PicoBackend {
         #ok(tokenId)
     };
 
+    // Set OpenAI API Key (only callable by the owner/deployer)
+    public func set_openai_api_key(apiKey: Text): async Result.Result<(), Text> {
+        // In production, you might want to add more sophisticated access control
+        openaiApiKey := ?apiKey;
+        #ok(())
+    };
+
     public func generate_ai_image(prompt: Text): async Result.Result<Text, Text> {
-        let mockImageUrl = "https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=1024&h=1024&fit=crop&q=80&prompt=" # prompt;
-        #ok(mockImageUrl)
+        // Check if API key is set
+        switch (openaiApiKey) {
+            case (null) {
+                #err("OpenAI API key not set. Please set the API key first.")
+            };
+            case (?apiKey) {
+                try {
+                    // Create OpenAI request with default settings
+                    let openaiRequest = OpenAI.createImageRequest(
+                        prompt,
+                        ?"1024x1024", // size
+                        ?"standard",  // quality
+                        null         // use default model (dall-e-3)
+                    );
+                    
+                    // Use the real OpenAI API
+                    let result = await OpenAI.generateImage(apiKey, openaiRequest);
+                    switch (result) {
+                        case (#ok(imageUrl)) #ok(imageUrl);
+                        case (#err(error)) #err(error);
+                    }
+                } catch (error) {
+                    #err("Failed to generate AI image: " # Error.message(error))
+                }
+            };
+        }
     };
 
     public query func get_nft(token_id: Nat): async ?NFTInfo {

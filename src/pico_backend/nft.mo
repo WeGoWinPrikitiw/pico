@@ -320,13 +320,19 @@ actor class NFT() = {
                 request.prompt,
                 ?request.size,
                 ?request.quality,
-                null // using default model
+                null // using default model (dall-e-3)
             );
             
-            // For production, you would store the API key securely
-            // For now, we'll use a mock implementation
-            let imageUrl = await OpenAI.generateImageMock(request.prompt);
-            #ok(imageUrl)
+            // For production, you need to provide a real API key
+            // This is a placeholder - in real implementation, store the API key securely
+            let apiKey = "your-openai-api-key-here"; // Replace with actual API key
+            
+            // Use the real OpenAI API
+            let result = await OpenAI.generateImage(apiKey, openaiRequest);
+            switch (result) {
+                case (#ok(imageUrl)) #ok(imageUrl);
+                case (#err(error)) #err(error);
+            }
         } catch (error) {
             #err("Failed to generate AI image: " # Error.message(error))
         }
@@ -343,7 +349,10 @@ actor class NFT() = {
             );
             
             let result = await OpenAI.generateImage(apiKey, openaiRequest);
-            #ok(result)
+            switch (result) {
+                case (#ok(imageUrl)) #ok(imageUrl);
+                case (#err(error)) #err(error);
+            }
         } catch (error) {
             #err("Failed to generate AI image: " # Error.message(error))
         }
