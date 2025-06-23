@@ -47,12 +47,7 @@ actor class NFT() = {
         #SelfMade;
     };
 
-    public type OpenAIRequest = {
-        prompt: Text;
-        size: Text; // "1024x1024", "1792x1024", "1024x1792"
-        quality: Text; // "standard" or "hd"
-        n: Nat; // number of images
-    };
+
 
     public type MintNFTArgs = {
         to: Account;
@@ -312,51 +307,7 @@ actor class NFT() = {
         #ok(tokenId)
     };
 
-    // Generate AI Image using OpenAI API
-    public func generate_ai_image(request: OpenAIRequest): async Result.Result<Text, Text> {
-        try {
-            // Convert our request to OpenAI format
-            let openaiRequest = OpenAI.createImageRequest(
-                request.prompt,
-                ?request.size,
-                ?request.quality,
-                null // using default model (dall-e-3)
-            );
-            
-            // For production, you need to provide a real API key
-            // This is a placeholder - in real implementation, store the API key securely
-            let apiKey = "your-openai-api-key-here"; // Replace with actual API key
-            
-            // Use the real OpenAI API
-            let result = await OpenAI.generateImage(apiKey, openaiRequest);
-            switch (result) {
-                case (#ok(imageUrl)) #ok(imageUrl);
-                case (#err(error)) #err(error);
-            }
-        } catch (error) {
-            #err("Failed to generate AI image: " # Error.message(error))
-        }
-    };
 
-    // Generate AI Image with API Key (for production use)
-    public func generate_ai_image_with_key(request: OpenAIRequest, apiKey: Text): async Result.Result<Text, Text> {
-        try {
-            let openaiRequest = OpenAI.createImageRequest(
-                request.prompt,
-                ?request.size,
-                ?request.quality,
-                null
-            );
-            
-            let result = await OpenAI.generateImage(apiKey, openaiRequest);
-            switch (result) {
-                case (#ok(imageUrl)) #ok(imageUrl);
-                case (#err(error)) #err(error);
-            }
-        } catch (error) {
-            #err("Failed to generate AI image: " # Error.message(error))
-        }
-    };
 
     // List NFTs with filtering
     public query func list_nfts(filter: FilterArgs): async [NFTInfo] {
