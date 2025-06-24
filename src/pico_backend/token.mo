@@ -1,8 +1,14 @@
 /*
- * PICO Token Created by ICRC-1 Ledger.
- * This token is simplified version of the icrc-1 ledger 
- * with some enhancement feature for our product development purposes.
-*/
+ * PiCO Token Information Contract
+ * 
+ * This contract provides enhanced token information and balance checking.
+ * It integrates with the ICRC-1 ledger and operational contract.
+ * 
+ * Architecture:
+ * - ICRC-1 Ledger (uxrrr-q7777-77774-qaaaq-cai) handles token storage/transfers
+ * - Operational Contract (u6s2n-gx777-77774-qaaba-cai) is the MINTER
+ * - This contract provides enhanced querying and analytics
+ */
 
 import Principal "mo:base/Principal";
 import Array "mo:base/Array";
@@ -20,7 +26,7 @@ actor Token {
   };
   
   // Reference to the operational contract
-  let operational = actor("ulvla-h7777-77774-qaacq-cai") : actor {
+  let operational = actor("u6s2n-gx777-77774-qaaba-cai") : actor {
     getAllTokenHolders : () -> async [Text];
     getTokenHoldersCount : () -> async Nat;
     isTokenHolder : (Text) -> async Bool;

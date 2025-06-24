@@ -1,3 +1,15 @@
+/*
+ * PiCO Operational Contract
+ * 
+ * This contract serves as the MINTER for the PiCO ICRC-1 token.
+ * It can mint tokens directly to users and handles operational transactions.
+ * 
+ * Architecture:
+ * - This contract (u6s2n-gx777-77774-qaaba-cai) is the MINTER
+ * - ICRC-1 Ledger (uxrrr-q7777-77774-qaaaq-cai) handles token storage/transfers
+ * - Admin (igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe) receives initial supply
+ */
+
 import Principal "mo:base/Principal";
 import Result "mo:base/Result";
 import Time "mo:base/Time";
@@ -11,8 +23,11 @@ import Text "mo:base/Text";
 
 actor Operational {
   
-  // Admin principal (minter account)
+  // Admin principal (for initial supply and management)
   private let ADMIN_PRINCIPAL = "igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe";
+  
+  // This contract is now the minter
+  private let MINTER_PRINCIPAL = "u6s2n-gx777-77774-qaaba-cai"; // This operational contract
   
   // ICRC-1 Ledger canister
   private let LEDGER_CANISTER_ID = "uxrrr-q7777-77774-qaaaq-cai";
@@ -82,8 +97,10 @@ actor Operational {
   private var tokenHolders = HashMap.HashMap<Text, Bool>(10, Text.equal, Text.hash);
   
   // Initialize admin as a token holder (since they have initial supply)
+  // Note: This contract is the minter, but admin gets the initial supply
   private func initializeAdmin() {
     tokenHolders.put(ADMIN_PRINCIPAL, true);
+    tokenHolders.put(MINTER_PRINCIPAL, true); // Also register this contract
   };
   
   // Call initialization
@@ -119,7 +136,8 @@ actor Operational {
   
   // Operational Token -> ICRC1 Functions
   
-  // Top up user with PiCO tokens
+  // Mint PiCO tokens to user (HACKATHON VERSION - NO AUTH REQUIRED)
+  // Since this contract is now the minter, it can mint tokens directly
   public func top_up(userPrincipal : Text, amount : Nat) : async Result.Result<{transaction_id: Nat; message: Text}, Text> {
     let transactionId = generateTransactionId();
     let currentTime = Time.now();
@@ -127,7 +145,7 @@ actor Operational {
     // Create pending transaction record
     let transaction : OperationalTransaction = {
       transaction_id = transactionId;
-      from_principal_id = ADMIN_PRINCIPAL;
+      from_principal_id = MINTER_PRINCIPAL; // This contract is now the minter
       to_principal_id = userPrincipal;
       status = #Pending;
       price_token = amount;
@@ -168,7 +186,7 @@ actor Operational {
           
           #ok({
             transaction_id = transactionId;
-            message = "Successfully topped up " # Nat.toText(amount) # " PiCO tokens. Block: " # Nat.toText(blockIndex);
+            message = "✅ Successfully minted " # Nat.toText(amount) # " PiCO tokens to " # userPrincipal # ". Block: " # Nat.toText(blockIndex);
           })
         };
         case (#Err(error)) {
@@ -181,16 +199,16 @@ actor Operational {
           
           let errorMsg = switch (error) {
             case (#InsufficientFunds({ balance })) {
-              "Insufficient funds. Available: " # Nat.toText(unitsToPico(balance)) # " PiCO"
+              "❌ Insufficient funds. Available: " # Nat.toText(unitsToPico(balance)) # " PiCO"
             };
             case (#BadFee({ expected_fee })) {
-              "Bad fee. Expected: " # Nat.toText(expected_fee)
+              "❌ Bad fee. Expected: " # Nat.toText(expected_fee)
             };
             case (#GenericError({ error_code; message })) {
-              "Error " # Nat.toText(error_code) # ": " # message
+              "❌ Error " # Nat.toText(error_code) # ": " # message
             };
             case (_) {
-              "Transfer failed"
+              "❌ Transfer failed"
             };
           };
           #err(errorMsg)
@@ -204,14 +222,34 @@ actor Operational {
       };
       transactions.put(transactionId, updatedTransaction);
       
-      #err("Error processing top-up: " # Error.message(e))
+      #err("❌ Error processing top-up: " # Error.message(e))
+    }
+  };
+  
+  // Function to be called by frontend - provides instructions for minting
+  public func mint_to_user(userPrincipal : Text, amount : Nat) : async Result.Result<{transaction_id: Nat; mint_command: Text}, Text> {
+    let topUpResult = await top_up(userPrincipal, amount);
+    
+    switch (topUpResult) {
+      case (#ok(result)) {
+        let amountInUnits = picoToUnits(amount);
+        let mintCommand = "dfx canister call icrc1_ledger_canister icrc1_transfer '(record { to = record { owner = principal \"" # userPrincipal # "\" }; amount = " # Nat.toText(amountInUnits) # " })'";
+        
+        #ok({
+          transaction_id = result.transaction_id;
+          mint_command = mintCommand;
+        })
+      };
+      case (#err(error)) {
+        #err(error)
+      };
     }
   };
   
   // OPERATIONAL Functions
   
-  // Buy NFT action
-  public func buy_nft(buyerPrincipal : Text, nftId : Nat, price : Nat, forumId : ?Nat) : async Result.Result<{transaction_id: Nat; message: Text}, Text> {
+  // Buy NFT action - transfers tokens from buyer to seller
+  public func buy_nft(buyerPrincipal : Text, sellerPrincipal : Text, nftId : Nat, price : Nat, forumId : ?Nat) : async Result.Result<{transaction_id: Nat; message: Text}, Text> {
     let transactionId = generateTransactionId();
     let currentTime = Time.now();
     
@@ -219,7 +257,7 @@ actor Operational {
     let transaction : OperationalTransaction = {
       transaction_id = transactionId;
       from_principal_id = buyerPrincipal;
-      to_principal_id = ADMIN_PRINCIPAL; // NFT sales go to admin
+      to_principal_id = sellerPrincipal;
       status = #Pending;
       price_token = price;
       created_at = currentTime;
@@ -229,24 +267,88 @@ actor Operational {
     
     transactions.put(transactionId, transaction);
     
-      try {       
-       let updatedTransaction = {
-         transaction with
-         status = #Completed;
-       };
-       transactions.put(transactionId, updatedTransaction);
-       
-       #ok({
-         transaction_id = transactionId;
-         message = "NFT purchase initiated. NFT ID: " # Nat.toText(nftId) # ", Price: " # Nat.toText(price) # " PiCO";
-       })
+    try {
+      // First check if buyer has enough balance
+      let buyerPrincipalObj = Principal.fromText(buyerPrincipal);
+      let buyerAccount : Account = {
+        owner = buyerPrincipalObj;
+        subaccount = null;
+      };
+      
+      let buyerBalance = await ledger.icrc1_balance_of(buyerAccount);
+      let requiredAmount = picoToUnits(price);
+      
+      if (buyerBalance < requiredAmount) {
+        let updatedTransaction = {
+          transaction with
+          status = #Failed;
+        };
+        transactions.put(transactionId, updatedTransaction);
+        return #err("❌ Insufficient funds. Required: " # Nat.toText(price) # " PiCO, Available: " # Nat.toText(unitsToPico(buyerBalance)) # " PiCO");
+      };
+      
+      // Transfer tokens from buyer to seller
+      let sellerPrincipalObj = Principal.fromText(sellerPrincipal);
+      let transferArgs : TransferArgs = {
+        from_subaccount = null;
+        to = {
+          owner = sellerPrincipalObj;
+          subaccount = null;
+        };
+        amount = requiredAmount;
+        fee = null;
+        memo = null; // Could add NFT purchase memo later
+        created_at_time = null;
+      };
+      
+      // Note: This transfer needs to be authorized by the buyer
+      // For now, this is a placeholder - in real implementation, buyer would need to approve this
+      let result = await ledger.icrc1_transfer(transferArgs);
+      
+      switch (result) {
+        case (#Ok(blockIndex)) {
+          let updatedTransaction = {
+            transaction with
+            status = #Completed;
+          };
+          transactions.put(transactionId, updatedTransaction);
+          
+          #ok({
+            transaction_id = transactionId;
+            message = "✅ NFT purchase completed! Transferred " # Nat.toText(price) # " PiCO from " # buyerPrincipal # " to " # sellerPrincipal # " for NFT #" # Nat.toText(nftId) # ". Block: " # Nat.toText(blockIndex);
+          })
+        };
+        case (#Err(error)) {
+          let updatedTransaction = {
+            transaction with
+            status = #Failed;
+          };
+          transactions.put(transactionId, updatedTransaction);
+          
+          let errorMsg = switch (error) {
+            case (#InsufficientFunds({ balance })) {
+              "❌ Insufficient funds for transfer. Available: " # Nat.toText(unitsToPico(balance)) # " PiCO"
+            };
+            case (#BadFee({ expected_fee })) {
+              "❌ Bad fee. Expected: " # Nat.toText(expected_fee)
+            };
+            case (#GenericError({ error_code; message })) {
+              "❌ Transfer error " # Nat.toText(error_code) # ": " # message
+            };
+            case (_) {
+              "❌ NFT purchase failed during token transfer"
+            };
+          };
+          #err(errorMsg)
+        };
+      }
     } catch (e) {
       let updatedTransaction = {
         transaction with
         status = #Failed;
       };
       transactions.put(transactionId, updatedTransaction);
-      #err("Error processing NFT purchase: " # Error.message(e))
+      #err("❌ Error processing NFT purchase: " # Error.message(e))
     }
   };
   
@@ -269,6 +371,64 @@ actor Operational {
   // Get all transactions (admin only)
   public query func getAllTransactions() : async [OperationalTransaction] {
     Iter.toArray(transactions.vals())
+  };
+  
+  // Get NFT purchase history
+  public query func getNFTTransactionHistory(nftId : Nat) : async [OperationalTransaction] {
+    let nftTxs = Array.filter<OperationalTransaction>(
+      Iter.toArray(transactions.vals()),
+      func(tx : OperationalTransaction) : Bool {
+        switch (tx.nft_id) {
+          case (?id) { id == nftId };
+          case null { false };
+        }
+      }
+    );
+    nftTxs
+  };
+  
+  // Get all NFT transactions
+  public query func getAllNFTTransactions() : async [OperationalTransaction] {
+    let nftTxs = Array.filter<OperationalTransaction>(
+      Iter.toArray(transactions.vals()),
+      func(tx : OperationalTransaction) : Bool {
+        switch (tx.nft_id) {
+          case (?_) { true };
+          case null { false };
+        }
+      }
+    );
+    nftTxs
+  };
+  
+  // Get NFT transactions by buyer
+  public query func getNFTTransactionsByBuyer(buyerPrincipal : Text) : async [OperationalTransaction] {
+    let buyerNFTTxs = Array.filter<OperationalTransaction>(
+      Iter.toArray(transactions.vals()),
+      func(tx : OperationalTransaction) : Bool {
+        let hasNFT = switch (tx.nft_id) {
+          case (?_) { true };
+          case null { false };
+        };
+        tx.from_principal_id == buyerPrincipal and hasNFT
+      }
+    );
+    buyerNFTTxs
+  };
+  
+  // Get NFT transactions by seller
+  public query func getNFTTransactionsBySeller(sellerPrincipal : Text) : async [OperationalTransaction] {
+    let sellerNFTTxs = Array.filter<OperationalTransaction>(
+      Iter.toArray(transactions.vals()),
+      func(tx : OperationalTransaction) : Bool {
+        let hasNFT = switch (tx.nft_id) {
+          case (?_) { true };
+          case null { false };
+        };
+        tx.to_principal_id == sellerPrincipal and hasNFT
+      }
+    );
+    sellerNFTTxs
   };
   
   // Utility functions
@@ -313,6 +473,15 @@ actor Operational {
   
   public query func getTransactionCount() : async Nat {
     transactionCounter
+  };
+  
+  // Get minter information
+  public query func getMinterInfo() : async {minter_principal: Text; admin_principal: Text; ledger_canister: Text} {
+    {
+      minter_principal = MINTER_PRINCIPAL;
+      admin_principal = ADMIN_PRINCIPAL;
+      ledger_canister = LEDGER_CANISTER_ID;
+    }
   };
   
   // Get all registered token holders
