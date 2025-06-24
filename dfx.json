@@ -1,22 +1,47 @@
 {
   "canisters": {
     "internet_identity": {
-      "type": "pull",
-      "id": "rdmx6-jaaaa-aaaaa-aaadq-cai"
+      "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",
+      "type": "custom",
+      "specified_id": "rdmx6-jaaaa-aaaaa-aaadq-cai",
+      "remote": {
+        "id": {
+          "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai"
+        }
+      },
+      "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz"
     },
-    "pico_backend": {
-      "main": "src/pico_backend/main.mo",
+    "operational_contract": {
+      "main": "src/pico_backend/operational.mo",
+      "type": "motoko"
+    },
+    "operational_v2": {
+      "main": "src/pico_backend/operational_v2.mo",
+      "type": "motoko"
+    },
+    "operational_v3": {
+      "main": "src/pico_backend/operational_v3.mo",
+      "type": "motoko"
+    },
+    "token_contract": {
+      "main": "src/pico_backend/token.mo",
       "type": "motoko"
     },
     "pico_frontend": {
       "dependencies": [
-        "pico_backend"
+        "operational_contract"
       ],
       "source": [
         "src/pico_frontend/dist"
       ],
       "type": "assets",
       "workspace": "pico_frontend"
+    },
+    "icrc1_ledger_canister": {
+      "type": "custom",
+      "candid": "icrc1_ledger.did",
+      "wasm": "icrc1_ledger.wasm.gz",
+      "init_arg": "(variant { Init = record { token_symbol = \"PiCO\"; token_name = \"PiCO\"; minting_account = record { owner = principal \"u6s2n-gx777-77774-qaaba-cai\" }; transfer_fee = 10_000; metadata = vec {}; feature_flags = opt record { icrc2 = true }; initial_balances = vec { record { record { owner = principal \"igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe\" }; 100_000_000_000_000 } }; archive_options = record { num_blocks_to_archive = 1000; trigger_threshold = 2000; controller_id = principal \"igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe\"; cycles_for_archive_creation = opt 10_000_000_000_000 } } })"
     }
   },
   "defaults": {
