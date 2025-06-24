@@ -4,13 +4,13 @@
       "type": "pull",
       "id": "rdmx6-jaaaa-aaaaa-aaadq-cai"
     },
-    "pico_backend": {
-      "main": "src/pico_backend/main.mo",
+    "operational_contract": {
+      "main": "src/pico_backend/operational.mo",
       "type": "motoko"
     },
     "pico_frontend": {
       "dependencies": [
-        "pico_backend"
+        "operational_contract"
       ],
       "source": [
         "src/pico_frontend/dist"
