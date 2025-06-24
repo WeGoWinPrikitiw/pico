@@ -1,70 +1,35 @@
-import Map "mo:base/HashMap";
+import Principal "mo:base/Principal";
+import Result "mo:base/Result";
+import HashMap "mo:base/HashMap";
 import Array "mo:base/Array";
 import Iter "mo:base/Iter";
-import Option "mo:base/Option";
-import Result "mo:base/Result";
 import Time "mo:base/Time";
-import Principal "mo:base/Principal";
 import Nat "mo:base/Nat";
+import Nat32 "mo:base/Nat32";
 import Text "mo:base/Text";
+import Hash "mo:base/Hash";
+import Error "mo:base/Error";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
-import Error "mo:base/Error";
+import Option "mo:base/Option";
 import OpenAI "openai";
 
 actor class NFT() = {
 
-    // Types
+    // ICRC-7 Standard Types
     public type Account = {
-        owner : Principal;
-        subaccount : ?Blob;
+        owner: Principal;
+        subaccount: ?Blob;
     };
 
     public type Value = {
-        #Nat : Nat;
-        #Int : Int; 
-        #Text : Text;
-        #Blob : Blob;
+        #Nat: Nat;
+        #Int: Int;
+        #Text: Text;
+        #Blob: Blob;
     };
 
     public type Metadata = [(Text, Value)];
-
-    public type NFTInfo = {
-        nft_id: Nat;
-        principal_id: Principal;
-        image_bytes: ?Blob;
-        image_url: ?Text;
-        name: Text;
-        description: Text;
-        token_price: Nat; // in tokens, not decimal for simplicity
-        traits: Metadata; // dynamic label:value pairs
-        created_by: CreatedBy;
-        created_at: Int;
-    };
-
-    public type CreatedBy = {
-        #GeneratedByAI;
-        #SelfMade;
-    };
-
-
-
-    public type MintNFTArgs = {
-        to: Account;
-        name: Text;
-        description: Text;
-        token_price: Nat;
-        traits: Metadata;
-        image_bytes: ?Blob;
-        image_url: ?Text;
-        created_by: CreatedBy;
-    };
-
-    public type MintError = {
-        #Unauthorized;
-        #InvalidRecipient;
-        #GenericError: { error_code: Nat; message: Text };
-    };
 
     public type TransferArgs = {
         from_subaccount: ?Blob;
@@ -81,14 +46,49 @@ actor class NFT() = {
         #GenericError: { error_code: Nat; message: Text };
     };
 
-    public type FilterArgs = {
-        owner: ?Principal;
-        name_contains: ?Text;
-        created_by: ?CreatedBy;
-        price_min: ?Nat;
-        price_max: ?Nat;
-        limit: ?Nat;
-        offset: ?Nat;
+    // NFT Specific Types
+    public type Trait = {
+        trait_type: Text;
+        value: Text;
+        rarity: ?Text; // Optional: "Common", "Rare", "Epic", "Legendary", "Special"
+    };
+
+    public type NFTInfo = {
+        nft_id: Nat;
+        owner: Principal;
+        name: Text;
+        description: Text;
+        price: Nat;
+        image_url: Text;
+        is_ai_generated: Bool;
+        traits: [Trait];
+        created_at: Int;
+    };
+
+    public type AIImageResult = {
+        image_url: Text;
+        suggested_traits: [Trait];
+    };
+
+    public type MintError = {
+        #Unauthorized;
+        #InvalidRecipient;
+        #GenericError: { error_code: Nat; message: Text };
+    };
+
+    // Hash functions
+    private func natHash(n: Nat): Hash.Hash = Nat32.fromNat(n % (2**32 - 1));
+
+    private func accountEqual(a1: Account, a2: Account): Bool {
+        Principal.equal(a1.owner, a2.owner) and a1.subaccount == a2.subaccount
+    };
+
+    private func accountHash(account: Account): Hash.Hash {
+        Principal.hash(account.owner)
+    };
+
+    private func principalToAccount(p: Principal): Account {
+        { owner = p; subaccount = null }
     };
 
     // State variables
@@ -96,10 +96,11 @@ actor class NFT() = {
     private stable var nftEntries: [(Nat, NFTInfo)] = [];
     private stable var ownersEntries: [(Nat, Account)] = [];
     private stable var balanceEntries: [(Account, Nat)] = [];
+    private stable var openaiApiKey: ?Text = null;
     
-    private var nfts = Map.HashMap<Nat, NFTInfo>(0, Nat.equal, Nat.hash);
-    private var owners = Map.HashMap<Nat, Account>(0, Nat.equal, Nat.hash);
-    private var balances = Map.HashMap<Account, Nat>(0, accountEqual, accountHash);
+    private var nfts = HashMap.HashMap<Nat, NFTInfo>(10, Nat.equal, natHash);
+    private var owners = HashMap.HashMap<Nat, Account>(10, Nat.equal, natHash);
+    private var balances = HashMap.HashMap<Account, Nat>(10, accountEqual, accountHash);
 
     // System functions for stable storage
     system func preupgrade() {
@@ -109,43 +110,115 @@ actor class NFT() = {
     };
 
     system func postupgrade() {
-        nfts := Map.fromIter<Nat, NFTInfo>(nftEntries.vals(), nftEntries.size(), Nat.equal, Nat.hash);
-        owners := Map.fromIter<Nat, Account>(ownersEntries.vals(), ownersEntries.size(), Nat.equal, Nat.hash);
-        balances := Map.fromIter<Account, Nat>(balanceEntries.vals(), balanceEntries.size(), accountEqual, accountHash);
+        nfts := HashMap.fromIter<Nat, NFTInfo>(nftEntries.vals(), nftEntries.size(), Nat.equal, natHash);
+        owners := HashMap.fromIter<Nat, Account>(ownersEntries.vals(), ownersEntries.size(), Nat.equal, natHash);
+        balances := HashMap.fromIter<Account, Nat>(balanceEntries.vals(), balanceEntries.size(), accountEqual, accountHash);
         nftEntries := [];
         ownersEntries := [];
         balanceEntries := [];
     };
 
     // Helper functions
-    private func accountEqual(a1: Account, a2: Account): Bool {
-        Principal.equal(a1.owner, a2.owner) and a1.subaccount == a2.subaccount
-    };
-
-    private func accountHash(account: Account): Nat32 {
-        Principal.hash(account.owner)
-    };
-
     private func incrementBalance(account: Account) {
-        let currentBalance = Option.get(balances.get(account), 0);
+        let currentBalance = switch (balances.get(account)) {
+            case (?balance) balance;
+            case null 0;
+        };
         balances.put(account, currentBalance + 1);
     };
 
     private func decrementBalance(account: Account) {
-        let currentBalance = Option.get(balances.get(account), 0);
+        let currentBalance = switch (balances.get(account)) {
+            case (?balance) balance;
+            case null 0;
+        };
         if (currentBalance > 0) {
             balances.put(account, currentBalance - 1);
         };
     };
 
-    // ICRC-7 Standard Methods
+    // Helper function to convert traits to ICRC-7 metadata format
+    private func traitsToMetadata(traits: [Trait]): Metadata {
+        Array.map<Trait, (Text, Value)>(traits, func(trait: Trait): (Text, Value) {
+            (trait.trait_type, #Text(trait.value))
+        })
+    };
+
+    // AI Trait Generation Helper
+    private func generateTraitsFromPrompt(prompt: Text): [Trait] {
+        var traits: [Trait] = [];
+        let lowercasePrompt = Text.toLowercase(prompt);
+
+        // Style detection
+        if (Text.contains(lowercasePrompt, #text "cyberpunk")) {
+            traits := Array.append(traits, [{ trait_type = "Style"; value = "Cyberpunk"; rarity = ?"Rare" }]);
+        } else if (Text.contains(lowercasePrompt, #text "fantasy")) {
+            traits := Array.append(traits, [{ trait_type = "Style"; value = "Fantasy"; rarity = ?"Rare" }]);
+        } else if (Text.contains(lowercasePrompt, #text "realistic")) {
+            traits := Array.append(traits, [{ trait_type = "Style"; value = "Realistic"; rarity = ?"Common" }]);
+        } else if (Text.contains(lowercasePrompt, #text "abstract")) {
+            traits := Array.append(traits, [{ trait_type = "Style"; value = "Abstract"; rarity = ?"Epic" }]);
+        } else if (Text.contains(lowercasePrompt, #text "anime") or Text.contains(lowercasePrompt, #text "manga")) {
+            traits := Array.append(traits, [{ trait_type = "Style"; value = "Anime"; rarity = ?"Rare" }]);
+        } else {
+            traits := Array.append(traits, [{ trait_type = "Style"; value = "Digital Art"; rarity = ?"Common" }]);
+        };
+
+        // Color palette detection
+        if (Text.contains(lowercasePrompt, #text "neon") or Text.contains(lowercasePrompt, #text "bright")) {
+            traits := Array.append(traits, [{ trait_type = "Color Palette"; value = "Neon"; rarity = ?"Rare" }]);
+        } else if (Text.contains(lowercasePrompt, #text "dark") or Text.contains(lowercasePrompt, #text "black")) {
+            traits := Array.append(traits, [{ trait_type = "Color Palette"; value = "Dark"; rarity = ?"Common" }]);
+        } else if (Text.contains(lowercasePrompt, #text "colorful") or Text.contains(lowercasePrompt, #text "rainbow")) {
+            traits := Array.append(traits, [{ trait_type = "Color Palette"; value = "Rainbow"; rarity = ?"Epic" }]);
+        } else if (Text.contains(lowercasePrompt, #text "blue")) {
+            traits := Array.append(traits, [{ trait_type = "Color Palette"; value = "Blue Tones"; rarity = ?"Common" }]);
+        } else if (Text.contains(lowercasePrompt, #text "red")) {
+            traits := Array.append(traits, [{ trait_type = "Color Palette"; value = "Red Tones"; rarity = ?"Common" }]);
+        } else if (Text.contains(lowercasePrompt, #text "gold") or Text.contains(lowercasePrompt, #text "golden")) {
+            traits := Array.append(traits, [{ trait_type = "Color Palette"; value = "Golden"; rarity = ?"Legendary" }]);
+        } else {
+            traits := Array.append(traits, [{ trait_type = "Color Palette"; value = "Natural"; rarity = ?"Common" }]);
+        };
+
+        // Theme detection
+        if (Text.contains(lowercasePrompt, #text "space") or Text.contains(lowercasePrompt, #text "cosmic") or Text.contains(lowercasePrompt, #text "galaxy")) {
+            traits := Array.append(traits, [{ trait_type = "Theme"; value = "Space"; rarity = ?"Rare" }]);
+        } else if (Text.contains(lowercasePrompt, #text "nature") or Text.contains(lowercasePrompt, #text "forest") or Text.contains(lowercasePrompt, #text "tree")) {
+            traits := Array.append(traits, [{ trait_type = "Theme"; value = "Nature"; rarity = ?"Common" }]);
+        } else if (Text.contains(lowercasePrompt, #text "city") or Text.contains(lowercasePrompt, #text "urban") or Text.contains(lowercasePrompt, #text "building")) {
+            traits := Array.append(traits, [{ trait_type = "Theme"; value = "Urban"; rarity = ?"Common" }]);
+        } else if (Text.contains(lowercasePrompt, #text "ocean") or Text.contains(lowercasePrompt, #text "sea") or Text.contains(lowercasePrompt, #text "water")) {
+            traits := Array.append(traits, [{ trait_type = "Theme"; value = "Ocean"; rarity = ?"Rare" }]);
+        } else if (Text.contains(lowercasePrompt, #text "dragon") or Text.contains(lowercasePrompt, #text "magic") or Text.contains(lowercasePrompt, #text "wizard")) {
+            traits := Array.append(traits, [{ trait_type = "Theme"; value = "Mythical"; rarity = ?"Epic" }]);
+        } else {
+            traits := Array.append(traits, [{ trait_type = "Theme"; value = "Artistic"; rarity = ?"Common" }]);
+        };
+
+        // Complexity detection
+        if (Text.contains(lowercasePrompt, #text "detailed") or Text.contains(lowercasePrompt, #text "intricate") or Text.contains(lowercasePrompt, #text "complex")) {
+            traits := Array.append(traits, [{ trait_type = "Complexity"; value = "High Detail"; rarity = ?"Epic" }]);
+        } else if (Text.contains(lowercasePrompt, #text "simple") or Text.contains(lowercasePrompt, #text "minimal")) {
+            traits := Array.append(traits, [{ trait_type = "Complexity"; value = "Minimalist"; rarity = ?"Rare" }]);
+        } else {
+            traits := Array.append(traits, [{ trait_type = "Complexity"; value = "Balanced"; rarity = ?"Common" }]);
+        };
+
+        // AI Generation marker
+        traits := Array.append(traits, [{ trait_type = "Generation"; value = "AI Created"; rarity = ?"Special" }]);
+
+        traits
+    };
+
+    // ICRC-7 Standard Functions
 
     // icrc7_collection_metadata
     public query func icrc7_collection_metadata(): async Metadata {
         [
             ("icrc7:name", #Text("Pico NFT Collection")),
             ("icrc7:symbol", #Text("PICO")),
-            ("icrc7:description", #Text("AI-powered NFT collection with dynamic metadata")),
+            ("icrc7:description", #Text("AI-powered NFT collection with dynamic traits")),
             ("icrc7:logo", #Text("https://example.com/logo.png")),
             ("icrc7:total_supply", #Nat(nextTokenId - 1)),
             ("icrc7:supply_cap", #Nat(1000000)),
@@ -157,7 +230,7 @@ actor class NFT() = {
         "Pico NFT Collection"
     };
 
-    // icrc7_symbol  
+    // icrc7_symbol
     public query func icrc7_symbol(): async Text {
         "PICO"
     };
@@ -179,20 +252,14 @@ actor class NFT() = {
                 case (?nft) {
                     let baseMetadata: Metadata = [
                         ("icrc7:name", #Text(nft.name)),
-                        ("icrc7:description", #Text(nft.description)), 
-                        ("icrc7:image", switch(nft.image_url) {
-                            case (?url) #Text(url);
-                            case null #Text("data:image/png;base64,");
-                        }),
-                        ("created_by", switch(nft.created_by) {
-                            case (#GeneratedByAI) #Text("generated-by-ai");
-                            case (#SelfMade) #Text("self-made");
-                        }),
-                        ("token_price", #Nat(nft.token_price)),
+                        ("icrc7:description", #Text(nft.description)),
+                        ("icrc7:image", #Text(nft.image_url)),
+                        ("price", #Nat(nft.price)),
+                        ("is_ai_generated", #Text(if (nft.is_ai_generated) "true" else "false")),
                         ("created_at", #Int(nft.created_at)),
                     ];
-                    // Merge with dynamic traits
-                    let fullMetadata = Array.append(baseMetadata, nft.traits);
+                    let traitMetadata = traitsToMetadata(nft.traits);
+                    let fullMetadata = Array.append(baseMetadata, traitMetadata);
                     ?fullMetadata
                 };
                 case null null;
@@ -210,14 +277,23 @@ actor class NFT() = {
     // icrc7_balance_of
     public query func icrc7_balance_of(accounts: [Account]): async [Nat] {
         Array.map<Account, Nat>(accounts, func(account: Account): Nat {
-            Option.get(balances.get(account), 0)
+            switch (balances.get(account)) {
+                case (?balance) balance;
+                case null 0;
+            }
         })
     };
 
     // icrc7_tokens
     public query func icrc7_tokens(prev: ?Nat, take: ?Nat): async [Nat] {
-        let startId = Option.get(prev, 0) + 1;
-        let limit = Option.get(take, 100);
+        let startId = switch (prev) {
+            case (?p) p + 1;
+            case null 1;
+        };
+        let limit = switch (take) {
+            case (?t) t;
+            case null 100;
+        };
         let endId = Nat.min(startId + limit - 1, nextTokenId - 1);
         
         var tokens: [Nat] = [];
@@ -231,10 +307,16 @@ actor class NFT() = {
 
     // icrc7_tokens_of
     public query func icrc7_tokens_of(account: Account, prev: ?Nat, take: ?Nat): async [Nat] {
-        let limit = Option.get(take, 100);
+        let limit = switch (take) {
+            case (?t) t;
+            case null 100;
+        };
         var tokens: [Nat] = [];
         var count = 0;
-        var startFound = Option.isNull(prev);
+        var startFound = switch (prev) {
+            case null true;
+            case (?_) false;
+        };
         
         for ((tokenId, owner) in owners.entries()) {
             if (accountEqual(owner, account)) {
@@ -243,10 +325,17 @@ actor class NFT() = {
                         tokens := Array.append(tokens, [tokenId]);
                         count += 1;
                     } else {
-                        break;
+                        return tokens;
                     };
-                } else if (Option.get(prev, 0) == tokenId) {
-                    startFound := true;
+                } else {
+                    switch (prev) {
+                        case (?p) {
+                            if (p == tokenId) {
+                                startFound := true;
+                            };
+                        };
+                        case null {};
+                    };
                 };
             };
         };
@@ -254,14 +343,15 @@ actor class NFT() = {
     };
 
     // icrc7_transfer
-    public func icrc7_transfer(args: [TransferArgs]): async [?TransferError] {
+    public shared(msg) func icrc7_transfer(args: [TransferArgs]): async [?TransferError] {
         let caller = msg.caller;
         
         Array.map<TransferArgs, ?TransferError>(args, func(arg: TransferArgs): ?TransferError {
             // Check if token exists and caller owns it
             switch (owners.get(arg.token_id)) {
                 case (?currentOwner) {
-                    if (not accountEqual(currentOwner, { owner = caller; subaccount = arg.from_subaccount })) {
+                    let callerAccount = { owner = caller; subaccount = arg.from_subaccount };
+                    if (not accountEqual(currentOwner, callerAccount)) {
                         return ?#Unauthorized;
                     };
                     
@@ -269,6 +359,25 @@ actor class NFT() = {
                     owners.put(arg.token_id, arg.to);
                     decrementBalance(currentOwner);
                     incrementBalance(arg.to);
+                    
+                    // Update NFT owner field for backward compatibility
+                    switch (nfts.get(arg.token_id)) {
+                        case (?nft) {
+                            let updatedNft: NFTInfo = {
+                                nft_id = nft.nft_id;
+                                owner = arg.to.owner;
+                                name = nft.name;
+                                description = nft.description;
+                                price = nft.price;
+                                image_url = nft.image_url;
+                                is_ai_generated = nft.is_ai_generated;
+                                traits = nft.traits;
+                                created_at = nft.created_at;
+                            };
+                            nfts.put(arg.token_id, updatedNft);
+                        };
+                        case null {};
+                    };
                     
                     null // Success
                 };
@@ -279,195 +388,239 @@ actor class NFT() = {
         })
     };
 
-    // Custom Methods for NFT Management
+    // OpenAI Integration Functions
 
-    // Mint NFT (both AI-generated and manual)
-    public func mint_nft(args: MintNFTArgs): async Result.Result<Nat, MintError> {
-        let caller = msg.caller;
+    // Initialize OpenAI API Key from environment (called during deployment)
+    public func init_openai_api_key(apiKey: Text): async Result.Result<(), Text> {
+        // Only allow initialization if key is not already set
+        switch (openaiApiKey) {
+            case (null) {
+                openaiApiKey := ?apiKey;
+                #ok(())
+            };
+            case (?_) {
+                #err("OpenAI API key already initialized")
+            };
+        }
+    };
+
+    // Generate AI image with suggested traits
+    public func generate_ai_image_with_traits(prompt: Text): async Result.Result<AIImageResult, Text> {
+        // Check if API key is set
+        switch (openaiApiKey) {
+            case (null) {
+                #err("OpenAI API key not set. Please set the API key first.")
+            };
+            case (?apiKey) {
+                try {
+                    // Create OpenAI request with default settings
+                    let openaiRequest = OpenAI.createImageRequest(
+                        prompt,
+                        ?"1024x1024", // size
+                        ?"standard",  // quality
+                        null         // use default model (dall-e-3)
+                    );
+                    
+                    // Use the real OpenAI API
+                    let result = await OpenAI.generateImage(apiKey, openaiRequest);
+                    switch (result) {
+                        case (#ok(imageUrl)) {
+                            let suggestedTraits = generateTraitsFromPrompt(prompt);
+                            #ok({
+                                image_url = imageUrl;
+                                suggested_traits = suggestedTraits;
+                            })
+                        };
+                        case (#err(error)) #err(error);
+                    }
+                } catch (error) {
+                    #err("Failed to generate AI image: " # Error.message(error))
+                }
+            };
+        }
+    };
+
+    // Legacy function for backward compatibility
+    public func generate_ai_image(prompt: Text): async Result.Result<Text, Text> {
+        let result = await generate_ai_image_with_traits(prompt);
+        switch (result) {
+            case (#ok(aiResult)) #ok(aiResult.image_url);
+            case (#err(error)) #err(error);
+        }
+    };
+
+    // NFT Management Functions
+
+    // Mint NFT (enhanced version with ICRC-7 compliance)
+    public func mint_nft(
+        to: Principal,
+        name: Text, 
+        description: Text, 
+        price: Nat, 
+        image_url: Text, 
+        is_ai_generated: Bool,
+        traits: [Trait]
+    ): async Result.Result<Nat, Text> {
         let tokenId = nextTokenId;
         nextTokenId += 1;
+        let account = principalToAccount(to);
 
         let nft: NFTInfo = {
             nft_id = tokenId;
-            principal_id = args.to.owner;
-            image_bytes = args.image_bytes;
-            image_url = args.image_url;
-            name = args.name;
-            description = args.description;
-            token_price = args.token_price;
-            traits = args.traits;
-            created_by = args.created_by;
+            owner = to;
+            name = name;
+            description = description;
+            price = price;
+            image_url = image_url;
+            is_ai_generated = is_ai_generated;
+            traits = traits;
             created_at = Time.now();
         };
 
         nfts.put(tokenId, nft);
-        owners.put(tokenId, args.to);
-        incrementBalance(args.to);
-
+        owners.put(tokenId, account);
+        incrementBalance(account);
         #ok(tokenId)
     };
 
+    // Query Functions
 
-
-    // List NFTs with filtering
-    public query func list_nfts(filter: FilterArgs): async [NFTInfo] {
-        let limit = Option.get(filter.limit, 100);
-        let offset = Option.get(filter.offset, 0);
-        
-        var results: [NFTInfo] = [];
-        var count = 0;
-        var processed = 0;
-
-        for ((tokenId, nft) in nfts.entries()) {
-            // Apply filters
-            var include = true;
-            
-            // Filter by owner
-            if (Option.isSome(filter.owner)) {
-                if (not Principal.equal(nft.principal_id, Option.get(filter.owner, Principal.fromText("aaaaa-aa")))) {
-                    include := false;
-                };
-            };
-            
-            // Filter by name contains
-            if (Option.isSome(filter.name_contains) and include) {
-                let searchTerm = Option.get(filter.name_contains, "");
-                if (not Text.contains(nft.name, #text searchTerm)) {
-                    include := false;
-                };
-            };
-            
-            // Filter by created_by
-            if (Option.isSome(filter.created_by) and include) {
-                switch (filter.created_by, nft.created_by) {
-                    case (?#GeneratedByAI, #GeneratedByAI) {};
-                    case (?#SelfMade, #SelfMade) {};
-                    case _ { include := false; };
-                };
-            };
-            
-            // Filter by price range
-            if (Option.isSome(filter.price_min) and include) {
-                if (nft.token_price < Option.get(filter.price_min, 0)) {
-                    include := false;
-                };
-            };
-            
-            if (Option.isSome(filter.price_max) and include) {
-                if (nft.token_price > Option.get(filter.price_max, 0)) {
-                    include := false;
-                };
-            };
-            
-            if (include) {
-                if (processed >= offset) {
-                    if (count < limit) {
-                        results := Array.append(results, [nft]);
-                        count += 1;
-                    } else {
-                        break;
-                    };
-                };
-                processed += 1;
-            };
-        };
-        
-        results
-    };
-
-    // Get NFT by ID
     public query func get_nft(token_id: Nat): async ?NFTInfo {
         nfts.get(token_id)
     };
 
-    // Get NFTs by Principal (user's NFTs)
-    public query func get_nfts_by_principal(principal_id: Principal): async [NFTInfo] {
+    public query func list_all_nfts(): async [NFTInfo] {
         var results: [NFTInfo] = [];
-        
         for ((tokenId, nft) in nfts.entries()) {
-            if (Principal.equal(nft.principal_id, principal_id)) {
-                results := Array.append(results, [nft]);
-            };
+            results := Array.append(results, [nft]);
         };
-        
         results
     };
 
-    // Update NFT metadata (only owner can update)
-    public func update_nft_metadata(token_id: Nat, new_traits: Metadata, new_price: ?Nat): async Result.Result<(), Text> {
-        let caller = msg.caller;
-        
-        switch (nfts.get(token_id)) {
-            case (?nft) {
-                if (not Principal.equal(caller, nft.principal_id)) {
-                    return #err("Unauthorized: Only owner can update NFT");
-                };
-                
-                let updatedPrice = Option.get(new_price, nft.token_price);
-                let updatedNft: NFTInfo = {
-                    nft_id = nft.nft_id;
-                    principal_id = nft.principal_id;
-                    image_bytes = nft.image_bytes;
-                    image_url = nft.image_url;
-                    name = nft.name;
-                    description = nft.description;
-                    token_price = updatedPrice;
-                    traits = new_traits;
-                    created_by = nft.created_by;
-                    created_at = nft.created_at;
-                };
-                
-                nfts.put(token_id, updatedNft);
-                #ok(())
-            };
-            case null {
-                #err("NFT not found")
-            };
-        }
-    };
-
-    // Search NFTs by name
-    public query func search_nfts(query: Text, limit: ?Nat): async [NFTInfo] {
-        let searchLimit = Option.get(limit, 50);
+    public query func get_nfts_by_owner(owner: Principal): async [NFTInfo] {
         var results: [NFTInfo] = [];
-        var count = 0;
-        
         for ((tokenId, nft) in nfts.entries()) {
-            if (count >= searchLimit) break;
-            
-            if (Text.contains(nft.name, #text query) or Text.contains(nft.description, #text query)) {
+            if (Principal.equal(nft.owner, owner)) {
                 results := Array.append(results, [nft]);
-                count += 1;
             };
         };
-        
         results
     };
 
-    // Get collection statistics
-    public query func get_collection_stats(): async {
+    public query func get_ai_generated_nfts(): async [NFTInfo] {
+        var results: [NFTInfo] = [];
+        for ((tokenId, nft) in nfts.entries()) {
+            if (nft.is_ai_generated) {
+                results := Array.append(results, [nft]);
+            };
+        };
+        results
+    };
+
+    public query func total_supply(): async Nat {
+        nextTokenId - 1
+    };
+
+    public query func collection_name(): async Text {
+        "Pico NFT Collection"
+    };
+
+    public query func get_stats(): async {
         total_nfts: Nat;
         ai_generated: Nat;
         self_made: Nat;
-        total_owners: Nat;
     } {
+        var total = 0;
         var aiGenerated = 0;
         var selfMade = 0;
-        var uniqueOwners = Map.HashMap<Principal, Bool>(0, Principal.equal, Principal.hash);
         
         for ((tokenId, nft) in nfts.entries()) {
-            switch (nft.created_by) {
-                case (#GeneratedByAI) { aiGenerated += 1; };
-                case (#SelfMade) { selfMade += 1; };
+            total += 1;
+            if (nft.is_ai_generated) {
+                aiGenerated += 1;
+            } else {
+                selfMade += 1;
             };
-            uniqueOwners.put(nft.principal_id, true);
         };
         
         {
-            total_nfts = nextTokenId - 1;
+            total_nfts = total;
             ai_generated = aiGenerated;
             self_made = selfMade;
-            total_owners = uniqueOwners.size();
         }
     };
-} 
+
+    // Trait-based Query Functions
+
+    public query func get_nfts_by_trait(traitType: Text, traitValue: Text): async [NFTInfo] {
+        var results: [NFTInfo] = [];
+        for ((tokenId, nft) in nfts.entries()) {
+            for (trait in nft.traits.vals()) {
+                if (trait.trait_type == traitType and trait.value == traitValue) {
+                    results := Array.append(results, [nft]);
+                };
+            };
+        };
+        results
+    };
+
+    public query func get_nfts_by_rarity(rarity: Text): async [NFTInfo] {
+        var results: [NFTInfo] = [];
+        for ((tokenId, nft) in nfts.entries()) {
+            for (trait in nft.traits.vals()) {
+                switch (trait.rarity) {
+                    case (?r) {
+                        if (r == rarity) {
+                            results := Array.append(results, [nft]);
+                        };
+                    };
+                    case null {};
+                };
+            };
+        };
+        results
+    };
+
+    public query func get_all_trait_types(): async [Text] {
+        var traitTypes: [Text] = [];
+        for ((tokenId, nft) in nfts.entries()) {
+            for (trait in nft.traits.vals()) {
+                var exists = false;
+                for (existingType in traitTypes.vals()) {
+                    if (existingType == trait.trait_type) {
+                        exists := true;
+                    };
+                };
+                if (not exists) {
+                    traitTypes := Array.append(traitTypes, [trait.trait_type]);
+                };
+            };
+        };
+        traitTypes
+    };
+
+    public query func get_trait_values(traitType: Text): async [Text] {
+        var traitValues: [Text] = [];
+        for ((tokenId, nft) in nfts.entries()) {
+            for (trait in nft.traits.vals()) {
+                if (trait.trait_type == traitType) {
+                    var exists = false;
+                    for (existingValue in traitValues.vals()) {
+                        if (existingValue == trait.value) {
+                            exists := true;
+                        };
+                    };
+                    if (not exists) {
+                        traitValues := Array.append(traitValues, [trait.value]);
+                    };
+                };
+            };
+        };
+        traitValues
+    };
+
+    // Legacy greeting function for testing
+    public query func greet(name : Text) : async Text {
+        return "Hello My Name is: " # name # "!";
+    };
+}; 

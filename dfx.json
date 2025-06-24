@@ -5,16 +5,12 @@
       "id": "rdmx6-jaaaa-aaaaa-aaadq-cai"
     },
     "pico_backend": {
-      "main": "src/pico_backend/main.mo",
+      "main": "src/pico_backend/nft.mo",
       "type": "motoko"
     },
     "pico_frontend": {
-      "dependencies": [
-        "pico_backend"
-      ],
-      "source": [
-        "src/pico_frontend/dist"
-      ],
+      "dependencies": ["pico_backend"],
+      "source": ["src/pico_frontend/dist"],
       "type": "assets",
       "workspace": "pico_frontend"
     }
