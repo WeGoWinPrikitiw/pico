@@ -8,6 +8,7 @@
  * - This contract (u6s2n-gx777-77774-qaaba-cai) is the MINTER
  * - ICRC-1 Ledger (uxrrr-q7777-77774-qaaaq-cai) handles token storage/transfers
  * - Admin (igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe) receives initial supply
+ * - ICRC-2 Ledger (uxrrr-q7777-77774-qaaaq-cai) handles approval for transfers
  */
 
 import Principal "mo:base/Principal";
@@ -387,16 +388,6 @@ const result = await ledger.approve({
     }
   };
   
-  // Check current user's allowance (for frontend - uses caller's principal)
-  public func check_my_allowance(caller : Principal) : async Result.Result<Nat, Text> {
-    try {
-      let callerText = Principal.toText(caller);
-      await check_allowance(callerText)
-    } catch (e) {
-      #err("Error checking your allowance: " # Error.message(e))
-    }
-  };
-
   // OPERATIONAL Functions
   
   // Buy NFT action - uses ICRC-2 approval to transfer tokens from buyer to seller

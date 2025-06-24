@@ -1,6 +1,7 @@
 # Feature that we implemented
 - `operational_contract` - Your main business logic with `PiCO` token operations
 - `icrc1_ledger_canister` - our ICRC-1 tokens which called `PiCO`
+- `icrc2_ledger_canister`- our approval method for sending token
 - `pico_frontend` - Your frontend (depends on operational_contract)
 - `internet_identity` - Authentication
 
