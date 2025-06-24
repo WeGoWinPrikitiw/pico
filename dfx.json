@@ -8,6 +8,10 @@
       "main": "src/pico_backend/operational.mo",
       "type": "motoko"
     },
+    "token_contract": {
+      "main": "src/pico_backend/token.mo",
+      "type": "motoko"
+    },
     "pico_frontend": {
       "dependencies": [
         "operational_contract"

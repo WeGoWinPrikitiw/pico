@@ -11,7 +11,7 @@ import Text "mo:base/Text";
 
 actor Operational {
   
-  // Admin principal (your minter account)
+  // Admin principal (minter account)
   private let ADMIN_PRINCIPAL = "igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe";
   
   // ICRC-1 Ledger canister
@@ -101,12 +101,12 @@ actor Operational {
     transactionCounter
   };
   
-  // Original greeting function
-  public query func greet(name : Text) : async Text {
-    return "Hello My Name is: " # name # "!";
+  // Healthy check function
+  public query func is_contract_healthy() : async Text {
+    return "Healthy bray! don't worry about it.";
   };
   
-  // TOKEN -> ICRC1 Functions
+  // Operational Token -> ICRC1 Functions
   
   // Top up user with PiCO tokens
   public func top_up(userPrincipal : Text, amount : Nat) : async Result.Result<{transaction_id: Nat; message: Text}, Text> {
