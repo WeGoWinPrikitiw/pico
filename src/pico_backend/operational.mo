@@ -88,9 +88,7 @@ actor Operational {
   
   // Storage for operational transactions
   private var transactions = HashMap.HashMap<Nat, OperationalTransaction>(10, Nat.equal, func(n: Nat) : Nat32 { 
-    // Custom hash function for Nat values - use wrapping arithmetic to avoid trap
-    let hash = Nat32.fromNat(n % 4294967295); // 2^32 - 1
-    hash
+    Nat32.fromNat(n % 4294967295) 
   });
   
   // Registry of all users who have received tokens
@@ -162,6 +160,18 @@ actor Operational {
     #GenericError : { error_code : Nat; message : Text };
   };
 
+  // ICRC-2 allowance query arguments
+  public type AllowanceArgs = {
+    account : Account;
+    spender : Account;
+  };
+
+  // ICRC-2 allowance response
+  public type AllowanceResponse = {
+    allowance : Nat;
+    expires_at : ?Nat64;
+  };
+
   // ICRC-1 + ICRC-2 Ledger interface
   let ledger = actor(LEDGER_CANISTER_ID) : actor {
     icrc1_transfer : (TransferArgs) -> async TransferResult;
@@ -171,7 +181,7 @@ actor Operational {
     icrc1_decimals : () -> async Nat8;
     icrc2_approve : (ApproveArgs) -> async ApproveResult;
     icrc2_transfer_from : (TransferFromArgs) -> async TransferFromResult;
-    icrc2_allowance : (Account, Account) -> async Nat;
+    icrc2_allowance : (AllowanceArgs) -> async AllowanceResponse;
   };
   
   // Helper functions
@@ -356,23 +366,24 @@ const result = await ledger.approve({
   // Check how much a user has approved this contract to spend
   public func check_allowance(userPrincipal : Text) : async Result.Result<Nat, Text> {
     try {
+      // Use EXACT same pattern as buy_nft
       let userPrincipalObj = Principal.fromText(userPrincipal);
       let contractPrincipalObj = Principal.fromText(MINTER_PRINCIPAL);
       
-      let userAccount : Account = {
-        owner = userPrincipalObj;
-        subaccount = null;
+      // Create accounts exactly like buy_nft
+      let userAccount = { owner = userPrincipalObj; subaccount = null : ?[Nat8] };
+      let contractAccount = { owner = contractPrincipalObj; subaccount = null : ?[Nat8] };
+      
+      // Try direct ledger call
+      let allowanceArgs = {
+        account = userAccount;
+        spender = contractAccount;
       };
       
-      let contractAccount : Account = {
-        owner = contractPrincipalObj;
-        subaccount = null;
-      };
-      
-      let allowance = await ledger.icrc2_allowance(userAccount, contractAccount);
-      #ok(unitsToPico(allowance))
+      let allowanceResponse = await ledger.icrc2_allowance(allowanceArgs);
+      #ok(allowanceResponse.allowance / 100_000_000)
     } catch (e) {
-      #err("Error checking allowance: " # Error.message(e))
+      #err("❌ Error checking allowance: " # Error.message(e))
     }
   };
   
@@ -389,11 +400,13 @@ const result = await ledger.approve({
   // OPERATIONAL Functions
   
   // Buy NFT action - uses ICRC-2 approval to transfer tokens from buyer to seller
-  public func buy_nft(buyerPrincipal : Text, sellerPrincipal : Text, nftId : Nat, price : Nat, forumId : ?Nat) : async Result.Result<{transaction_id: Nat; message: Text}, Text> {
-    let transactionId = generateTransactionId();
-    let currentTime = Time.now();
+  public func buy_nft(buyerPrincipal : Text, sellerPrincipal : Text, nftId : Nat, price : Nat) : async Result.Result<{transaction_id: Nat; message: Text}, Text> {
+    // Generate transaction ID first
+    let transactionId = transactionCounter + 1;
+    transactionCounter := transactionId;
     
     // Create transaction record
+    let currentTime = Time.now();
     let transaction : OperationalTransaction = {
       transaction_id = transactionId;
       from_principal_id = buyerPrincipal;
@@ -402,118 +415,82 @@ const result = await ledger.approve({
       price_token = price;
       created_at = currentTime;
       nft_id = ?nftId;
-      forum_id = forumId;
+      forum_id = null;
     };
     
+    // Store transaction as pending
     transactions.put(transactionId, transaction);
     
     try {
+      // Convert text to principals
       let buyerPrincipalObj = Principal.fromText(buyerPrincipal);
       let sellerPrincipalObj = Principal.fromText(sellerPrincipal);
-      let contractPrincipalObj = Principal.fromText(MINTER_PRINCIPAL);
       
-      let buyerAccount : Account = {
-        owner = buyerPrincipalObj;
-        subaccount = null;
-      };
+      // Create accounts
+      let buyerAccount = { owner = buyerPrincipalObj; subaccount = null : ?[Nat8] };
+      let sellerAccount = { owner = sellerPrincipalObj; subaccount = null : ?[Nat8] };
       
-      let sellerAccount : Account = {
-        owner = sellerPrincipalObj;
-        subaccount = null;
-      };
+      // Convert price to units (PiCO has 8 decimals)
+      let amountInUnits = price * 100_000_000;
       
-      let contractAccount : Account = {
-        owner = contractPrincipalObj;
-        subaccount = null;
-      };
-      
-      let requiredAmount = picoToUnits(price);
-      
-      // Check if buyer has enough balance
-      let buyerBalance = await ledger.icrc1_balance_of(buyerAccount);
-      if (buyerBalance < requiredAmount) {
-        let updatedTransaction = {
-          transaction with
-          status = #Failed;
-        };
-        transactions.put(transactionId, updatedTransaction);
-        return #err("❌ Insufficient funds. Required: " # Nat.toText(price) # " PiCO, Available: " # Nat.toText(unitsToPico(buyerBalance)) # " PiCO");
-      };
-      
-      // Check if buyer has approved this contract to spend their tokens
-      let allowance = await ledger.icrc2_allowance(buyerAccount, contractAccount);
-      if (allowance < requiredAmount) {
-        let updatedTransaction = {
-          transaction with
-          status = #Failed;
-        };
-        transactions.put(transactionId, updatedTransaction);
-        return #err("❌ Insufficient allowance. Required: " # Nat.toText(price) # " PiCO, Approved: " # Nat.toText(unitsToPico(allowance)) # " PiCO. Please approve the contract first.");
-      };
-      
-      // Use ICRC-2 transfer_from to move tokens from buyer to seller
-      let transferFromArgs : TransferFromArgs = {
-        spender_subaccount = null;
+      // Perform ICRC-2 transfer_from
+      let transferArgs = {
+        spender_subaccount = null : ?[Nat8];
         from = buyerAccount;
         to = sellerAccount;
-        amount = requiredAmount;
-        fee = null;
-        memo = null;
-        created_at_time = null;
+        amount = amountInUnits;
+        fee = null : ?Nat;
+        memo = null : ?[Nat8];
+        created_at_time = null : ?Nat64;
       };
       
-      let result = await ledger.icrc2_transfer_from(transferFromArgs);
+      let transferResult = await ledger.icrc2_transfer_from(transferArgs);
       
-      switch (result) {
+      switch (transferResult) {
         case (#Ok(blockIndex)) {
-          let updatedTransaction = {
+          // Update transaction to completed
+          let completedTransaction = {
             transaction with
             status = #Completed;
           };
-          transactions.put(transactionId, updatedTransaction);
+          transactions.put(transactionId, completedTransaction);
           
-          // Add seller to token holders if not already
+          // Add both buyer and seller to token holders
+          tokenHolders.put(buyerPrincipal, true);
           tokenHolders.put(sellerPrincipal, true);
           
           #ok({
             transaction_id = transactionId;
-            message = "🎉 NFT #" # Nat.toText(nftId) # " purchased! Transferred " # Nat.toText(price) # " PiCO from " # buyerPrincipal # " to " # sellerPrincipal # ". Block: " # Nat.toText(blockIndex);
+            message = "🎉 NFT #" # Nat.toText(nftId) # " purchased! " # Nat.toText(price) # " PiCO transferred from buyer to seller. Block: " # Nat.toText(blockIndex);
           })
         };
         case (#Err(error)) {
-          let updatedTransaction = {
+          // Update transaction to failed
+          let failedTransaction = {
             transaction with
             status = #Failed;
           };
-          transactions.put(transactionId, updatedTransaction);
+          transactions.put(transactionId, failedTransaction);
           
           let errorMsg = switch (error) {
-            case (#InsufficientFunds({ balance })) {
-              "❌ Buyer insufficient funds. Available: " # Nat.toText(unitsToPico(balance)) # " PiCO"
-            };
-            case (#InsufficientAllowance({ allowance })) {
-              "❌ Insufficient allowance. Approved: " # Nat.toText(unitsToPico(allowance)) # " PiCO"
-            };
-            case (#BadFee({ expected_fee })) {
-              "❌ Bad fee. Expected: " # Nat.toText(expected_fee)
-            };
-            case (#GenericError({ error_code; message })) {
-              "❌ Transfer error " # Nat.toText(error_code) # ": " # message
-            };
-            case (_) {
-              "❌ NFT purchase failed during token transfer"
-            };
+            case (#InsufficientFunds({ balance })) { "❌ Insufficient funds. Balance: " # Nat.toText(balance / 100_000_000) # " PiCO" };
+            case (#InsufficientAllowance({ allowance })) { "❌ Insufficient allowance. Approved: " # Nat.toText(allowance / 100_000_000) # " PiCO" };
+            case (#BadFee({ expected_fee })) { "❌ Bad fee. Expected: " # Nat.toText(expected_fee) };
+            case (#GenericError({ error_code; message })) { "❌ Error " # Nat.toText(error_code) # ": " # message };
+            case (_) { "❌ Transfer failed" };
           };
           #err(errorMsg)
         };
       }
     } catch (e) {
-      let updatedTransaction = {
+      // Update transaction to failed
+      let failedTransaction = {
         transaction with
         status = #Failed;
       };
-      transactions.put(transactionId, updatedTransaction);
-      #err("❌ Error processing NFT purchase: " # Error.message(e))
+      transactions.put(transactionId, failedTransaction);
+      
+      #err("❌ Purchase failed: " # Error.message(e))
     }
   };
   
@@ -628,9 +605,54 @@ const result = await ledger.approve({
     }
   };
   
+  // ADMIN FUNCTIONS
+  
+  // Check if user is admin (you can modify this logic)
   public query func isUserAdmin(userPrincipal : Text) : async Bool {
-    userPrincipal == ADMIN_PRINCIPAL
+    // For now, the minter principal is admin
+    userPrincipal == MINTER_PRINCIPAL
   };
+  
+  // Get all token holders with their balances (admin only)
+  public func getAllTokenHoldersWithBalances() : async Result.Result<[(Text, Nat)], Text> {
+    try {
+      let holders = Iter.toArray(tokenHolders.keys());
+      var holdersWithBalances : [(Text, Nat)] = [];
+      
+      for (holder in holders.vals()) {
+        let holderPrincipalObj = Principal.fromText(holder);
+        let holderAccount = { owner = holderPrincipalObj; subaccount = null : ?[Nat8] };
+        let balance = await ledger.icrc1_balance_of(holderAccount);
+        let balanceInPico = balance / 100_000_000; // Convert to PiCO
+        holdersWithBalances := Array.append(holdersWithBalances, [(holder, balanceInPico)]);
+      };
+      
+      #ok(holdersWithBalances)
+    } catch (e) {
+      #err("❌ Error getting balances: " # Error.message(e))
+    }
+  };
+  
+  // Get total supply info
+  public func getTotalSupplyInfo() : async Result.Result<{holders_count: Nat; minter_balance: Nat}, Text> {
+    try {
+      let holdersCount = tokenHolders.size();
+      
+      // Get minter balance as a proxy for total distributed tokens
+      let minterPrincipalObj = Principal.fromText(MINTER_PRINCIPAL);
+      let minterAccount = { owner = minterPrincipalObj; subaccount = null : ?[Nat8] };
+      let minterBalance = await ledger.icrc1_balance_of(minterAccount);
+      
+      #ok({
+        holders_count = holdersCount;
+        minter_balance = minterBalance / 100_000_000; // Convert to PiCO
+      })
+    } catch (e) {
+      #err("❌ Error getting supply info: " # Error.message(e))
+    }
+  };
+  
+  // UTILITY FUNCTIONS (restored)
   
   public query func getLedgerCanisterId() : async Text {
     LEDGER_CANISTER_ID
@@ -644,7 +666,7 @@ const result = await ledger.approve({
   public query func getMinterInfo() : async {minter_principal: Text; admin_principal: Text; ledger_canister: Text} {
     {
       minter_principal = MINTER_PRINCIPAL;
-      admin_principal = ADMIN_PRINCIPAL;
+      admin_principal = MINTER_PRINCIPAL; // Using minter as admin for now
       ledger_canister = LEDGER_CANISTER_ID;
     }
   };
@@ -654,7 +676,7 @@ const result = await ledger.approve({
     Iter.toArray(tokenHolders.keys())
   };
   
-  // Add a user to token holders registry (for manual additions)
+  // Add a user to token holders registry
   public func addTokenHolder(principalId : Text) : async Bool {
     tokenHolders.put(principalId, true);
     true

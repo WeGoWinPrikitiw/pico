@@ -5,8 +5,8 @@ import { Principal } from '@dfinity/principal';
 import { IcrcLedgerCanister } from '@dfinity/ledger-icrc';
 
 // Import the generated declarations
-import { operational_contract } from 'declarations/operational_contract';
-import { token_contract } from 'declarations/token_contract';
+import { operational_contract, idlFactory as operationalIdlFactory } from 'declarations/operational_contract';
+import { token_contract, idlFactory as tokenIdlFactory } from 'declarations/token_contract';
 
 function App() {
   // Authentication state
@@ -41,6 +41,7 @@ function App() {
   const [nftSeller, setNftSeller] = useState('');
   const [nftId, setNftId] = useState('');
   const [nftPrice, setNftPrice] = useState('');
+  const [selfTopUpAmount, setSelfTopUpAmount] = useState('');
 
   // Initialize authentication
   useEffect(() => {
@@ -69,55 +70,94 @@ function App() {
     setPrincipal(principal.toString());
     setIsAuthenticated(true);
 
-    // Create authenticated agent
-    const agent = new HttpAgent({
-      identity,
-      host: process.env.DFX_NETWORK === 'local' ? 'http://localhost:4943' : 'https://ic0.app'
-    });
+    try {
+      // Create authenticated agent
+      const isLocal = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const host = isLocal ? 'http://localhost:4943' : 'https://ic0.app';
+      
+      console.log('Creating agent with host:', host, 'isLocal:', isLocal);
+      
+      const agent = new HttpAgent({
+        identity,
+        host
+      });
 
-    if (process.env.DFX_NETWORK === 'local') {
-      await agent.fetchRootKey();
+      if (isLocal) {
+        await agent.fetchRootKey();
+        console.log('Root key fetched for local development');
+      }
+
+      setAgent(agent);
+
+      // Create authenticated actors with fallback canister IDs
+      const operationalCanisterId = operational_contract.canisterId || 'u6s2n-gx777-77774-qaaba-cai';
+      const tokenCanisterId = token_contract.canisterId || 'umunu-kh777-77774-qaaca-cai';
+      const ledgerCanisterId = 'uxrrr-q7777-77774-qaaaq-cai';
+      
+      console.log('Creating actors with canister IDs:');
+      console.log('operational_contract:', operationalCanisterId);
+      console.log('token_contract:', tokenCanisterId);
+      console.log('ledger_canister:', ledgerCanisterId);
+      console.log('IDL factories available:');
+      console.log('operational_contract.idlFactory:', !!operational_contract?.idlFactory);
+      console.log('token_contract.idlFactory:', !!token_contract?.idlFactory);
+      console.log('operationalIdlFactory:', !!operationalIdlFactory);
+      console.log('tokenIdlFactory:', !!tokenIdlFactory);
+      
+      // Use directly imported IDL factories as fallback
+      const operationalIdl = operational_contract?.idlFactory || operationalIdlFactory;
+      const tokenIdl = token_contract?.idlFactory || tokenIdlFactory;
+      
+      const operationalActor = Actor.createActor(operationalIdl, {
+        agent,
+        canisterId: operationalCanisterId
+      });
+
+      const tokenActor = Actor.createActor(tokenIdl, {
+        agent,
+        canisterId: tokenCanisterId
+      });
+
+      // Create ICRC ledger actor
+      const ledgerActor = IcrcLedgerCanister.create({
+        agent,
+        canisterId: ledgerCanisterId
+      });
+
+      console.log('Actors created successfully');
+      console.log('operationalActor:', !!operationalActor);
+      console.log('tokenActor:', !!tokenActor);
+      console.log('ledgerActor:', !!ledgerActor);
+
+      setOperationalActor(operationalActor);
+      setTokenActor(tokenActor);
+      setLedgerActor(ledgerActor);
+
+      // Load initial data
+      await loadUserData(operationalActor, tokenActor, principal.toString());
+      
+      setMessage('✅ Successfully authenticated and connected to contracts!');
+    } catch (error) {
+      console.error('Error during authentication setup:', error);
+      setMessage(`❌ Failed to connect to contracts: ${error.message}`);
     }
-
-    setAgent(agent);
-
-    // Create authenticated actors
-    const operationalActor = Actor.createActor(operational_contract.idlFactory, {
-      agent,
-      canisterId: operational_contract.canisterId
-    });
-
-    const tokenActor = Actor.createActor(token_contract.idlFactory, {
-      agent,
-      canisterId: token_contract.canisterId
-    });
-
-    // Create ICRC ledger actor
-    const ledgerActor = IcrcLedgerCanister.create({
-      agent,
-      canisterId: 'uxrrr-q7777-77774-qaaaq-cai' // ICRC-1 ledger canister
-    });
-
-    setOperationalActor(operationalActor);
-    setTokenActor(tokenActor);
-    setLedgerActor(ledgerActor);
-
-    // Load initial data
-    await loadUserData(operationalActor, tokenActor, principal.toString());
-    
-    setMessage('✅ Successfully authenticated and connected to contracts!');
   };
 
   const login = async () => {
     try {
       setLoading(true);
+      const isLocal = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const identityProvider = isLocal 
+        ? `http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:4943`
+        : 'https://identity.ic0.app';
+      
+      console.log('Logging in with identity provider:', identityProvider);
+      
       await authClient.login({
-        identityProvider: process.env.DFX_NETWORK === 'local' 
-          ? `http://localhost:4943/?canisterId=rdmx6-jaaaa-aaaaa-aaadq-cai`
-          : 'https://identity.ic0.app',
+        identityProvider,
         onSuccess: () => handleAuthenticated(authClient),
         onError: (error) => {
-          console.error('Login failed:', error);
+          console.error('Login faileds:', error);
           setMessage('Login failed');
           setLoading(false);
         }
@@ -142,35 +182,79 @@ function App() {
   };
 
   const loadUserData = async (opActor, tokActor, userPrincipal) => {
+    console.log('Starting to load user data for:', userPrincipal);
+    
+    // Load token info
     try {
-      // Load token info
       const tokenInfo = await tokActor.get_token_info();
       setTokenInfo(tokenInfo);
+      console.log('✅ Token info loaded');
+    } catch (error) {
+      console.error('❌ Failed to load token info:', error);
+    }
 
-      // Load user balance
+    // Load user balance
+    try {
       const balanceResult = await opActor.getUserBalance(userPrincipal);
       if (balanceResult.ok !== undefined) {
         setUserBalance(balanceResult.ok);
+        console.log('✅ User balance loaded:', balanceResult.ok);
       }
+    } catch (error) {
+      console.error('❌ Failed to load user balance:', error);
+      setUserBalance(0);
+    }
 
-      // Load user allowance
+    // Load user allowance (skip if it causes IDL errors)
+    try {
+      console.log('Attempting to load allowance...');
       const allowanceResult = await opActor.check_allowance(userPrincipal);
       if (allowanceResult.ok !== undefined) {
         setAllowance(allowanceResult.ok);
+        console.log('✅ Allowance loaded:', allowanceResult.ok);
       }
-
-      // Load user transactions
-      const userTxs = await opActor.getUserTransactions(userPrincipal);
-      setTransactions(userTxs);
-
-      // Load token holders
-      const holders = await tokActor.get_all_token_holders();
-      setTokenHolders(holders);
-
     } catch (error) {
-      console.error('Error loading user data:', error);
-      setMessage('Error loading user data: ' + error.message);
+      console.error('❌ Failed to load allowance (IDL issue), skipping:', error.message);
+      setAllowance(0); // Set default value
     }
+
+    // Load user transactions
+    try {
+      console.log('Loading transactions for user:', userPrincipal);
+      const userTxs = await opActor.getUserTransactions(userPrincipal);
+      console.log('✅ Loaded transactions:', userTxs);
+      setTransactions(userTxs);
+    } catch (error) {
+      console.error('❌ Failed to load transactions:', error);
+      setTransactions([]);
+    }
+
+    // Load token holders with balances from operational contract
+    try {
+      console.log('Loading token holders...');
+      const holdersWithBalances = await opActor.getAllTokenHoldersWithBalances();
+      if (holdersWithBalances.ok) {
+        setTokenHolders(holdersWithBalances.ok);
+        console.log('✅ Token holders with balances loaded:', holdersWithBalances.ok.length);
+      } else {
+        // Fallback to simple holder list
+        const holders = await opActor.getAllTokenHolders();
+        setTokenHolders(holders.map(holder => [holder, 0])); // Format as [principal, balance] pairs
+        console.log('✅ Token holders loaded (simple list):', holders.length);
+      }
+    } catch (error) {
+      console.log('❌ Failed to load holders with balances, using simple list:', error);
+      try {
+        const holders = await opActor.getAllTokenHolders();
+        setTokenHolders(holders.map(holder => [holder, 0])); // Format as [principal, balance] pairs
+        console.log('✅ Token holders loaded (fallback):', holders.length);
+      } catch (fallbackError) {
+        console.error('❌ Failed to load token holders completely:', fallbackError);
+        setTokenHolders([]);
+      }
+    }
+
+    console.log('✅ User data loading completed');
   };
 
   const refreshData = async () => {
@@ -215,31 +299,47 @@ function App() {
       
       // Get approval info from operational contract
       const approvalInfo = await operationalActor.get_approval_info(parseInt(approveAmount));
+      console.log('Approval info:', approvalInfo);
       
       // Approve the operational contract to spend tokens
-      const result = await ledgerActor.approve({
+      const approveArgs = {
         spender: {
           owner: Principal.fromText(approvalInfo.spender_principal),
           subaccount: []
         },
-        amount: BigInt(approvalInfo.amount_in_units),
-        fee: [],
-        memo: [],
-        from_subaccount: [],
-        created_at_time: [],
-        expected_allowance: []
-      });
+        amount: BigInt(approvalInfo.amount_in_units)
+        // Remove optional fields to let the library handle defaults
+      };
+      
+      console.log('Approve args:', approveArgs);
+      
+      const result = await ledgerActor.approve(approveArgs);
+      console.log('Approval result:', result);
 
-      if (result.Ok !== undefined) {
+      // The @dfinity/ledger-icrc library returns the block number directly on success
+      if (typeof result === 'bigint' || typeof result === 'number') {
+        setMessage(`✅ Approved ${approveAmount} PiCO for contract to spend. Block: ${result}`);
+        await refreshData();
+      } else if (result.Ok !== undefined) {
         setMessage(`✅ Approved ${approveAmount} PiCO for contract to spend. Block: ${result.Ok}`);
         await refreshData();
       } else {
-        setMessage(`❌ Approval failed: ${JSON.stringify(result.Err)}`);
+        setMessage(`❌ Approval failed: ${JSON.stringify(result)}`);
       }
     } catch (error) {
+      console.error('Approval error:', error);
       setMessage(`❌ Approval failed: ${error.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const validatePrincipal = (principalStr) => {
+    try {
+      Principal.fromText(principalStr);
+      return true;
+    } catch (error) {
+      return false;
     }
   };
 
@@ -249,15 +349,49 @@ function App() {
       return;
     }
 
+    // Validate principal IDs
+    if (!validatePrincipal(nftBuyer)) {
+      setMessage('❌ Invalid buyer principal ID format');
+      return;
+    }
+
+    if (!validatePrincipal(nftSeller)) {
+      setMessage('❌ Invalid seller principal ID format');
+      return;
+    }
+
     try {
       setLoading(true);
+      
+      // Convert and validate parameters
+      const nftIdNum = parseInt(nftId);
+      const nftPriceNum = parseInt(nftPrice);
+      
+      if (isNaN(nftIdNum) || nftIdNum < 0) {
+        setMessage('❌ Invalid NFT ID - must be a positive number');
+        return;
+      }
+      
+      if (isNaN(nftPriceNum) || nftPriceNum <= 0) {
+        setMessage('❌ Invalid price - must be a positive number');
+        return;
+      }
+      
+      console.log('Buying NFT with parameters:');
+      console.log('Buyers:', nftBuyer, typeof nftBuyer);
+      console.log('Seller:', nftSeller, typeof nftSeller);
+      console.log('NFT ID:', BigInt(nftIdNum), typeof BigInt(nftIdNum));
+      console.log('Price:', BigInt(nftPriceNum), typeof BigInt(nftPriceNum));
+      console.log('Forum ID (optional):', [], typeof []);
+      
       const result = await operationalActor.buy_nft(
         nftBuyer,
         nftSeller,
-        parseInt(nftId),
-        parseInt(nftPrice),
-        []
+        BigInt(nftIdNum), // Convert to BigInt for Candid Nat
+        BigInt(nftPriceNum) // Convert to BigInt for Candid Nat
       );
+
+      console.log('Buy NFT result:', result);
 
       if (result.ok) {
         setMessage(`✅ ${result.ok.message}`);
@@ -266,6 +400,7 @@ function App() {
         setMessage(`❌ ${result.err}`);
       }
     } catch (error) {
+      console.error('Buy NFT error:', error);
       setMessage(`❌ NFT purchase failed: ${error.message}`);
     } finally {
       setLoading(false);
@@ -280,6 +415,62 @@ function App() {
       setMessage(`Balance for ${principalId}: ${result.balance_pico} PiCO`);
     } catch (error) {
       setMessage(`❌ Balance check failed: ${error.message}`);
+    }
+  };
+
+  const copyPrincipalToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(principal);
+      setMessage('✅ Principal ID copied to clipboard!');
+    } catch (error) {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = principal;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setMessage('✅ Principal ID copied to clipboard!');
+    }
+  };
+
+  const selfTopUp = async () => {
+    console.log('selfTopUp called with amount:', selfTopUpAmount);
+    console.log('operationalActor exists:', !!operationalActor);
+    console.log('principal:', principal);
+    
+    if (!operationalActor) {
+      setMessage('❌ Contract not connected. Please refresh the page.');
+      return;
+    }
+    
+    if (!selfTopUpAmount || selfTopUpAmount.trim() === '' || Number(selfTopUpAmount) <= 0) {
+      setMessage('❌ Please enter a valid top-up amount greater than 0');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setMessage('🔄 Processing top-up...');
+      
+      const amount = parseInt(selfTopUpAmount);
+      console.log('Calling top_up with:', principal, amount);
+      
+      const result = await operationalActor.top_up(principal, amount);
+      console.log('Top-up result:', result);
+      
+      if (result.ok) {
+        setMessage(`✅ ${result.ok.message}`);
+        await refreshData();
+        setSelfTopUpAmount('');
+      } else {
+        setMessage(`❌ ${result.err}`);
+      }
+    } catch (error) {
+      console.error('Top-up error:', error);
+      setMessage(`❌ Top-up failed: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -310,7 +501,13 @@ function App() {
           <img src="/logo2.svg" alt="PiCO Logo" className="logo-small" />
           <h1>PiCO NFT Marketplace</h1>
           <div className="user-info">
-            <span>Principal: {principal.slice(0, 10)}...</span>
+            <div className="principal-section">
+              <span className="principal-label">Principal ID:</span>
+              <span className="principal-id">{principal}</span>
+              <button onClick={copyPrincipalToClipboard} className="copy-btn" title="Copy Principal ID">
+                📋
+              </button>
+            </div>
             <button onClick={logout} className="logout-btn">Logout</button>
           </div>
         </div>
@@ -352,6 +549,16 @@ function App() {
             
             <div className="info-cards">
               <div className="card">
+                <h3>Your Principal ID</h3>
+                <div className="principal-display">
+                  <p className="principal-text">{principal}</p>
+                  <button onClick={copyPrincipalToClipboard} className="copy-principal-btn">
+                    Copy Principal ID
+                  </button>
+                </div>
+              </div>
+
+              <div className="card">
                 <h3>Token Info</h3>
                 {tokenInfo && (
                   <div>
@@ -369,6 +576,30 @@ function App() {
                 <p className="balance">{userBalance.toLocaleString()} PiCO</p>
                 <p>Approved for Contract: {allowance.toLocaleString()} PiCO</p>
               </div>
+            </div>
+
+            <div className="action-section">
+              <h3>Quick Top-Up</h3>
+              <p>Add PiCO tokens to your balance</p>
+              <div className="input-group">
+                <input
+                  type="number"
+                  value={selfTopUpAmount}
+                  onChange={(e) => {
+                    console.log('Input changed to:', e.target.value);
+                    setSelfTopUpAmount(e.target.value);
+                  }}
+                  placeholder="Amount to top-up"
+                  min="1"
+                  step="1"
+                />
+                <button onClick={selfTopUp} disabled={loading} className="topup-btn">
+                  {loading ? 'Processing...' : 'Top-Up'}
+                </button>
+              </div>
+              <p style={{fontSize: '0.8rem', color: '#666', marginTop: '0.5rem'}}>
+                Current amount: "{selfTopUpAmount}" (length: {selfTopUpAmount.length})
+              </p>
             </div>
 
             <div className="action-section">
@@ -399,6 +630,35 @@ function App() {
             
             <div className="action-section">
               <h3>Buy NFT</h3>
+              
+              <div style={{marginBottom: '1rem'}}>
+                <button 
+                  onClick={() => {
+                    setNftBuyer(principal);
+                    setNftSeller(principal);
+                    setNftId('1');
+                    setNftPrice('1');
+                  }}
+                  className="copy-btn"
+                  style={{marginRight: '0.5rem'}}
+                >
+                  Fill Test Data
+                </button>
+                <button 
+                  onClick={() => setNftBuyer(principal)}
+                  className="copy-btn"
+                  style={{marginRight: '0.5rem'}}
+                >
+                  Use My Principal as Buyer
+                </button>
+                <button 
+                  onClick={() => setNftSeller(principal)}
+                  className="copy-btn"
+                >
+                  Use My Principal as Seller
+                </button>
+              </div>
+              
               <div className="form-grid">
                 <input
                   type="text"
@@ -425,6 +685,12 @@ function App() {
                   placeholder="Price in PiCO"
                 />
               </div>
+              
+              <div style={{fontSize: '0.8rem', color: '#666', margin: '0.5rem 0'}}>
+                <p>Buyer valid: {nftBuyer ? (validatePrincipal(nftBuyer) ? '✅' : '❌') : '⚪'}</p>
+                <p>Seller valid: {nftSeller ? (validatePrincipal(nftSeller) ? '✅' : '❌') : '⚪'}</p>
+              </div>
+              
               <button onClick={buyNFT} disabled={loading} className="buy-btn">
                 {loading ? 'Processing...' : 'Buy NFT'}
               </button>
@@ -487,17 +753,26 @@ function App() {
             <div className="token-holders-section">
               <h3>Token Holders ({tokenHolders.length})</h3>
               <div className="holders-list">
-                {tokenHolders.map((holder, index) => (
-                  <div key={index} className="holder-item">
-                    <span>{holder}</span>
-                    <button 
-                      onClick={() => checkBalance(holder)}
-                      className="check-balance-btn"
-                    >
-                      Check Balance
-                    </button>
-                  </div>
-                ))}
+                {tokenHolders.map((holderData, index) => {
+                  // Handle both formats: [principal, balance] or just principal
+                  const holder = Array.isArray(holderData) ? holderData[0] : holderData;
+                  const balance = Array.isArray(holderData) ? holderData[1] : 'Unknown';
+                  
+                  return (
+                    <div key={index} className="holder-item">
+                      <div className="holder-info">
+                        <span className="holder-principal">{holder.slice(0, 20)}...</span>
+                        <span className="holder-balance">{balance} PiCO</span>
+                      </div>
+                      <button 
+                        onClick={() => checkBalance(holder)}
+                        className="check-balance-btn"
+                      >
+                        Refresh Balance
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
