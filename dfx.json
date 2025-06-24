@@ -12,6 +12,10 @@
       "main": "src/pico_backend/operational_v2.mo",
       "type": "motoko"
     },
+    "operational_v3": {
+      "main": "src/pico_backend/operational_v3.mo",
+      "type": "motoko"
+    },
     "token_contract": {
       "main": "src/pico_backend/token.mo",
       "type": "motoko"
