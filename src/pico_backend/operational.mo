@@ -106,13 +106,72 @@ actor Operational {
   // Call initialization
   initializeAdmin();
   
-  // ICRC-1 Ledger interface
+  // ICRC-2 types for approval system
+  public type ApproveArgs = {
+    from_subaccount : ?[Nat8];
+    spender : Account;
+    amount : Nat;
+    expected_allowance : ?Nat;
+    expires_at : ?Nat64;
+    fee : ?Nat;
+    memo : ?[Nat8];
+    created_at_time : ?Nat64;
+  };
+  
+  public type ApproveResult = {
+    #Ok : Nat;
+    #Err : ApproveError;
+  };
+  
+  public type ApproveError = {
+    #BadFee : { expected_fee : Nat };
+    #InsufficientFunds : { balance : Nat };
+    #AllowanceChanged : { current_allowance : Nat };
+    #Expired : { ledger_time : Nat64 };
+    #TooOld;
+    #CreatedInFuture : { ledger_time : Nat64 };
+    #Duplicate : { duplicate_of : Nat };
+    #TemporarilyUnavailable;
+    #GenericError : { error_code : Nat; message : Text };
+  };
+  
+  public type TransferFromArgs = {
+    spender_subaccount : ?[Nat8];
+    from : Account;
+    to : Account;
+    amount : Nat;
+    fee : ?Nat;
+    memo : ?[Nat8];
+    created_at_time : ?Nat64;
+  };
+  
+  public type TransferFromResult = {
+    #Ok : Nat;
+    #Err : TransferFromError;
+  };
+  
+  public type TransferFromError = {
+    #BadFee : { expected_fee : Nat };
+    #BadBurn : { min_burn_amount : Nat };
+    #InsufficientFunds : { balance : Nat };
+    #InsufficientAllowance : { allowance : Nat };
+    #TooOld;
+    #CreatedInFuture : { ledger_time : Nat64 };
+    #Duplicate : { duplicate_of : Nat };
+    #TemporarilyUnavailable;
+    #GenericError : { error_code : Nat; message : Text };
+  };
+
+  // ICRC-1 + ICRC-2 Ledger interface
   let ledger = actor(LEDGER_CANISTER_ID) : actor {
     icrc1_transfer : (TransferArgs) -> async TransferResult;
     icrc1_balance_of : (Account) -> async Nat;
     icrc1_name : () -> async Text;
     icrc1_symbol : () -> async Text;
     icrc1_decimals : () -> async Nat8;
+    icrc2_approve : (ApproveArgs) -> async ApproveResult;
+    icrc2_transfer_from : (TransferFromArgs) -> async TransferFromResult;
+    icrc2_allowance : (Account, Account) -> async Nat;
   };
   
   // Helper functions
@@ -246,9 +305,90 @@ actor Operational {
     }
   };
   
+  // APPROVAL Functions (ICRC-2)
+  
+  // IMPORTANT: This function will NOT work as expected!
+  // ICRC-2 approve must be called by the token OWNER, not through a proxy contract
+  // The caller's identity gets lost when our contract calls the ledger
+  // 
+  // RECOMMENDED: Use @dfinity/ledger-icrc library in frontend instead
+  public func approve_contract_BROKEN(_ : Nat) : async Result.Result<Text, Text> {
+    #err("❌ This function doesn't work! Use frontend to call ledger directly. Call get_approval_info() for details.")
+  };
+  
+  // Get info for frontend to approve ledger directly (CORRECT WAY)
+  public query func get_approval_info(amount : Nat) : async {
+    ledger_canister_id: Text;
+    spender_principal: Text;
+    amount_in_units: Nat;
+    javascript_example: Text;
+  } {
+    let amountInUnits = picoToUnits(amount);
+    {
+      ledger_canister_id = LEDGER_CANISTER_ID;
+      spender_principal = MINTER_PRINCIPAL;
+      amount_in_units = amountInUnits;
+      javascript_example = "
+// Use @dfinity/ledger-icrc library:
+import { IcrcLedgerCanister } from '@dfinity/ledger-icrc';
+
+const ledger = IcrcLedgerCanister.create({
+  agent: authenticatedAgent,
+  canisterId: '" # LEDGER_CANISTER_ID # "'
+});
+
+const result = await ledger.approve({
+  spender: {
+    owner: Principal.fromText('" # MINTER_PRINCIPAL # "'),
+    subaccount: []
+  },
+  amount: " # Nat.toText(amountInUnits) # "n
+});";
+    }
+  };
+  
+  // Get approval command for CLI users (alternative method)
+  public query func get_approval_command(amount : Nat) : async Text {
+    let amountInUnits = picoToUnits(amount);
+    "dfx canister call icrc1_ledger_canister icrc2_approve '(record { spender = record { owner = principal \"" # MINTER_PRINCIPAL # "\" }; amount = " # Nat.toText(amountInUnits) # " })'"
+  };
+  
+  // Check how much a user has approved this contract to spend
+  public func check_allowance(userPrincipal : Text) : async Result.Result<Nat, Text> {
+    try {
+      let userPrincipalObj = Principal.fromText(userPrincipal);
+      let contractPrincipalObj = Principal.fromText(MINTER_PRINCIPAL);
+      
+      let userAccount : Account = {
+        owner = userPrincipalObj;
+        subaccount = null;
+      };
+      
+      let contractAccount : Account = {
+        owner = contractPrincipalObj;
+        subaccount = null;
+      };
+      
+      let allowance = await ledger.icrc2_allowance(userAccount, contractAccount);
+      #ok(unitsToPico(allowance))
+    } catch (e) {
+      #err("Error checking allowance: " # Error.message(e))
+    }
+  };
+  
+  // Check current user's allowance (for frontend - uses caller's principal)
+  public func check_my_allowance(caller : Principal) : async Result.Result<Nat, Text> {
+    try {
+      let callerText = Principal.toText(caller);
+      await check_allowance(callerText)
+    } catch (e) {
+      #err("Error checking your allowance: " # Error.message(e))
+    }
+  };
+
   // OPERATIONAL Functions
   
-  // Buy NFT action - transfers tokens from buyer to seller
+  // Buy NFT action - uses ICRC-2 approval to transfer tokens from buyer to seller
   public func buy_nft(buyerPrincipal : Text, sellerPrincipal : Text, nftId : Nat, price : Nat, forumId : ?Nat) : async Result.Result<{transaction_id: Nat; message: Text}, Text> {
     let transactionId = generateTransactionId();
     let currentTime = Time.now();
@@ -268,16 +408,29 @@ actor Operational {
     transactions.put(transactionId, transaction);
     
     try {
-      // First check if buyer has enough balance
       let buyerPrincipalObj = Principal.fromText(buyerPrincipal);
+      let sellerPrincipalObj = Principal.fromText(sellerPrincipal);
+      let contractPrincipalObj = Principal.fromText(MINTER_PRINCIPAL);
+      
       let buyerAccount : Account = {
         owner = buyerPrincipalObj;
         subaccount = null;
       };
       
-      let buyerBalance = await ledger.icrc1_balance_of(buyerAccount);
+      let sellerAccount : Account = {
+        owner = sellerPrincipalObj;
+        subaccount = null;
+      };
+      
+      let contractAccount : Account = {
+        owner = contractPrincipalObj;
+        subaccount = null;
+      };
+      
       let requiredAmount = picoToUnits(price);
       
+      // Check if buyer has enough balance
+      let buyerBalance = await ledger.icrc1_balance_of(buyerAccount);
       if (buyerBalance < requiredAmount) {
         let updatedTransaction = {
           transaction with
@@ -287,23 +440,29 @@ actor Operational {
         return #err("❌ Insufficient funds. Required: " # Nat.toText(price) # " PiCO, Available: " # Nat.toText(unitsToPico(buyerBalance)) # " PiCO");
       };
       
-      // Transfer tokens from buyer to seller
-      let sellerPrincipalObj = Principal.fromText(sellerPrincipal);
-      let transferArgs : TransferArgs = {
-        from_subaccount = null;
-        to = {
-          owner = sellerPrincipalObj;
-          subaccount = null;
+      // Check if buyer has approved this contract to spend their tokens
+      let allowance = await ledger.icrc2_allowance(buyerAccount, contractAccount);
+      if (allowance < requiredAmount) {
+        let updatedTransaction = {
+          transaction with
+          status = #Failed;
         };
+        transactions.put(transactionId, updatedTransaction);
+        return #err("❌ Insufficient allowance. Required: " # Nat.toText(price) # " PiCO, Approved: " # Nat.toText(unitsToPico(allowance)) # " PiCO. Please approve the contract first.");
+      };
+      
+      // Use ICRC-2 transfer_from to move tokens from buyer to seller
+      let transferFromArgs : TransferFromArgs = {
+        spender_subaccount = null;
+        from = buyerAccount;
+        to = sellerAccount;
         amount = requiredAmount;
         fee = null;
-        memo = null; // Could add NFT purchase memo later
+        memo = null;
         created_at_time = null;
       };
       
-      // Note: This transfer needs to be authorized by the buyer
-      // For now, this is a placeholder - in real implementation, buyer would need to approve this
-      let result = await ledger.icrc1_transfer(transferArgs);
+      let result = await ledger.icrc2_transfer_from(transferFromArgs);
       
       switch (result) {
         case (#Ok(blockIndex)) {
@@ -313,9 +472,12 @@ actor Operational {
           };
           transactions.put(transactionId, updatedTransaction);
           
+          // Add seller to token holders if not already
+          tokenHolders.put(sellerPrincipal, true);
+          
           #ok({
             transaction_id = transactionId;
-            message = "✅ NFT purchase completed! Transferred " # Nat.toText(price) # " PiCO from " # buyerPrincipal # " to " # sellerPrincipal # " for NFT #" # Nat.toText(nftId) # ". Block: " # Nat.toText(blockIndex);
+            message = "🎉 NFT #" # Nat.toText(nftId) # " purchased! Transferred " # Nat.toText(price) # " PiCO from " # buyerPrincipal # " to " # sellerPrincipal # ". Block: " # Nat.toText(blockIndex);
           })
         };
         case (#Err(error)) {
@@ -327,7 +489,10 @@ actor Operational {
           
           let errorMsg = switch (error) {
             case (#InsufficientFunds({ balance })) {
-              "❌ Insufficient funds for transfer. Available: " # Nat.toText(unitsToPico(balance)) # " PiCO"
+              "❌ Buyer insufficient funds. Available: " # Nat.toText(unitsToPico(balance)) # " PiCO"
+            };
+            case (#InsufficientAllowance({ allowance })) {
+              "❌ Insufficient allowance. Approved: " # Nat.toText(unitsToPico(allowance)) # " PiCO"
             };
             case (#BadFee({ expected_fee })) {
               "❌ Bad fee. Expected: " # Nat.toText(expected_fee)
