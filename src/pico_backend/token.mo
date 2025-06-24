@@ -1,4 +1,8 @@
-// PICO Token Created by ICRC-1 Ledger
+/*
+ * PICO Token Created by ICRC-1 Ledger.
+ * This token is simplified version of the icrc-1 ledger 
+ * with some enhancement feature for our product development purposes.
+*/
 
 import Principal "mo:base/Principal";
 import Array "mo:base/Array";
@@ -49,10 +53,15 @@ actor Token {
   };
 
 
-
   // Convert smallest units to PiCO (8 decimals)
   private func unitsToPico(units : Nat) : Nat {
     units / 100_000_000 // 8 decimals
+  };
+
+  // Check all registered token holders from operational contract
+  private func check_all_registered_balances() : async [BalanceInfo] {
+    let registered_holders = await operational.getAllTokenHolders();
+    await check_multiple_balances(registered_holders)
   };
 
   public func get_token_info() : async TokenInfo {
@@ -88,8 +97,6 @@ actor Token {
     }
   };
 
-
-
   // Get multiple balances at once
   public func check_multiple_balances(principals : [Text]) : async [BalanceInfo] {
     var results : [BalanceInfo] = [];
@@ -101,14 +108,6 @@ actor Token {
     
     results
   };
-
-  // Check all registered token holders from operational contract
-  public func check_all_registered_balances() : async [BalanceInfo] {
-    let registered_holders = await operational.getAllTokenHolders();
-    await check_multiple_balances(registered_holders)
-  };
-  
-
 
   // Filter out accounts with zero balance (only registered holders with tokens)
   public func check_active_token_holders() : async [BalanceInfo] {
