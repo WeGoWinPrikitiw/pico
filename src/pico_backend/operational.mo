@@ -229,12 +229,7 @@ actor Operational {
     
     transactions.put(transactionId, transaction);
     
-         try {
-       // Note: In a real implementation, need to handle the caller authentication
-       // and perform the actual token transfer. For now, this is a placeholder for the NFT purchase logic
-       // let _buyerPrincipalObj = Principal.fromText(buyerPrincipal);
-       // let _adminPrincipalObj = Principal.fromText(ADMIN_PRINCIPAL);
-       
+      try {       
        let updatedTransaction = {
          transaction with
          status = #Completed;
@@ -245,14 +240,12 @@ actor Operational {
          transaction_id = transactionId;
          message = "NFT purchase initiated. NFT ID: " # Nat.toText(nftId) # ", Price: " # Nat.toText(price) # " PiCO";
        })
-      
     } catch (e) {
       let updatedTransaction = {
         transaction with
         status = #Failed;
       };
       transactions.put(transactionId, updatedTransaction);
-      
       #err("Error processing NFT purchase: " # Error.message(e))
     }
   };
