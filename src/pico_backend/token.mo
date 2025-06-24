@@ -88,18 +88,27 @@ actor Token {
 
   // Check balance of a specific principal
   public func check_balance(principal_id : Text) : async BalanceInfo {
-    let principal_obj = Principal.fromText(principal_id);
-    let account : Account = {
-      owner = principal_obj;
-      subaccount = null;
-    };
-    
-    let balance = await ledger.icrc1_balance_of(account);
-    
-    {
-      principal_id = principal_id;
-      balance = balance;
-      balance_pico = unitsToPico(balance);
+    try {
+      let principal_obj = Principal.fromText(principal_id);
+      let account : Account = {
+        owner = principal_obj;
+        subaccount = null;
+      };
+      
+      let balance = await ledger.icrc1_balance_of(account);
+      
+      {
+        principal_id = principal_id;
+        balance = balance;
+        balance_pico = unitsToPico(balance);
+      }
+    } catch (_) {
+      // Return zero balance for invalid principals
+      {
+        principal_id = principal_id;
+        balance = 0;
+        balance_pico = 0;
+      }
     }
   };
 
