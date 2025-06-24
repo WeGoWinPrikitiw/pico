@@ -78,6 +78,17 @@ actor Operational {
     hash
   });
   
+  // Registry of all users who have received tokens
+  private var tokenHolders = HashMap.HashMap<Text, Bool>(10, Text.equal, Text.hash);
+  
+  // Initialize admin as a token holder (since they have initial supply)
+  private func initializeAdmin() {
+    tokenHolders.put(ADMIN_PRINCIPAL, true);
+  };
+  
+  // Call initialization
+  initializeAdmin();
+  
   // ICRC-1 Ledger interface
   let ledger = actor(LEDGER_CANISTER_ID) : actor {
     icrc1_transfer : (TransferArgs) -> async TransferResult;
@@ -151,6 +162,9 @@ actor Operational {
             status = #Completed;
           };
           transactions.put(transactionId, updatedTransaction);
+          
+          // Add user to token holders registry
+          tokenHolders.put(userPrincipal, true);
           
           #ok({
             transaction_id = transactionId;
@@ -306,5 +320,29 @@ actor Operational {
   
   public query func getTransactionCount() : async Nat {
     transactionCounter
+  };
+  
+  // Get all registered token holders
+  public query func getAllTokenHolders() : async [Text] {
+    Iter.toArray(tokenHolders.keys())
+  };
+  
+  // Add a user to token holders registry (for manual additions)
+  public func addTokenHolder(principalId : Text) : async Bool {
+    tokenHolders.put(principalId, true);
+    true
+  };
+  
+  // Check if user is registered as token holder
+  public query func isTokenHolder(principalId : Text) : async Bool {
+    switch (tokenHolders.get(principalId)) {
+      case (?exists) { exists };
+      case null { false };
+    }
+  };
+  
+  // Get count of registered token holders
+  public query func getTokenHoldersCount() : async Nat {
+    tokenHolders.size()
   };
 }
