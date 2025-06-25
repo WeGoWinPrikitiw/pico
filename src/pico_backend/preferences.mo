@@ -18,7 +18,6 @@ actor Preferences {
   // User preferences type
   public type UserPreferences = {
     principal_id : Text;
-    description : Text;
     preferences : [Text];
     created_at : Int;
     updated_at : Int;
@@ -27,7 +26,6 @@ actor Preferences {
   // Create/Update preferences input type
   public type PreferencesInput = {
     principal_id : Text;
-    description : Text;
     preferences : [Text];
   };
   
@@ -50,7 +48,6 @@ actor Preferences {
         let currentTime = getCurrentTime();
         let newPreferences : UserPreferences = {
           principal_id = input.principal_id;
-          description = input.description;
           preferences = input.preferences;
           created_at = currentTime;
           updated_at = currentTime;
@@ -93,7 +90,6 @@ actor Preferences {
       case (?existing) {
         let updatedPreferences : UserPreferences = {
           principal_id = input.principal_id;
-          description = input.description;
           preferences = input.preferences;
           created_at = existing.created_at; // Keep original creation time
           updated_at = getCurrentTime(); // Update the timestamp
@@ -165,24 +161,7 @@ actor Preferences {
     }
   };
   
-  // UPDATE - Update only description
-  public func updateDescription(principal_id : Text, newDescription : Text) : async Result.Result<UserPreferences, Text> {
-    switch (userPreferences.get(principal_id)) {
-      case (?existing) {
-        let updatedPreferences : UserPreferences = {
-          existing with
-          description = newDescription;
-          updated_at = getCurrentTime();
-        };
-        
-        userPreferences.put(principal_id, updatedPreferences);
-        #ok(updatedPreferences)
-      };
-      case null {
-        #err("❌ No preferences found for user: " # principal_id)
-      };
-    }
-  };
+
   
   // DELETE - Remove user preferences completely
   public func deletePreferences(principal_id : Text) : async Result.Result<Text, Text> {
@@ -213,15 +192,12 @@ actor Preferences {
   public query func searchPreferences(keyword : Text) : async [UserPreferences] {
     let allPrefs = Iter.toArray(userPreferences.vals());
     Array.filter<UserPreferences>(allPrefs, func(userPref) {
-      // Search in description
-      let descriptionMatch = Text.contains(userPref.description, #text keyword);
-      
       // Search in preferences array
       let prefsMatch = Array.find<Text>(userPref.preferences, func(pref) {
         Text.contains(pref, #text keyword)
       });
       
-      descriptionMatch or (prefsMatch != null)
+      prefsMatch != null
     })
   };
   
