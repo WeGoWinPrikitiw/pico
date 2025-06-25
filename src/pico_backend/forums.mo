@@ -307,40 +307,6 @@ actor Forums {
     }
   };
   
-  // LIKE FORUM (Deprecated - use toggleLikeForum instead)
-  public func likeForum(forumId : Nat, userId : Text) : async Result.Result<Forum, Text> {
-    let result = await toggleLikeForum(forumId, userId);
-    switch (result) {
-      case (#ok({forum; action})) {
-        if (action == "liked") {
-          #ok(forum)
-        } else {
-          #err("❌ User has already liked this forum. Use toggleLikeForum for better UX.")
-        }
-      };
-      case (#err(error)) {
-        #err(error)
-      };
-    }
-  };
-  
-  // UNLIKE FORUM (Deprecated - use toggleLikeForum instead)
-  public func unlikeForum(forumId : Nat, userId : Text) : async Result.Result<Forum, Text> {
-    let result = await toggleLikeForum(forumId, userId);
-    switch (result) {
-      case (#ok({forum; action})) {
-        if (action == "unliked") {
-          #ok(forum)
-        } else {
-          #err("❌ User has not liked this forum. Use toggleLikeForum for better UX.")
-        }
-      };
-      case (#err(error)) {
-        #err(error)
-      };
-    }
-  };
-  
   // ADD COMMENT TO FORUM
   public func commentForum(forumId : Nat, userId : Text, commentText : Text) : async Result.Result<Forum, Text> {
     switch (forums.get(forumId)) {
