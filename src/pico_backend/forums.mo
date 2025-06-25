@@ -30,6 +30,8 @@ actor Forums {
     nft_id : Nat;
     principal_id : Text;
     nft_name : Text; // For search functionality
+    title : Text;
+    description : Text;
     likes : Nat;
     comments : [Comment];
     is_sold : Bool;
@@ -42,18 +44,24 @@ actor Forums {
     nft_id : Nat;
     principal_id : Text;
     nft_name : Text;
+    title : Text;
+    description : Text;
   };
   
   // Update forum input type
   public type UpdateForumInput = {
     forum_id : Nat;
     nft_name : ?Text; // Optional update
+    title : ?Text; // Optional update
+    description : ?Text; // Optional update
     is_sold : ?Bool; // Optional update
   };
   
   // Search/Filter criteria
   public type SearchCriteria = {
     nft_name : ?Text;
+    title : ?Text;
+    description : ?Text;
     nft_id : ?Nat;
     principal_id : ?Text;
     is_sold : ?Bool;
@@ -118,6 +126,8 @@ actor Forums {
       nft_id = input.nft_id;
       principal_id = input.principal_id;
       nft_name = input.nft_name;
+      title = input.title;
+      description = input.description;
       likes = 0;
       comments = [];
       is_sold = false;
@@ -151,6 +161,22 @@ actor Forums {
       switch (criteria.nft_name) {
         case (?name) {
           matches := matches and Text.contains(forum.nft_name, #text name);
+        };
+        case null { /* No filter */ };
+      };
+      
+      // Filter by title
+      switch (criteria.title) {
+        case (?title) {
+          matches := matches and Text.contains(forum.title, #text title);
+        };
+        case null { /* No filter */ };
+      };
+      
+      // Filter by description
+      switch (criteria.description) {
+        case (?desc) {
+          matches := matches and Text.contains(forum.description, #text desc);
         };
         case null { /* No filter */ };
       };
@@ -353,6 +379,28 @@ actor Forums {
             updatedForum := {
               updatedForum with
               nft_name = newName;
+            };
+          };
+          case null { /* No update */ };
+        };
+        
+        // Update title if provided
+        switch (input.title) {
+          case (?newTitle) {
+            updatedForum := {
+              updatedForum with
+              title = newTitle;
+            };
+          };
+          case null { /* No update */ };
+        };
+        
+        // Update description if provided
+        switch (input.description) {
+          case (?newDescription) {
+            updatedForum := {
+              updatedForum with
+              description = newDescription;
             };
           };
           case null { /* No update */ };
