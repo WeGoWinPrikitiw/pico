@@ -1,14 +1,26 @@
 import { Button } from "@/components/ui";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/auth-context";
+import { useNavigate } from "react-router-dom";
 
 export function HeroSection() {
     const [mounted, setMounted] = useState(false);
-    const { login, loading } = useAuth();
+    const { login, loading, isAuthenticated } = useAuth();
+    const navigate = useNavigate();
 
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    const handleGetStarted = async () => {
+        if (isAuthenticated) {
+            // Already authenticated, go to explore
+            navigate('/explore');
+        } else {
+            // Start authentication process
+            await login();
+        }
+    };
 
     const floatingElements = [
         {
@@ -69,25 +81,37 @@ export function HeroSection() {
                     The ultimate art marketplace where creativity meets the blockchain. Mint your artwork as NFTs, showcase it, and connect with collectors <span className="font-black">who truly get it.</span>
                 </p>
 
-                {/* CTA Button */}
-                <Button
-                    onClick={login}
-                    disabled={loading}
-                    className="flex text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl w-auto h-auto px-4 py-2 sm:px-6 sm:py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 justify-center items-center gap-2 rounded-full border border-white/37 bg-[rgba(255,158,251,0.23)] text-white hover:bg-[rgba(255,158,251,0.35)] transition-all duration-300 hover:scale-105 backdrop-blur-sm min-w-max disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {loading ? (
-                        <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span className="hidden sm:inline">Connecting...</span>
-                            <span className="sm:hidden">Connecting...</span>
-                        </>
-                    ) : (
-                        <>
-                            <span className="hidden sm:inline">Explore Now for Free</span>
-                            <span className="sm:hidden">Explore Now</span>
-                        </>
-                    )}
-                </Button>
+                {/* CTA Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4 items-center">
+                    <Button
+                        onClick={handleGetStarted}
+                        disabled={loading}
+                        className="flex text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl w-auto h-auto px-4 py-2 sm:px-6 sm:py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 justify-center items-center gap-2 rounded-full border border-white/37 bg-[rgba(255,158,251,0.23)] text-white hover:bg-[rgba(255,158,251,0.35)] transition-all duration-300 hover:scale-105 backdrop-blur-sm min-w-max disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loading ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <span className="hidden sm:inline">Connecting...</span>
+                                <span className="sm:hidden">Connecting...</span>
+                            </>
+                        ) : (
+                            <>
+                                <span className="hidden sm:inline">
+                                    {isAuthenticated ? 'Enter App' : 'Start Creating for Free'}
+                                </span>
+                                <span className="sm:hidden">
+                                    {isAuthenticated ? 'Enter App' : 'Get Started'}
+                                </span>
+                            </>
+                        )}
+                    </Button>
+
+                </div>
+                {!isAuthenticated && (
+                    <p className="text-xs sm:text-sm text-[#E7D8FFA8] opacity-75">
+                        No wallet? No problem! Connect and start exploring instantly.
+                    </p>
+                )}
             </div>
 
             {/* Floating Animation Elements */}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { Button, Input, LoadingSpinner } from '@/components/ui';
+import { BackendIntegrationDemo } from '@/components/demo/backend-integration-demo';
 
 export function OperationalDashboard() {
     const {
@@ -162,6 +163,9 @@ export function OperationalDashboard() {
                                 <div className="text-sm text-gray-600">
                                     <p>{tokenInfo.name} ({tokenInfo.symbol})</p>
                                     <p>Decimals: {tokenInfo.decimals}</p>
+                                    {tokenInfo.totalSupply && tokenInfo.totalSupply > 0n ? (
+                                        <p>Total Supply: {tokenInfo.totalSupply.toString()}</p>
+                                    ) : null}
                                 </div>
                             ) : (
                                 <p className="text-sm text-gray-500">Loading...</p>
@@ -193,14 +197,15 @@ export function OperationalDashboard() {
                                 { id: 'wallet', label: 'Wallet Operations' },
                                 { id: 'nft', label: 'NFT Marketplace' },
                                 { id: 'admin', label: 'Admin Functions' },
-                                { id: 'transactions', label: 'Transaction History' }
+                                { id: 'transactions', label: 'Transaction History' },
+                                { id: 'demo', label: 'Backend Demo' }
                             ].map((tab) => (
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
-                                            ? 'border-blue-500 text-blue-600'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        ? 'border-blue-500 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                 >
                                     {tab.label}
@@ -381,6 +386,12 @@ export function OperationalDashboard() {
                             ) : (
                                 <p className="text-gray-500 text-center py-8">No transactions found</p>
                             )}
+                        </div>
+                    )}
+
+                    {activeTab === 'demo' && (
+                        <div className="lg:col-span-2">
+                            <BackendIntegrationDemo />
                         </div>
                     )}
                 </div>

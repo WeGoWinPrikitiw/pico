@@ -115,6 +115,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }, []);
 
     const initAuth = async () => {
+        setLoading(true);
         try {
             const client = await AuthClient.create();
             setAuthClient(client);
@@ -125,10 +126,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (error) {
             console.error('Auth initialization failed:', error);
             setMessage('Authentication initialization failed');
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleAuthenticated = async (client: AuthClient) => {
+        setLoading(true);
         const identity = client.getIdentity();
         const principal = identity.getPrincipal();
 
@@ -198,6 +202,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (error) {
             console.error('Error during authentication setup:', error);
             setMessage(`❌ Failed to connect to contracts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -248,30 +254,79 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         // Load token info
         try {
-            const tokenInfo = await tokActor.get_token_info();
-            setTokenInfo(tokenInfo);
-            console.log('✅ Token info loaded');
+            let info: TokenInfo | null = null;
+
+            // Prefer dedicated token canister if method exists
+            if (tokActor && typeof tokActor.get_token_info === 'function') {
+                info = await tokActor.get_token_info();
+            }
+
+            // Fallback: derive token info directly from the ICRC-1 ledger canister
+            if (!info && ledgerActor) {
+                const [name, symbol, decimals, totalSupply] = await Promise.all([
+                    ledgerActor.icrc1_name(),
+                    ledgerActor.icrc1_symbol(),
+                    ledgerActor.icrc1_decimals(),
+                    ledgerActor.icrc1_total_supply()
+                ]);
+
+                info = {
+                    name,
+                    symbol,
+                    decimals: Number(decimals),
+                    totalSupply: totalSupply as bigint
+                } as TokenInfo;
+            }
+
+            if (info) {
+                setTokenInfo(info);
+                console.log('✅ Token info loaded');
+            } else {
+                console.warn('⚠️ Unable to load token info from any source');
+            }
         } catch (error) {
             console.error('❌ Failed to load token info:', error);
         }
 
         // Load user balance
         try {
-            const balanceResult = await opActor.getUserBalance(userPrincipal);
-            if (balanceResult.ok !== undefined) {
-                setUserBalance(balanceResult.ok);
-                console.log('✅ User balance loaded:', balanceResult.ok);
+            let balance: number | null = null;
+
+            if (opActor && typeof opActor.getUserBalance === 'function') {
+                const balanceResult = await opActor.getUserBalance(userPrincipal);
+                if (balanceResult.ok !== undefined) {
+                    balance = balanceResult.ok;
+                }
+            }
+
+            // Fallback: query balance directly from ledger
+            if (balance === null && ledgerActor) {
+                const account = {
+                    owner: Principal.fromText(userPrincipal),
+                    subaccount: [] as number[]
+                };
+                const rawBal: bigint = await ledgerActor.icrc1_balance_of(account);
+                balance = Number(rawBal / BigInt(100000000)); // convert from 8-dec units
+            }
+
+            if (balance !== null) {
+                setUserBalance(balance);
+                console.log('✅ User balance loaded:', balance);
+            } else {
+                console.warn('⚠️ Unable to load user balance from any source');
             }
         } catch (error) {
             console.error('❌ Failed to load user balance:', error);
         }
 
-        // Load user transactions
+        // Load user transactions (no easy fallback if method missing)
         try {
-            const transactionsResult = await opActor.getUserTransactions(userPrincipal);
-            if (transactionsResult.ok !== undefined) {
-                setTransactions(transactionsResult.ok);
-                console.log('✅ User transactions loaded');
+            if (opActor && typeof opActor.getUserTransactions === 'function') {
+                const transactionsResult = await opActor.getUserTransactions(userPrincipal);
+                if (transactionsResult.ok !== undefined) {
+                    setTransactions(transactionsResult.ok);
+                    console.log('✅ User transactions loaded');
+                }
             }
         } catch (error) {
             console.error('❌ Failed to load user transactions:', error);

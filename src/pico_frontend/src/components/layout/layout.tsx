@@ -18,4 +18,4 @@ export function Layout({ children }: LayoutProps) {
       {!isAuthenticated && <Footer />}
     </div>
   );
-} 
+}   
