@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Button,
@@ -74,7 +74,7 @@ interface NFTItem {
 }
 
 export function ProfilePage() {
-  const { principal, userBalance, copyPrincipalToClipboard } = useAuth();
+  const { principal, userBalance, copyPrincipalToClipboard, getNftsForUser } = useAuth();
   const [activeTab, setActiveTab] = useState("created");
   const [isEditing, setIsEditing] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -98,94 +98,53 @@ export function ProfilePage() {
     },
   });
 
-  const [createdNFTs] = useState<NFTItem[]>([
-    {
-      id: "1",
-      title: "Cosmic Sunrise #001",
-      image: "/landing/landing-hero.png",
-      price: "25.5",
-      likes: 142,
-      isForSale: true,
-      views: 2841,
-      creator: userProfile.username,
-    },
-    {
-      id: "2",
-      title: "Digital Dreams",
-      image: "/brand/pico-glow.png",
-      price: "18.2",
-      likes: 89,
-      isForSale: false,
-      views: 1567,
-      creator: userProfile.username,
-    },
-    {
-      id: "3",
-      title: "Abstract Flow",
-      image: "/brand/pico-logo.svg",
-      price: "32.1",
-      likes: 256,
-      isForSale: true,
-      views: 3420,
-      creator: userProfile.username,
-    },
-    {
-      id: "4",
-      title: "Neon Pulse",
-      image: "/landing/landing-hero.png",
-      price: "45.0",
-      likes: 189,
-      isForSale: true,
-      views: 2156,
-      creator: userProfile.username,
-    },
-  ]);
-
-  const [collectedNFTs] = useState<NFTItem[]>([
-    {
-      id: "4",
-      title: "Neon City",
-      image: "/brand/pico-glow.png",
-      price: "12.8",
-      likes: 67,
-      isForSale: false,
-      views: 1245,
-      creator: "crypto_artist",
-    },
-    {
-      id: "5",
-      title: "Virtual Realm",
-      image: "/landing/landing-hero.png",
-      price: "28.0",
-      likes: 134,
-      isForSale: false,
-      views: 1876,
-      creator: "meta_creator",
-    },
-  ]);
-
-  const [wishlistNFTs] = useState<NFTItem[]>([
+  const [createdNFTs, setCreatedNFTs] = useState<NFTItem[]>([]);
+  const [collectedNFTs, setCollectedNFTs] = useState<NFTItem[]>([]);
+  const [wishlistNFTs, setWishlistNFTs] = useState<NFTItem[]>([
     {
       id: "6",
       title: "Future Landscape",
-      image: "/landing/landing-hero.png",
-      price: "45.0",
-      likes: 289,
-      isForSale: true,
-      views: 4123,
-      creator: "future_artist",
-    },
-    {
-      id: "7",
-      title: "Quantum Dreams",
-      image: "/brand/pico-glow.png",
-      price: "67.5",
-      likes: 425,
-      isForSale: true,
-      views: 5234,
-      creator: "quantum_dev",
+      image: "/brand/pico-logo.svg",
+      price: "55.0",
+      likes: 312,
+      isForSale: false,
+      views: 4500,
+      creator: "visionary_art",
     },
   ]);
+
+  useEffect(() => {
+    const loadUserNfts = async () => {
+      if (principal) {
+        try {
+          const nfts = await getNftsForUser.execute(principal);
+          const formattedNfts: NFTItem[] = nfts.map((nft: any) => ({
+            id: nft.nft_id.toString(),
+            title: nft.name,
+            image: nft.image_url,
+            price: (Number(nft.price) / 100000000).toFixed(2),
+            likes: Math.floor(Math.random() * 100), // Mock likes
+            isForSale: true, // Assuming all are for sale for now
+            views: Math.floor(Math.random() * 1000), // Mock views
+            creator: nft.owner.toText(),
+          }));
+
+          // For now, created and collected are the same
+          setCreatedNFTs(formattedNfts);
+          setCollectedNFTs(formattedNfts);
+
+          setUserProfile((prev) => ({
+            ...prev,
+            totalNFTs: formattedNfts.length,
+          }));
+        } catch (error) {
+          console.error("Failed to fetch user NFTs:", error);
+        }
+      }
+    };
+
+    loadUserNfts();
+  }, [principal, getNftsForUser]);
 
   const tabs = [
     {

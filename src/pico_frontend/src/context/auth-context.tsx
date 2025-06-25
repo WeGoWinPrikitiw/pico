@@ -20,6 +20,15 @@ import {
   token_contract,
   idlFactory as tokenIdlFactory,
 } from "declarations/token_contract";
+import {
+  pico_backend as nft_canister,
+  idlFactory as nftIdlFactory,
+  _SERVICE as NftService,
+  NFTInfo,
+  Trait,
+  AIImageResult,
+} from "declarations/pico_backend";
+import { ActorSubclass } from "@dfinity/agent";
 
 interface TokenInfo {
   name: string;
@@ -39,6 +48,44 @@ interface Transaction {
   forum_id?: number;
 }
 
+// Frontend-specific types
+export interface Post {
+  id: string;
+  title: string;
+  description: string;
+  creator: {
+    name: string;
+    avatar: string;
+    verified: boolean;
+  };
+  creatorPrincipal: string;
+  price: string;
+  image: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  isLiked: boolean;
+  createdAt: string;
+  tags: string[];
+}
+
+export interface PostDetail extends Post {
+  views: number;
+  isBookmarked: boolean;
+  tokenId: string;
+  contractAddress: string;
+  blockchain: string;
+  royalty: number;
+  category: string;
+  properties: {
+    trait_type: string;
+    value: string;
+  }[];
+  history: any[]; // Define history type if needed
+  isForSale: boolean;
+  saleEnds: string;
+}
+
 interface AuthContextType {
   // Authentication state
   isAuthenticated: boolean;
@@ -51,6 +98,7 @@ interface AuthContextType {
   operationalActor: any;
   tokenActor: any;
   ledgerActor: any;
+  nftActor: ActorSubclass<NftService> | null;
 
   // UI state - now using useAsync
   loading: boolean;
@@ -135,6 +183,49 @@ interface AuthContextType {
     data: any | null;
     reset: () => void;
   };
+  generateAiImage: {
+    execute: (prompt: string) => Promise<AIImageResult>;
+    loading: boolean;
+    error: string | null;
+    data: AIImageResult | null;
+    reset: () => void;
+  };
+  mintNft: {
+    execute: (nftData: {
+      to: string;
+      name: string;
+      description: string;
+      price: bigint;
+      image_url: string;
+      is_ai_generated: boolean;
+      traits: Trait[];
+    }) => Promise<bigint>;
+    loading: boolean;
+    error: string | null;
+    data: bigint | null;
+    reset: () => void;
+  };
+  listAllNfts: {
+    execute: () => Promise<Post[]>;
+    loading: boolean;
+    error: string | null;
+    data: Post[] | null;
+    reset: () => void;
+  };
+  getNftsForUser: {
+    execute: (principal: string) => Promise<Post[]>;
+    loading: boolean;
+    error: string | null;
+    data: Post[] | null;
+    reset: () => void;
+  };
+  getNft: {
+    execute: (id: string) => Promise<PostDetail | null>;
+    loading: boolean;
+    error: string | null;
+    data: PostDetail | null;
+    reset: () => void;
+  };
 
   // Utility functions
   copyPrincipalToClipboard: () => Promise<void>;
@@ -167,6 +258,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [operationalActor, setOperationalActor] = useState<any>(null);
   const [tokenActor, setTokenActor] = useState<any>(null);
   const [ledgerActor, setLedgerActor] = useState<any>(null);
+  const [nftActor, setNftActor] = useState<ActorSubclass<NftService> | null>(
+    null,
+  );
 
   // UI state
   const [loading, setLoading] = useState(false);
@@ -178,6 +272,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [allowance, setAllowance] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [tokenHolders, setTokenHolders] = useState<any[]>([]);
+
+  const mapNftToPost = (nft: NFTInfo): Post => ({
+    id: nft.nft_id.toString(),
+    title: nft.name,
+    description: nft.description,
+    creator: {
+      name: `${nft.owner.toText().slice(0, 8)}...`,
+      avatar: `https://avatar.vercel.sh/${nft.owner.toText()}.png`,
+      verified: Math.random() > 0.5,
+    },
+    creatorPrincipal: nft.owner.toText(),
+    price: (Number(nft.price) / 100000000).toFixed(2),
+    image: nft.image_url,
+    likes: Math.floor(Math.random() * 400) + 50,
+    comments: Math.floor(Math.random() * 30) + 5,
+    shares: Math.floor(Math.random() * 20) + 2,
+    isLiked: Math.random() > 0.7,
+    createdAt: new Date(
+      Number(nft.created_at / 1000000n)
+    ).toLocaleDateString(),
+    tags: nft.traits.map((trait: Trait) => trait.value),
+  });
+
+  const mapNftToPostDetail = (nft: NFTInfo): PostDetail => ({
+    ...mapNftToPost(nft),
+    views: 0,
+    isBookmarked: false,
+    tokenId: nft.nft_id.toString(),
+    contractAddress: (nft_canister as any)?.canisterId || "vizcg-th777-77774-qaaea-cai",
+    blockchain: "Internet Computer",
+    royalty: 0,
+    category: "NFT",
+    properties: nft.traits.map((trait: Trait) => ({
+      trait_type: trait.trait_type,
+      value: trait.value,
+    })),
+    history: [],
+    isForSale: true,
+    saleEnds: "",
+  });
 
   // Helper function to create authenticated agent and actors
   const createAuthenticatedActors = async (client: AuthClient) => {
@@ -216,16 +350,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const tokenCanisterId =
       (token_contract as any)?.canisterId || "ucwa4-rx777-77774-qaada-cai";
     const ledgerCanisterId = "u6s2n-gx777-77774-qaaba-cai";
+    const nftCanisterId =
+      (nft_canister as any)?.canisterId || "vizcg-th777-77774-qaaea-cai";
 
     console.log("Creating actors with canister IDs:");
     console.log("operational_contract:", operationalCanisterId);
     console.log("token_contract:", tokenCanisterId);
     console.log("ledger_canister:", ledgerCanisterId);
+    console.log("nft_canister:", nftCanisterId);
 
     // Use directly imported IDL factories as fallback
     const operationalIdl =
       (operational_contract as any)?.idlFactory || operationalIdlFactory;
     const tokenIdl = (token_contract as any)?.idlFactory || tokenIdlFactory;
+    const nftIdl = (nft_canister as any)?.idlFactory || nftIdlFactory;
 
     const operationalActor = Actor.createActor(operationalIdl, {
       agent,
@@ -236,6 +374,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       agent,
       canisterId: tokenCanisterId,
     });
+
+    const nftActor = Actor.createActor(nftIdl, {
+      agent,
+      canisterId: nftCanisterId,
+    }) as ActorSubclass<NftService>;
 
     // Create ICRC ledger actor
     const ledgerActor = IcrcLedgerCanister.create({
@@ -248,8 +391,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setOperationalActor(operationalActor);
     setTokenActor(tokenActor);
     setLedgerActor(ledgerActor);
+    setNftActor(nftActor);
 
-    return { operationalActor, tokenActor, ledgerActor, principalStr: principal.toString() };
+    return {
+      operationalActor,
+      tokenActor,
+      ledgerActor,
+      nftActor,
+      principalStr: principal.toString(),
+    };
   };
 
   // Load user data helper function
@@ -420,6 +570,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setOperationalActor(null);
     setTokenActor(null);
     setLedgerActor(null);
+    setNftActor(null);
     setMessage("Logged out successfully");
   }, [authClient]);
 
@@ -591,6 +742,87 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [operationalActor, validatePrincipal]);
 
+  const generateAiImageAsync = useAsync(async (prompt: string) => {
+    if (!nftActor) {
+      throw new Error("NFT actor not available");
+    }
+    const res = await nftActor.generate_ai_image(prompt);
+    if ("err" in res) {
+      throw new Error(res.err);
+    }
+    return res.ok;
+  }, [nftActor]);
+
+  const mintNftAsync = useAsync(
+    async (nftData: {
+      to: string;
+      name: string;
+      description: string;
+      price: bigint;
+      image_url: string;
+      is_ai_generated: boolean;
+      traits: Trait[];
+    }) => {
+      if (!nftActor) {
+        throw new Error("NFT actor not available");
+      }
+      const toPrincipal = Principal.fromText(nftData.to);
+      const res = await nftActor.mint_nft(
+        toPrincipal,
+        nftData.name,
+        nftData.description,
+        nftData.price,
+        nftData.image_url,
+        nftData.is_ai_generated,
+        nftData.traits,
+      );
+      if ("err" in res) {
+        throw new Error(res.err);
+      }
+      return res.ok;
+    },
+    [nftActor],
+  );
+
+  const listAllNftsAsync = useAsync(async () => {
+    if (!nftActor) {
+      throw new Error("NFT actor not available");
+    }
+    const res = await nftActor.list_all_nfts();
+    return res.map(mapNftToPost);
+  }, [nftActor]);
+
+  const getNftsForUserAsync = useAsync(async (principal: string) => {
+    if (!nftActor) {
+      throw new Error("NFT actor not available");
+    }
+    const userPrincipal = Principal.fromText(principal);
+    const account = { owner: userPrincipal, subaccount: [] as [] | [Uint8Array] };
+    const tokenIds = await nftActor.icrc7_tokens_of(account, [] as [], [] as []);
+    const nftsPromises = tokenIds.map(async (id: bigint) => {
+      const nftResult = await nftActor.get_nft(id);
+      if (nftResult.length > 0) {
+        return nftResult[0];
+      }
+      return null;
+    });
+
+    const nfts = await Promise.all(nftsPromises);
+
+    return nfts.filter((nft): nft is NFTInfo => nft !== null).map(mapNftToPost);
+  }, [nftActor]);
+
+  const getNftAsync = useAsync(async (id: string) => {
+    if (!nftActor) {
+      throw new Error("NFT actor not available");
+    }
+    const nftResult = await nftActor.get_nft(BigInt(id));
+    if (nftResult.length > 0 && nftResult[0]) {
+      return mapNftToPostDetail(nftResult[0]);
+    }
+    return null;
+  }, [nftActor]);
+
   const copyPrincipalToClipboard = async () => {
     if (principal) {
       try {
@@ -615,6 +847,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     operationalActor,
     tokenActor,
     ledgerActor,
+    nftActor,
 
     // UI state
     loading,
@@ -643,6 +876,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkBalance: checkBalanceAsync,
     selfTopUp: selfTopUpAsync,
     checkNFTApproval: checkNFTApprovalAsync,
+    generateAiImage: generateAiImageAsync,
+    mintNft: mintNftAsync,
+    listAllNfts: listAllNftsAsync,
+    getNftsForUser: getNftsForUserAsync,
+    getNft: getNftAsync,
 
     // Utility functions
     copyPrincipalToClipboard,

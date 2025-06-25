@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Button,
@@ -51,134 +51,51 @@ interface Post {
 }
 
 export function PostsPage() {
-  const { buyNFT, transactions, principal } = useAuth();
+  const { buyNFT, transactions, principal, listAllNfts } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("trending");
-
-  // Generate posts from real transactions
-  const generatePostsFromTransactions = (): Post[] => {
-    const mockImages = [
-      "/landing/landing-hero.png",
-      "/brand/pico-glow.png",
-      "/brand/pico-logo.svg",
-      "/brand/pico-logo-dark.svg",
-    ];
-
-    const artTitles = [
-      "Digital Sunset Paradise",
-      "Neon City Dreams",
-      "Abstract Consciousness",
-      "Cosmic Waves",
-      "Pixel Art Masterpiece",
-      "Future Vision",
-      "Digital Ocean",
-      "Cyber Dreams",
-    ];
-
-    const descriptions = [
-      "A stunning digital artwork capturing the essence of a perfect virtual world.",
-      "Cyberpunk-inspired artwork featuring futuristic elements with vibrant colors.",
-      "An exploration of consciousness through abstract forms and flowing patterns.",
-      "A mesmerizing piece that takes you on a journey through space and time.",
-      "Carefully crafted pixel art that brings back nostalgic memories.",
-      "A glimpse into the future through the lens of digital creativity.",
-      "Dive deep into an ocean of digital possibilities and wonder.",
-      "Dreams manifested in the cyber realm with stunning visual appeal.",
-    ];
-
-    const tagSets = [
-      ["digital-art", "landscape", "sunset"],
-      ["cyberpunk", "city", "neon"],
-      ["abstract", "consciousness", "patterns"],
-      ["space", "cosmic", "waves"],
-      ["pixel-art", "retro", "gaming"],
-      ["future", "vision", "tech"],
-      ["ocean", "blue", "serenity"],
-      ["cyber", "dreams", "digital"],
-    ];
-
-    // Create posts from actual transactions
-    const postsFromTransactions = transactions
-      .filter((tx) => tx.nft_id !== undefined)
-      .map((tx, index) => ({
-        id: tx.nft_id?.toString() || `tx-${tx.transaction_id}`,
-        title: artTitles[index % artTitles.length] || `NFT #${tx.nft_id}`,
-        description: descriptions[index % descriptions.length],
-        creator: {
-          name: tx.from_principal_id
-            ? `${tx.from_principal_id.slice(0, 8)}...`
-            : "Unknown Artist",
-          avatar: mockImages[index % mockImages.length],
-          verified: Math.random() > 0.5,
-        },
-        creatorPrincipal: tx.from_principal_id || "",
-        price: (tx.price_token / 100000000).toFixed(2), // Convert from e8s to PICO
-        image: mockImages[index % mockImages.length],
-        likes: Math.floor(Math.random() * 400) + 50,
-        comments: Math.floor(Math.random() * 30) + 5,
-        shares: Math.floor(Math.random() * 20) + 2,
-        isLiked: Math.random() > 0.7,
-        createdAt: new Date(Number(tx.created_at) / 1000000).toLocaleString(), // Convert from nanoseconds
-        tags: tagSets[index % tagSets.length],
-        transaction_id: tx.transaction_id,
-      }));
-
-    // Add default posts if no transactions
-    if (postsFromTransactions.length === 0) {
-      return [
-        {
-          id: "1",
-          title: "Digital Sunset Paradise",
-          description:
-            "A stunning digital artwork capturing the essence of a perfect sunset in a virtual world.",
-          creator: {
-            name: "ArtMaster99",
-            avatar: "/brand/pico-logo.svg",
-            verified: true,
-          },
-          creatorPrincipal: "",
-          price: "25.5",
-          image: "/landing/landing-hero.png",
-          likes: 342,
-          comments: 28,
-          shares: 15,
-          isLiked: false,
-          createdAt: "2 hours ago",
-          tags: ["digital-art", "landscape", "sunset"],
-        },
-        {
-          id: "2",
-          title: "Neon City Dreams",
-          description:
-            "Cyberpunk-inspired artwork featuring a futuristic cityscape with vibrant neon colors.",
-          creator: {
-            name: "CyberArtist",
-            avatar: "/brand/pico-glow.png",
-            verified: false,
-          },
-          creatorPrincipal: "",
-          price: "18.2",
-          image: "/brand/pico-glow.png",
-          likes: 156,
-          comments: 12,
-          shares: 8,
-          isLiked: true,
-          createdAt: "5 hours ago",
-          tags: ["cyberpunk", "city", "neon"],
-        },
-      ];
-    }
-
-    return postsFromTransactions;
-  };
-
   const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Update posts when transactions change
-  React.useEffect(() => {
-    setPosts(generatePostsFromTransactions());
-  }, [transactions]);
+  useEffect(() => {
+    const fetchNfts = async () => {
+      setLoading(true);
+      try {
+        const nfts = await listAllNfts.execute();
+        if (nfts) {
+          const formattedPosts: Post[] = nfts.map((nft: any) => ({
+            id: nft.nft_id.toString(),
+            title: nft.name,
+            description: nft.description,
+            creator: {
+              name: `${nft.owner.toText().slice(0, 8)}...`,
+              avatar: `https://avatar.vercel.sh/${nft.owner.toText()}.png`,
+              verified: Math.random() > 0.5,
+            },
+            creatorPrincipal: nft.owner.toText(),
+            price: (Number(nft.price) / 100000000).toFixed(2),
+            image: nft.image_url,
+            likes: Math.floor(Math.random() * 400) + 50,
+            comments: Math.floor(Math.random() * 30) + 5,
+            shares: Math.floor(Math.random() * 20) + 2,
+            isLiked: Math.random() > 0.7,
+            createdAt: new Date(
+              Number(nft.created_at) / 1000000,
+            ).toLocaleString(),
+            tags: nft.traits.map((trait: any) => trait.value),
+          }));
+          setPosts(formattedPosts);
+        }
+      } catch (error) {
+        console.error("Failed to fetch NFTs:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNfts();
+  }, [listAllNfts]);
 
   const sortOptions = [
     { value: "trending", label: "Trending", icon: TrendingUp },
@@ -192,10 +109,10 @@ export function PostsPage() {
       prev.map((post) =>
         post.id === postId
           ? {
-              ...post,
-              isLiked: !post.isLiked,
-              likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-            }
+            ...post,
+            isLiked: !post.isLiked,
+            likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+          }
           : post,
       ),
     );
@@ -208,9 +125,10 @@ export function PostsPage() {
         return;
       }
 
-      await buyNFT(principal, post.creatorPrincipal, post.id, post.price);
+      await buyNFT.execute(principal, post.creatorPrincipal, post.id, post.price);
     } catch (error) {
       console.error("Failed to buy NFT:", error);
+      alert(`Failed to buy NFT: ${error}`);
     }
   };
 
@@ -293,7 +211,11 @@ export function PostsPage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {viewMode === "grid" ? (
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <p>Loading NFTs...</p>
+          </div>
+        ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredPosts.map((post) => (
               <Card

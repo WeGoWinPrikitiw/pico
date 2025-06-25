@@ -41,11 +41,13 @@ interface NFTMetadata {
   isForSale: boolean;
   file?: File;
   previewUrl?: string;
+  isAiGenerated: boolean;
+  traits: any[];
 }
 
 export function UploadPage() {
   const navigate = useNavigate();
-  const { principal, mintTokens } = useAuth();
+  const { principal, mintNft, generateAiImage, setMessage } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [uploadType, setUploadType] = useState<"upload" | "ai-generate">(
@@ -63,6 +65,8 @@ export function UploadPage() {
     tags: [],
     royalty: "10",
     isForSale: true,
+    isAiGenerated: false,
+    traits: [],
   });
 
   const [aiPrompt, setAiPrompt] = useState({
@@ -119,6 +123,8 @@ export function UploadPage() {
       ...prev,
       file,
       previewUrl,
+      isAiGenerated: false,
+      traits: [],
     }));
   };
 
@@ -161,30 +167,27 @@ export function UploadPage() {
       return;
     }
 
-    setIsUploading(true);
+    const fullPrompt = `${aiPrompt.prompt}, ${aiPrompt.style} style, ${aiPrompt.quality} quality`;
 
     try {
-      // Simulate AI generation (in real app, this would call an AI service)
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      // Simulate generated image
-      const mockGeneratedUrl = "/brand/pico-glow.png";
-
-      setNftData((prev) => ({
-        ...prev,
-        previewUrl: mockGeneratedUrl,
-        title:
-          aiPrompt.prompt.slice(0, 50) +
-          (aiPrompt.prompt.length > 50 ? "..." : ""),
-        description: `AI-generated artwork based on prompt: "${aiPrompt.prompt}"`,
-      }));
-
-      setUploadType("upload"); // Switch to upload view after generation
+      const result = await generateAiImage.execute(fullPrompt);
+      if (result) {
+        setNftData((prev) => ({
+          ...prev,
+          previewUrl: result.image_url,
+          title:
+            aiPrompt.prompt.slice(0, 50) +
+            (aiPrompt.prompt.length > 50 ? "..." : ""),
+          description: `AI-generated artwork based on prompt: "${aiPrompt.prompt}"`,
+          isAiGenerated: true,
+          traits: result.suggested_traits || [],
+        }));
+        setUploadType("upload");
+        setMessage("✅ AI Image generated successfully!");
+      }
     } catch (error) {
       console.error("AI generation failed:", error);
-      alert("AI generation failed. Please try again.");
-    } finally {
-      setIsUploading(false);
+      setMessage(`❌ AI generation failed: ${error}`);
     }
   };
 
@@ -208,67 +211,27 @@ export function UploadPage() {
       return;
     }
 
-    setIsUploading(true);
-
     try {
-      // In a real implementation, this would:
-      // 1. Upload file to IPFS/Arweave
-      // 2. Create NFT metadata JSON
-      // 3. Upload metadata to IPFS
-      // 4. Call NFT minting contract with metadata URI
-      // 5. If isForSale, list on marketplace
+      const priceInUnits = BigInt(Math.round(parseFloat(nftData.price) * 100_000_000));
 
-      // For demo, we'll simulate the process and create a mock transaction
-      console.log("Step 1: Uploading file to decentralized storage...");
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      console.log("Step 2: Creating NFT metadata...");
-      const metadata = {
+      await mintNft.execute({
+        to: principal,
         name: nftData.title,
         description: nftData.description,
-        image: nftData.previewUrl,
-        attributes: [
-          { trait_type: "Category", value: nftData.category },
-          { trait_type: "Creator", value: principal },
-          { trait_type: "Royalty", value: `${nftData.royalty}%` },
-        ],
-        tags: nftData.tags,
-        created_at: Date.now(),
-      };
-
-      console.log("Step 3: Minting NFT...");
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Mock mint process - in reality would call smart contract
-      const mockNFTId = Math.floor(Math.random() * 10000);
-
-      if (nftData.isForSale) {
-        console.log("Step 4: Listing NFT for sale...");
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // This would call the marketplace contract to list the NFT
-        console.log(`NFT listed for ${nftData.price} PiCO tokens`);
-      }
-
-      console.log("NFT minted successfully!", {
-        nftId: mockNFTId,
-        metadata,
-        isForSale: nftData.isForSale,
-        price: nftData.isForSale ? nftData.price : null,
+        price: priceInUnits,
+        image_url: nftData.previewUrl!,
+        is_ai_generated: nftData.isAiGenerated,
+        traits: nftData.traits,
       });
 
-      // Show success message
-      alert(
-        `✅ NFT "${nftData.title}" minted successfully! ${nftData.isForSale ? `Listed for ${nftData.price} PiCO tokens.` : ""}`,
+      setMessage(
+        `✅ NFT "${nftData.title}" minted successfully! ${nftData.isForSale ? `Listed for ${nftData.price} PiCO tokens.` : ""
+        }`,
       );
-
-      // Navigate to profile or success page
       navigate("/profile");
     } catch (error) {
       console.error("Minting failed:", error);
-      alert("Minting failed. Please try again.");
-    } finally {
-      setIsUploading(false);
+      setMessage(`❌ Minting failed: ${error}`);
     }
   };
 
@@ -309,6 +272,8 @@ export function UploadPage() {
                     tags: [],
                     royalty: "10",
                     isForSale: true,
+                    isAiGenerated: false,
+                    traits: [],
                   });
                 }}
                 className="min-w-[120px]"
@@ -317,14 +282,14 @@ export function UploadPage() {
               </Button>
               <Button
                 onClick={handleMintNFT}
-                disabled={!isFormValid || isUploading}
+                disabled={!isFormValid || mintNft.loading || generateAiImage.loading}
                 size="sm"
                 className="gap-2 min-w-[120px]"
               >
-                {isUploading ? (
+                {mintNft.loading || generateAiImage.loading ? (
                   <>
                     <LoadingSpinner className="h-4 w-4" />
-                    Minting...
+                    {mintNft.loading ? "Minting..." : "Generating..."}
                   </>
                 ) : (
                   <>
@@ -413,6 +378,27 @@ export function UploadPage() {
                 )}
               </CardContent>
             </Card>
+
+            {nftData.traits.length > 0 && (
+              <Card>
+                <CardHeader className="pb-4">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Sparkles className="h-5 w-5" />
+                    AI Generated Traits
+                  </h2>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {nftData.traits.map((trait, index) => (
+                      <Badge key={index} variant="secondary">
+                        {trait.trait_type}: {trait.value}
+                        {trait.rarity && ` (${trait.rarity})`}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Preview Card */}
             {nftData.previewUrl && (
