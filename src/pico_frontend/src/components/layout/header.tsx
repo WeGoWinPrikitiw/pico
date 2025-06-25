@@ -1,5 +1,23 @@
 import { Link, useLocation } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import {
+  Button,
+  NavigationMenu,
+  NavigationMenuList,
+  NavigationMenuItem,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  Badge,
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Separator,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth-context";
 import {
   User,
@@ -8,8 +26,13 @@ import {
   Grid3X3,
   LogOut,
   Settings,
-  Wallet
+  Wallet,
+  Menu,
+  Home,
+  Info,
+  Star,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function Header() {
   const location = useLocation();
@@ -19,204 +42,187 @@ export function Header() {
     return location.pathname === path;
   };
 
+  const NavLink = ({ to, icon: Icon, children }: { to: string; icon: React.ElementType; children: React.ReactNode }) => (
+    <Link
+      to={to}
+      className={cn(
+        "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+        isActive(to)
+          ? "text-primary bg-primary/10"
+          : "text-muted-foreground hover:text-foreground hover:bg-accent"
+      )}
+    >
+      <Icon className="h-4 w-4" />
+      {children}
+    </Link>
+  );
+
   return (
-    <header className="bg-white shadow-sm border-b sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center">
-            <img src="/brand/pico-logo.svg" alt="PiCO" className="h-8 w-auto" />
-            <span className="ml-2 text-xl font-bold text-gray-900">PiCO</span>
-          </Link>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <nav className="container mx-auto px-4 h-14 flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2">
+          <img src="/brand/pico-logo.svg" alt="PiCO" className="h-8 w-auto" />
+        </Link>
 
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
+        {/* Desktop Navigation */}
+        <NavigationMenu className="hidden md:flex">
+          <NavigationMenuList>
             {isAuthenticated ? (
-              // Authenticated Navigation
               <>
-                <Link
-                  to="/explore"
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/explore')
-                    ? 'text-blue-600 bg-blue-50'
-                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
-                >
-                  <Search className="h-4 w-4" />
-                  Explore
-                </Link>
-
-                <Link
-                  to="/posts"
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/posts')
-                    ? 'text-blue-600 bg-blue-50'
-                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
-                >
-                  <Grid3X3 className="h-4 w-4" />
-                  Posts
-                </Link>
-
-                <Link
-                  to="/upload"
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/upload')
-                    ? 'text-blue-600 bg-blue-50'
-                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload
-                </Link>
+                <NavigationMenuItem>
+                  <NavLink to="/explore" icon={Search}>Explore</NavLink>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <NavLink to="/posts" icon={Grid3X3}>Posts</NavLink>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <NavLink to="/upload" icon={Upload}>Upload</NavLink>
+                </NavigationMenuItem>
               </>
             ) : (
-              // Non-authenticated Navigation
               <>
-                <Link
-                  to="/"
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/')
-                    ? 'text-blue-600 bg-blue-50'
-                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
-                >
-                  Home
-                </Link>
-
-                <a
-                  href="#features"
-                  className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  Features
-                </a>
-
-                <a
-                  href="#about"
-                  className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  About
-                </a>
+                <NavigationMenuItem>
+                  <NavLink to="/" icon={Home}>Home</NavLink>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <NavLink to="#features" icon={Star}>Features</NavLink>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <NavLink to="#about" icon={Info}>About</NavLink>
+                </NavigationMenuItem>
               </>
             )}
-          </nav>
+          </NavigationMenuList>
+        </NavigationMenu>
 
-          {/* Right side actions */}
-          <div className="flex items-center space-x-4">
-            {isAuthenticated ? (
-              // Authenticated User Actions
-              <>
-                {/* Balance Display */}
-                <div className="hidden sm:flex items-center gap-2">
-                  <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full">
-                    <Wallet className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-600">
-                      {userBalance} PiCO
-                    </span>
+        {/* Right side actions */}
+        <div className="flex items-center gap-2">
+          {isAuthenticated ? (
+            <>
+              {/* Balance Display */}
+              <Badge variant="secondary" className="hidden sm:flex items-center gap-2 px-3 py-1">
+                <Wallet className="h-4 w-4" />
+                <span>{userBalance} PiCO</span>
+              </Badge>
+
+              {/* Profile Menu */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Avatar className="cursor-pointer hover:opacity-80">
+                    <AvatarImage src={`https://avatar.vercel.sh/${principal}.png`} alt={principal} />
+                    <AvatarFallback>
+                      <User className="h-4 w-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="end">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 px-2 py-1.5">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={`https://avatar.vercel.sh/${principal}.png`} alt={principal} />
+                        <AvatarFallback>
+                          <User className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">Profile</span>
+                        <span className="text-xs text-muted-foreground max-w-[150px] truncate" title={principal}>
+                          {principal?.length > 20 ? `${principal.slice(0, 10)}...${principal.slice(-10)}` : principal}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <Link
+                      to="/profile"
+                      className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent"
+                    >
+                      <User className="h-4 w-4" />
+                      View Profile
+                    </Link>
+                    <Link
+                      to="/admin"
+                      className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Admin Settings
+                    </Link>
+                    <Button
+                      onClick={logout}
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-1"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Logout
+                    </Button>
                   </div>
-                  <button
-                    onClick={refreshData}
-                    className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded-md"
-                    title="Refresh balance"
-                  >
-                    <Settings className="h-4 w-4" />
-                  </button>
-                </div>
+                </PopoverContent>
+              </Popover>
+            </>
+          ) : (
+            <Button onClick={login} variant="default">
+              Connect Wallet
+            </Button>
+          )}
 
-                {/* Profile Dropdown */}
-                <div className="relative group">
-                  <Link
-                    to="/profile"
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/profile')
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
-                      }`}
-                  >
-                    <User className="h-4 w-4" />
-                    <span className="hidden sm:inline">Profile</span>
-                  </Link>
-                </div>
-
-                {/* Admin Link (for testing) */}
-                <Link
-                  to="/admin"
-                  className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
-                  title="Admin Dashboard"
-                >
-                  <Settings className="h-4 w-4" />
-                  Admin
-                </Link>
-
-                {/* Logout */}
-                <Button
-                  onClick={logout}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span className="hidden sm:inline">Logout</span>
-                </Button>
-              </>
-            ) : (
-              // Non-authenticated Actions
-              <Button
-                onClick={login}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                Connect Wallet
+          {/* Mobile Menu */}
+          <Sheet>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Menu className="h-5 w-5" />
               </Button>
-            )}
-          </div>
+            </SheetTrigger>
+            <SheetContent side="right">
+              <SheetHeader>
+                <SheetTitle>Menu</SheetTitle>
+              </SheetHeader>
+              <nav className="flex flex-col gap-4 mt-4">
+                {isAuthenticated ? (
+                  <>
+                    <NavLink to="/explore" icon={Search}>Explore</NavLink>
+                    <NavLink to="/posts" icon={Grid3X3}>Posts</NavLink>
+                    <NavLink to="/upload" icon={Upload}>Upload</NavLink>
+                    <NavLink to="/profile" icon={User}>Profile</NavLink>
+                    <Badge variant="secondary" className="flex items-center gap-2 px-3 py-2">
+                      <Wallet className="h-4 w-4" />
+                      <span>{userBalance} PiCO</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={refreshData}
+                        className="h-6 w-6"
+                      >
+                        <Settings className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                    <Button
+                      onClick={logout}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2 mt-2"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Logout</span>
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <NavLink to="/" icon={Home}>Home</NavLink>
+                    <NavLink to="#features" icon={Star}>Features</NavLink>
+                    <NavLink to="#about" icon={Info}>About</NavLink>
+                    <Button onClick={login} variant="default" className="mt-2">
+                      Connect Wallet
+                    </Button>
+                  </>
+                )}
+              </nav>
+            </SheetContent>
+          </Sheet>
         </div>
-
-        {/* Mobile Navigation */}
-        {isAuthenticated && (
-          <div className="md:hidden border-t border-gray-200 py-2">
-            <div className="flex items-center justify-around">
-              <Link
-                to="/explore"
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-md text-xs font-medium transition-colors ${isActive('/explore')
-                  ? 'text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-                  }`}
-              >
-                <Search className="h-5 w-5" />
-                Explore
-              </Link>
-
-              <Link
-                to="/posts"
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-md text-xs font-medium transition-colors ${isActive('/posts')
-                  ? 'text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-                  }`}
-              >
-                <Grid3X3 className="h-5 w-5" />
-                Posts
-              </Link>
-
-              <Link
-                to="/upload"
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-md text-xs font-medium transition-colors ${isActive('/upload')
-                  ? 'text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-                  }`}
-              >
-                <Upload className="h-5 w-5" />
-                Upload
-              </Link>
-
-              <Link
-                to="/profile"
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-md text-xs font-medium transition-colors ${isActive('/profile')
-                  ? 'text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-                  }`}
-              >
-                <User className="h-5 w-5" />
-                Profile
-              </Link>
-            </div>
-          </div>
-        )}
-      </div>
+      </nav>
     </header>
   );
 } 

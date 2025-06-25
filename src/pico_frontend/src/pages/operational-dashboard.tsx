@@ -1,7 +1,55 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { Button, Input, LoadingSpinner } from '@/components/ui';
+import {
+    Button,
+    Input,
+    LoadingSpinner,
+    Card,
+    CardHeader,
+    CardContent,
+    Badge,
+    Tabs,
+    TabsList,
+    TabsTrigger,
+    TabsContent,
+    Separator
+} from '@/components/ui';
 import { BackendIntegrationDemo } from '@/components/demo/backend-integration-demo';
+import {
+    Wallet,
+    CreditCard,
+    ShoppingCart,
+    History,
+    Code,
+    Copy,
+    DollarSign,
+    RefreshCw,
+    LogOut,
+    ChevronRight,
+    ArrowUpRight,
+    ArrowDownRight,
+    ArrowRight,
+    Clock,
+    CheckCircle2,
+    XCircle,
+    AlertCircle
+} from 'lucide-react';
+
+interface Transaction {
+    transaction_id: string;
+    created_at: string;
+    price_token: number;
+    nft_id?: string;
+    transaction_type: 'mint' | 'transfer' | 'sale';
+}
+
+interface TokenInfo {
+    name: string;
+    symbol: string;
+    decimals: number;
+    totalSupply: string;
+    totalHolders: number;
+}
 
 export function OperationalDashboard() {
     const {
@@ -35,7 +83,7 @@ export function OperationalDashboard() {
     const [nftPrice, setNftPrice] = useState('');
     const [selfTopUpAmount, setSelfTopUpAmount] = useState('');
     const [checkBalancePrincipal, setCheckBalancePrincipal] = useState('');
-    const [activeTab, setActiveTab] = useState('wallet');
+    const [activeTab, setActiveTab] = useState('overview');
 
     const handleMintTokens = async () => {
         if (!mintAmount || !mintRecipient) {
@@ -86,316 +134,510 @@ export function OperationalDashboard() {
         setCheckBalancePrincipal('');
     };
 
-    if (!isAuthenticated) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-8">
-                <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-                    <div className="mb-8">
-                        <img src="/logo2.svg" alt="PiCO logo" className="mx-auto mb-6 max-w-xs" />
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                            PiCO Token Dashboard
-                        </h1>
-                        <p className="text-gray-600">
-                            Connect with Internet Identity to access your PiCO token operations
-                        </p>
-                    </div>
+    const stats = [
+        {
+            title: 'Total Balance',
+            value: `${userBalance} PiCO`,
+            icon: Wallet,
+            change: '+12.5%',
+            changeType: 'positive'
+        },
+        {
+            title: 'Total Sales',
+            value: '156',
+            icon: ShoppingCart,
+            change: '+8.2%',
+            changeType: 'positive'
+        },
+        {
+            title: 'Active Listings',
+            value: '23',
+            icon: CreditCard,
+            change: '-3.1%',
+            changeType: 'negative'
+        },
+        {
+            title: 'Transaction Volume',
+            value: '2,345 PiCO',
+            icon: History,
+            change: '+15.3%',
+            changeType: 'positive'
+        }
+    ];
 
-                    <Button
-                        onClick={login}
-                        disabled={loading}
-                        className="w-full"
-                    >
-                        {loading ? (
-                            <>
-                                <LoadingSpinner size="sm" className="mr-2" />
-                                Connecting...
-                            </>
-                        ) : (
-                            'Connect with Internet Identity'
-                        )}
-                    </Button>
-
-                    {message && (
-                        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                            <p className="text-blue-800 text-sm">{message}</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
-    }
+    const recentTransactions = (transactions as Transaction[] || []).slice(0, 5);
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
-            <div className="max-w-6xl mx-auto px-4">
-                {/* Header */}
-                <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900 mb-2">PiCO Token Dashboard</h1>
-                            <p className="text-gray-600">Manage your PiCO tokens and transactions</p>
-                        </div>
-                        <Button onClick={logout} variant="outline">
-                            Logout
-                        </Button>
-                    </div>
+        <div className="min-h-screen bg-background py-8">
+            {!isAuthenticated ? (
+                <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] px-4">
+                    <Card className="max-w-md w-full">
+                        <CardHeader className="text-center space-y-6">
+                            <img src="/logo2.svg" alt="PiCO logo" className="mx-auto max-w-xs" />
+                            <div className="space-y-2">
+                                <h1 className="text-2xl font-bold">
+                                    PiCO Token Dashboard
+                                </h1>
+                                <p className="text-muted-foreground">
+                                    Connect with Internet Identity to access your PiCO token operations
+                                </p>
+                            </div>
+                        </CardHeader>
 
-                    {/* User Info */}
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-gray-50 rounded-lg p-4">
-                            <h3 className="font-medium text-gray-900 mb-2">Principal ID</h3>
-                            <div className="flex items-center gap-2">
-                                <p className="text-sm text-gray-600 font-mono truncate">{principal}</p>
-                                <Button size="sm" variant="outline" onClick={copyPrincipalToClipboard}>
-                                    Copy
+                        <CardContent className="space-y-4">
+                            <Button
+                                onClick={login}
+                                disabled={loading}
+                                className="w-full"
+                            >
+                                {loading ? (
+                                    <>
+                                        <LoadingSpinner size="sm" className="mr-2" />
+                                        Connecting...
+                                    </>
+                                ) : (
+                                    'Connect with Internet Identity'
+                                )}
+                            </Button>
+
+                            {message && (
+                                <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                                    <p className="text-primary text-sm">{message}</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            ) : (
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    {/* Header */}
+                    <Card className="mb-8">
+                        <CardContent className="p-6">
+                            <div className="flex justify-between items-start">
+                                <div className="space-y-2">
+                                    <h1 className="text-3xl font-bold">PiCO Token Dashboard</h1>
+                                    <p className="text-muted-foreground">Manage your PiCO tokens and transactions</p>
+                                </div>
+                                <Button onClick={logout} variant="outline">
+                                    <LogOut className="h-4 w-4 mr-2" />
+                                    Logout
                                 </Button>
                             </div>
-                        </div>
 
-                        <div className="bg-gray-50 rounded-lg p-4">
-                            <h3 className="font-medium text-gray-900 mb-2">PiCO Balance</h3>
-                            <p className="text-2xl font-bold text-green-600">{userBalance}</p>
-                        </div>
+                            {/* User Info */}
+                            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <Card>
+                                    <CardContent className="p-4">
+                                        <h3 className="font-medium mb-2">Principal ID</h3>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-sm font-mono text-muted-foreground truncate">{principal}</p>
+                                            <Button size="sm" variant="outline" onClick={copyPrincipalToClipboard}>
+                                                <Copy className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
 
-                        <div className="bg-gray-50 rounded-lg p-4">
-                            <h3 className="font-medium text-gray-900 mb-2">Token Info</h3>
-                            {tokenInfo ? (
-                                <div className="text-sm text-gray-600">
-                                    <p>{tokenInfo.name} ({tokenInfo.symbol})</p>
-                                    <p>Decimals: {tokenInfo.decimals}</p>
-                                    {tokenInfo.totalSupply && tokenInfo.totalSupply > 0n ? (
-                                        <p>Total Supply: {tokenInfo.totalSupply.toString()}</p>
-                                    ) : null}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-gray-500">Loading...</p>
-                            )}
-                        </div>
-                    </div>
+                                <Card>
+                                    <CardContent className="p-4">
+                                        <h3 className="font-medium mb-2">PiCO Balance</h3>
+                                        <p className="text-2xl font-bold text-primary">{userBalance}</p>
+                                    </CardContent>
+                                </Card>
 
-                    {/* Refresh Button */}
-                    <div className="mt-4 flex justify-end">
-                        <Button onClick={refreshData} disabled={loading} variant="outline">
-                            {loading ? <LoadingSpinner size="sm" className="mr-2" /> : null}
-                            Refresh Data
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Message Display */}
-                {message && (
-                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-blue-800">{message}</p>
-                    </div>
-                )}
-
-                {/* Tab Navigation */}
-                <div className="mb-6">
-                    <div className="border-b border-gray-200">
-                        <nav className="-mb-px flex space-x-8">
-                            {[
-                                { id: 'wallet', label: 'Wallet Operations' },
-                                { id: 'nft', label: 'NFT Marketplace' },
-                                { id: 'admin', label: 'Admin Functions' },
-                                { id: 'transactions', label: 'Transaction History' },
-                                { id: 'demo', label: 'Backend Demo' }
-                            ].map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
-                                        ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                        }`}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </nav>
-                    </div>
-                </div>
-
-                {/* Tab Content */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {activeTab === 'wallet' && (
-                        <>
-                            {/* Self Top-up */}
-                            <div className="bg-white rounded-lg shadow-sm p-6">
-                                <h3 className="text-lg font-semibold mb-4">Self Top-up</h3>
-                                <div className="space-y-4">
-                                    <Input
-                                        type="number"
-                                        placeholder="Amount to top-up"
-                                        value={selfTopUpAmount}
-                                        onChange={(e) => setSelfTopUpAmount(e.target.value)}
-                                    />
-                                    <Button onClick={handleSelfTopUp} disabled={loading} className="w-full">
-                                        Top-up My Account
-                                    </Button>
-                                </div>
+                                <Card>
+                                    <CardContent className="p-4">
+                                        <h3 className="font-medium mb-2">Token Info</h3>
+                                        {tokenInfo ? (
+                                            <div className="text-sm text-muted-foreground space-y-1">
+                                                <p>{tokenInfo.name} ({tokenInfo.symbol})</p>
+                                                <p>Decimals: {tokenInfo.decimals}</p>
+                                                {tokenInfo.totalSupply && tokenInfo.totalSupply > 0n ? (
+                                                    <p>Total Supply: {tokenInfo.totalSupply.toString()}</p>
+                                                ) : null}
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground">Loading...</p>
+                                        )}
+                                    </CardContent>
+                                </Card>
                             </div>
 
-                            {/* Approve Contract */}
-                            <div className="bg-white rounded-lg shadow-sm p-6">
-                                <h3 className="text-lg font-semibold mb-4">Approve Contract</h3>
-                                <div className="space-y-4">
-                                    <Input
-                                        type="number"
-                                        placeholder="Amount to approve"
-                                        value={approveAmount}
-                                        onChange={(e) => setApproveAmount(e.target.value)}
-                                    />
-                                    <Button onClick={handleApproveContract} disabled={loading} className="w-full">
-                                        Approve
-                                    </Button>
-                                </div>
+                            {/* Refresh Button */}
+                            <div className="mt-4 flex justify-end">
+                                <Button onClick={refreshData} disabled={loading} variant="outline">
+                                    {loading ? <LoadingSpinner size="sm" className="mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                                    Refresh Data
+                                </Button>
                             </div>
+                        </CardContent>
+                    </Card>
 
-                            {/* Check Balance */}
-                            <div className="bg-white rounded-lg shadow-sm p-6">
-                                <h3 className="text-lg font-semibold mb-4">Check Balance</h3>
-                                <div className="space-y-4">
-                                    <Input
-                                        placeholder="Principal ID to check"
-                                        value={checkBalancePrincipal}
-                                        onChange={(e) => setCheckBalancePrincipal(e.target.value)}
-                                    />
-                                    <Button onClick={handleCheckBalance} disabled={loading} className="w-full">
-                                        Check Balance
-                                    </Button>
-                                </div>
-                            </div>
-                        </>
+                    {/* Message Display */}
+                    {message && (
+                        <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                            <p className="text-primary">{message}</p>
+                        </div>
                     )}
 
-                    {activeTab === 'nft' && (
-                        <>
+                    {/* Tabs */}
+                    <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="w-full justify-start border-b rounded-none p-0 h-12 bg-transparent">
+                            <TabsTrigger value="overview" className="gap-2">
+                                <Wallet className="h-4 w-4" />
+                                Overview
+                            </TabsTrigger>
+                            <TabsTrigger value="nft" className="gap-2">
+                                <ShoppingCart className="h-4 w-4" />
+                                NFT Marketplace
+                            </TabsTrigger>
+                            <TabsTrigger value="admin" className="gap-2">
+                                <CreditCard className="h-4 w-4" />
+                                Admin Functions
+                            </TabsTrigger>
+                            <TabsTrigger value="transactions" className="gap-2">
+                                <History className="h-4 w-4" />
+                                Transaction History
+                            </TabsTrigger>
+                            <TabsTrigger value="demo" className="gap-2">
+                                <Code className="h-4 w-4" />
+                                Backend Demo
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="overview">
+                            {/* Stats Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                                {stats.map((stat) => (
+                                    <Card key={stat.title}>
+                                        <CardContent className="pt-6">
+                                            <div className="flex items-center justify-between">
+                                                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                                                    <stat.icon className="h-6 w-6 text-primary" />
+                                                </div>
+                                                <Badge
+                                                    variant={stat.changeType === 'positive' ? 'default' : 'destructive'}
+                                                    className="font-medium"
+                                                >
+                                                    {stat.change}
+                                                </Badge>
+                                            </div>
+                                            <div className="mt-4">
+                                                <p className="text-sm text-muted-foreground">{stat.title}</p>
+                                                <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+
+                            {/* Main Content */}
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                {/* Left Column */}
+                                <div className="lg:col-span-2 space-y-8">
+                                    <Card>
+                                        <CardHeader>
+                                            <h2 className="text-xl font-semibold">Recent Transactions</h2>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="space-y-4">
+                                                {recentTransactions.map((tx) => (
+                                                    <div
+                                                        key={tx.transaction_id}
+                                                        className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                                                    >
+                                                        <div className="flex items-center gap-4">
+                                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.transaction_type === 'mint' ? 'bg-green-100 text-green-700' :
+                                                                tx.transaction_type === 'transfer' ? 'bg-blue-100 text-blue-700' :
+                                                                    'bg-orange-100 text-orange-700'
+                                                                }`}>
+                                                                {tx.transaction_type === 'mint' ? (
+                                                                    <Code className="h-5 w-5" />
+                                                                ) : tx.transaction_type === 'transfer' ? (
+                                                                    <ArrowRight className="h-5 w-5" />
+                                                                ) : (
+                                                                    <ShoppingCart className="h-5 w-5" />
+                                                                )}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-medium">
+                                                                    {tx.transaction_type.charAt(0).toUpperCase() + tx.transaction_type.slice(1)}
+                                                                </p>
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    {new Date(Number(tx.created_at) / 1000000).toLocaleString()}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="font-medium">
+                                                                {(tx.price_token / 100000000).toFixed(2)} PiCO
+                                                            </p>
+                                                            <p className="text-sm text-muted-foreground">
+                                                                {tx.nft_id ? `NFT #${tx.nft_id}` : 'Token Transfer'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+
+                                                {recentTransactions.length === 0 && (
+                                                    <div className="text-center py-8">
+                                                        <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                                                        <p className="text-muted-foreground">No transactions yet</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card>
+                                        <CardHeader>
+                                            <h2 className="text-xl font-semibold">Token Information</h2>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="p-4 rounded-lg border bg-card">
+                                                        <p className="text-sm text-muted-foreground">Total Supply</p>
+                                                        <p className="text-2xl font-bold mt-1">
+                                                            {tokenInfo?.totalSupply ? (Number(tokenInfo.totalSupply) / 100000000).toLocaleString() : '0'} PiCO
+                                                        </p>
+                                                    </div>
+                                                    <div className="p-4 rounded-lg border bg-card">
+                                                        <p className="text-sm text-muted-foreground">Holders</p>
+                                                        <p className="text-2xl font-bold mt-1">
+                                                            {tokenInfo?.totalHolders?.toLocaleString() || '0'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <Separator />
+
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between items-center">
+                                                        <p className="text-sm text-muted-foreground">Token Name</p>
+                                                        <p className="font-medium">{tokenInfo?.name || 'PiCO Token'}</p>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <p className="text-sm text-muted-foreground">Symbol</p>
+                                                        <p className="font-medium">{tokenInfo?.symbol || 'PiCO'}</p>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <p className="text-sm text-muted-foreground">Decimals</p>
+                                                        <p className="font-medium">{tokenInfo?.decimals || '8'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+
+                                {/* Right Column */}
+                                <div className="space-y-8">
+                                    <Card>
+                                        <CardHeader>
+                                            <h2 className="text-xl font-semibold">Quick Actions</h2>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="space-y-2">
+                                                <Button variant="outline" className="w-full justify-between">
+                                                    <div className="flex items-center">
+                                                        <CreditCard className="h-4 w-4 mr-2" />
+                                                        Buy PiCO Tokens
+                                                    </div>
+                                                    <ChevronRight className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="outline" className="w-full justify-between">
+                                                    <div className="flex items-center">
+                                                        <ShoppingCart className="h-4 w-4 mr-2" />
+                                                        Create Listing
+                                                    </div>
+                                                    <ChevronRight className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="outline" className="w-full justify-between">
+                                                    <div className="flex items-center">
+                                                        <History className="h-4 w-4 mr-2" />
+                                                        View All Transactions
+                                                    </div>
+                                                    <ChevronRight className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card>
+                                        <CardHeader>
+                                            <h2 className="text-xl font-semibold">System Status</h2>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                                        <span className="text-sm">Backend</span>
+                                                    </div>
+                                                    <Badge variant="outline">Operational</Badge>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                                        <span className="text-sm">Token Contract</span>
+                                                    </div>
+                                                    <Badge variant="outline">Operational</Badge>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <AlertCircle className="h-4 w-4 text-yellow-500" />
+                                                        <span className="text-sm">NFT Contract</span>
+                                                    </div>
+                                                    <Badge variant="outline">Maintenance</Badge>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            </div>
+                        </TabsContent>
+
+                        <TabsContent value="nft">
                             {/* Buy NFT */}
-                            <div className="bg-white rounded-lg shadow-sm p-6 lg:col-span-2">
-                                <h3 className="text-lg font-semibold mb-4">Buy NFT</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <Input
-                                        placeholder="Buyer Principal ID"
-                                        value={nftBuyer}
-                                        onChange={(e) => setNftBuyer(e.target.value)}
-                                    />
-                                    <Input
-                                        placeholder="Seller Principal ID"
-                                        value={nftSeller}
-                                        onChange={(e) => setNftSeller(e.target.value)}
-                                    />
-                                    <Input
-                                        type="number"
-                                        placeholder="NFT ID"
-                                        value={nftId}
-                                        onChange={(e) => setNftId(e.target.value)}
-                                    />
-                                    <Input
-                                        type="number"
-                                        placeholder="Price in PiCO"
-                                        value={nftPrice}
-                                        onChange={(e) => setNftPrice(e.target.value)}
-                                    />
-                                </div>
-                                <div className="mt-4">
-                                    <Button onClick={handleBuyNFT} disabled={loading} className="w-full">
-                                        Buy NFT
-                                    </Button>
-                                </div>
-                            </div>
-                        </>
-                    )}
+                            <Card>
+                                <CardHeader>
+                                    <h3 className="text-lg font-semibold">Buy NFT</h3>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <Input
+                                            placeholder="Buyer Principal ID"
+                                            value={nftBuyer}
+                                            onChange={(e) => setNftBuyer(e.target.value)}
+                                        />
+                                        <Input
+                                            placeholder="Seller Principal ID"
+                                            value={nftSeller}
+                                            onChange={(e) => setNftSeller(e.target.value)}
+                                        />
+                                        <Input
+                                            type="number"
+                                            placeholder="NFT ID"
+                                            value={nftId}
+                                            onChange={(e) => setNftId(e.target.value)}
+                                        />
+                                        <Input
+                                            type="number"
+                                            placeholder="Price in PiCO"
+                                            value={nftPrice}
+                                            onChange={(e) => setNftPrice(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="mt-4">
+                                        <Button onClick={handleBuyNFT} disabled={loading} className="w-full">
+                                            <ShoppingCart className="h-4 w-4 mr-2" />
+                                            Buy NFT
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
 
-                    {activeTab === 'admin' && (
-                        <>
+                        <TabsContent value="admin">
                             {/* Mint Tokens */}
-                            <div className="bg-white rounded-lg shadow-sm p-6 lg:col-span-2">
-                                <h3 className="text-lg font-semibold mb-4">Mint Tokens (Admin)</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <Input
-                                        type="number"
-                                        placeholder="Amount to mint"
-                                        value={mintAmount}
-                                        onChange={(e) => setMintAmount(e.target.value)}
-                                    />
-                                    <Input
-                                        placeholder="Recipient Principal ID"
-                                        value={mintRecipient}
-                                        onChange={(e) => setMintRecipient(e.target.value)}
-                                    />
-                                </div>
-                                <div className="mt-4">
-                                    <Button onClick={handleMintTokens} disabled={loading} className="w-full">
-                                        Mint Tokens
-                                    </Button>
-                                </div>
-                            </div>
-                        </>
-                    )}
+                            <Card>
+                                <CardHeader>
+                                    <h3 className="text-lg font-semibold">Mint Tokens (Admin)</h3>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <Input
+                                            type="number"
+                                            placeholder="Amount to mint"
+                                            value={mintAmount}
+                                            onChange={(e) => setMintAmount(e.target.value)}
+                                        />
+                                        <Input
+                                            placeholder="Recipient Principal ID"
+                                            value={mintRecipient}
+                                            onChange={(e) => setMintRecipient(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="mt-4">
+                                        <Button onClick={handleMintTokens} disabled={loading} className="w-full">
+                                            <DollarSign className="h-4 w-4 mr-2" />
+                                            Mint Tokens
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
 
-                    {activeTab === 'transactions' && (
-                        <div className="bg-white rounded-lg shadow-sm p-6 lg:col-span-2">
-                            <h3 className="text-lg font-semibold mb-4">Transaction History</h3>
-                            {transactions.length > 0 ? (
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-50">
-                                            <tr>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    ID
-                                                </th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Type
-                                                </th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Amount
-                                                </th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Status
-                                                </th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Date
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="bg-white divide-y divide-gray-200">
-                                            {transactions.map((tx) => (
-                                                <tr key={tx.transaction_id}>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                        #{tx.transaction_id}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                        {tx.nft_id ? 'NFT Purchase' : 'Token Transfer'}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                        {tx.price_token} PiCO
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap">
-                                                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                            {Object.keys(tx.status)[0]}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                        {new Date(Number(tx.created_at) / 1000000).toLocaleDateString()}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <p className="text-gray-500 text-center py-8">No transactions found</p>
-                            )}
-                        </div>
-                    )}
+                        <TabsContent value="transactions">
+                            <Card>
+                                <CardHeader>
+                                    <h3 className="text-lg font-semibold">Transaction History</h3>
+                                </CardHeader>
+                                <CardContent>
+                                    {transactions.length > 0 ? (
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full divide-y divide-border">
+                                                <thead>
+                                                    <tr>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                                            ID
+                                                        </th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                                            Type
+                                                        </th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                                            Amount
+                                                        </th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                                            Status
+                                                        </th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                                            Date
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border">
+                                                    {transactions.map((tx) => (
+                                                        <tr key={tx.transaction_id}>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                                #{tx.transaction_id}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                                                                {tx.nft_id ? 'NFT Purchase' : 'Token Transfer'}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                                                                {tx.price_token} PiCO
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                <Badge variant="outline" className="capitalize">
+                                                                    {Object.keys(tx.status)[0]}
+                                                                </Badge>
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                                                                {new Date(Number(tx.created_at) / 1000000).toLocaleDateString()}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8">
+                                            <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                                            <p className="text-muted-foreground">No transactions found</p>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
 
-                    {activeTab === 'demo' && (
-                        <div className="lg:col-span-2">
+                        <TabsContent value="demo">
                             <BackendIntegrationDemo />
-                        </div>
-                    )}
+                        </TabsContent>
+                    </Tabs>
                 </div>
-            </div>
+            )}
         </div>
     );
 } 

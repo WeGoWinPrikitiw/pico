@@ -1,11 +1,19 @@
 import { useState } from 'react';
 import { pico_backend } from 'declarations/pico_backend';
-import { Button, Input, LoadingSpinner, ErrorMessage } from '@/components/ui';
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Input,
+  Separator
+} from '@/components/ui';
 import { useAsync } from '@/hooks';
+import { Send, ArrowLeft } from 'lucide-react';
 
 export function AppPage() {
   const [name, setName] = useState('');
-  
+
   const greetAsync = useAsync(
     (name: string) => pico_backend.greet(name)
   );
@@ -14,86 +22,75 @@ export function AppPage() {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const nameValue = formData.get('name') as string;
-    
+
     if (nameValue.trim()) {
       greetAsync.execute(nameValue);
     }
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-8">
-      <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
-        <div className="text-center mb-8">
-          <img src="/logo2.svg" alt="DFINITY logo" className="mx-auto mb-6 max-w-xs" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Pico Greeter
-          </h1>
-          <p className="text-gray-600">
-            Enter your name to receive a personalized greeting from the Internet Computer
-          </p>
-        </div>
+    <div className="min-h-screen bg-background py-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Card>
+          <CardHeader>
+            <h1 className="text-3xl font-bold">Welcome to PiCO</h1>
+            <p className="text-muted-foreground">
+              Test the Internet Computer backend integration
+            </p>
+          </CardHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-              Enter your name:
-            </label>
-            <Input 
-              id="name" 
-              name="name"
-              type="text" 
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your name here..."
-              disabled={greetAsync.loading}
-            />
-          </div>
-          
-          <Button 
-            type="submit" 
-            className="w-full"
-            disabled={greetAsync.loading || !name.trim()}
-          >
-            {greetAsync.loading ? (
-              <>
-                <LoadingSpinner size="sm" className="mr-2" />
-                Greeting...
-              </>
-            ) : (
-              'Get Greeting'
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium mb-2">
+                  Your Name
+                </label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter your name"
+                  className="w-full"
+                />
+              </div>
+
+              <Separator />
+
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  disabled={!name.trim() || greetAsync.loading}
+                >
+                  {greetAsync.loading ? (
+                    <>
+                      <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Greeting
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+
+            {greetAsync.error && (
+              <div className="mt-4 p-4 bg-destructive/10 text-destructive rounded-lg">
+                <p className="text-sm">Error: {greetAsync.error.toString()}</p>
+              </div>
             )}
-          </Button>
-        </form>
 
-        {greetAsync.error && (
-          <div className="mt-6">
-            <ErrorMessage 
-              message={greetAsync.error} 
-              onRetry={() => greetAsync.execute(name)}
-            />
-          </div>
-        )}
-
-        {greetAsync.data && (
-          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
-            <p className="text-green-800 font-medium">{greetAsync.data}</p>
-          </div>
-        )}
-
-        {greetAsync.data && (
-          <div className="mt-4 text-center">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => {
-                greetAsync.reset();
-                setName('');
-              }}
-            >
-              Try Again
-            </Button>
-          </div>
-        )}
+            {greetAsync.data && (
+              <div className="mt-4 p-4 bg-muted rounded-lg">
+                <p className="text-sm font-medium">Response:</p>
+                <p className="text-lg mt-1">{greetAsync.data}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

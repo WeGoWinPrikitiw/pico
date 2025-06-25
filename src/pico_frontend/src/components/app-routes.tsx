@@ -17,10 +17,10 @@ export function AppRoutes() {
   return (
     <Layout>
       <Routes>
-        {/* Landing page - accessible to all */}
+        {/* Landing page - only show if user is NOT authenticated */}
         <Route
           path="/"
-          element={<LandingPage />}
+          element={isAuthenticated ? <Navigate to="/explore" replace /> : <LandingPage />}
         />
 
         {/* Main application routes - require authentication */}

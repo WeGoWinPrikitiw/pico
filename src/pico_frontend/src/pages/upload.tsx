@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button, Card, CardContent, CardHeader, Input, Badge, Separator } from '@/components/ui';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useAuth } from '@/context/auth-context';
 import {
@@ -16,7 +15,10 @@ import {
     Tag,
     FileText,
     Camera,
-    Palette
+    Palette,
+    Info,
+    Clock,
+    Percent
 } from 'lucide-react';
 
 interface NFTMetadata {
@@ -248,247 +250,119 @@ export function UploadPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <div className="bg-white shadow-sm">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <div className="flex items-center gap-4">
-                        <Link to="/explore">
-                            <Button variant="outline" size="sm">
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                Back to Explore
-                            </Button>
-                        </Link>
-                        <h1 className="text-3xl font-bold text-gray-900">Create NFT</h1>
-                    </div>
-                </div>
-            </div>
-
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Upload Type Selector */}
+        <div className="min-h-screen bg-background py-8">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                {/* Navigation */}
                 <div className="mb-8">
-                    <div className="flex rounded-lg bg-gray-100 p-1">
-                        <button
-                            onClick={() => setUploadType('upload')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-md transition-colors ${uploadType === 'upload'
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                        >
-                            <UploadIcon className="h-5 w-5" />
-                            Upload File
-                        </button>
-                        <button
-                            onClick={() => setUploadType('ai-generate')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-md transition-colors ${uploadType === 'ai-generate'
-                                ? 'bg-white text-purple-600 shadow-sm'
-                                : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                        >
-                            <Sparkles className="h-5 w-5" />
-                            AI Generate
-                        </button>
-                    </div>
+                    <Link to="/explore">
+                        <Button variant="outline" size="sm">
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Back to Explore
+                        </Button>
+                    </Link>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Left Column - Upload/Generate */}
-                    <div>
-                        {uploadType === 'upload' ? (
-                            /* File Upload */
-                            <div className="bg-white rounded-xl p-6 shadow-sm">
-                                <h2 className="text-xl font-semibold text-gray-900 mb-6">Upload Your NFT</h2>
+                <Card>
+                    <CardHeader>
+                        <h1 className="text-3xl font-bold">Create New NFT</h1>
+                        <p className="text-muted-foreground">Upload your artwork and create your NFT</p>
+                    </CardHeader>
 
-                                {!nftData.previewUrl ? (
-                                    <div
-                                        onDrop={handleDrop}
-                                        onDragOver={handleDragOver}
-                                        onDragLeave={handleDragLeave}
-                                        className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${dragOver
-                                            ? 'border-blue-500 bg-blue-50'
-                                            : 'border-gray-300 hover:border-gray-400'
-                                            }`}
-                                    >
-                                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <UploadIcon className="h-8 w-8 text-gray-400" />
-                                        </div>
-                                        <p className="text-lg font-medium text-gray-900 mb-2">
-                                            Drop your file here, or{' '}
-                                            <button
-                                                onClick={() => fileInputRef.current?.click()}
-                                                className="text-blue-600 hover:text-blue-700 underline"
-                                            >
-                                                browse
-                                            </button>
-                                        </p>
-                                        <p className="text-sm text-gray-600">
-                                            PNG, JPG, GIF, MP4, MP3 up to 50MB
-                                        </p>
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            accept="image/*,video/*,audio/*"
-                                            onChange={(e) => handleFileSelect(e.target.files)}
-                                            className="hidden"
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <div className="relative">
+                    <CardContent>
+                        <form onSubmit={handleMintNFT} className="space-y-8">
+                            {/* Image Upload */}
+                            <div>
+                                <label className="block text-sm font-medium mb-4">
+                                    Upload Image
+                                </label>
+                                <div className="relative">
+                                    {nftData.previewUrl ? (
+                                        <div className="relative aspect-square rounded-lg overflow-hidden">
                                             <img
                                                 src={nftData.previewUrl}
                                                 alt="Preview"
-                                                className="w-full h-64 object-cover rounded-lg"
+                                                className="w-full h-full object-cover"
                                             />
                                             <button
-                                                onClick={() => setNftData(prev => ({ ...prev, file: undefined, previewUrl: undefined }))}
-                                                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                                                type="button"
+                                                onClick={() => {
+                                                    setNftData(prev => ({ ...prev, file: undefined, previewUrl: undefined }));
+                                                }}
+                                                className="absolute top-2 right-2 p-1 bg-background/80 backdrop-blur-sm rounded-full hover:bg-background transition-colors"
                                             >
                                                 <X className="h-4 w-4" />
                                             </button>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                variant="outline"
-                                                onClick={() => fileInputRef.current?.click()}
-                                                className="flex-1"
-                                            >
-                                                <Camera className="h-4 w-4 mr-2" />
-                                                Change File
-                                            </Button>
+                                    ) : (
+                                        <label className="block">
                                             <input
                                                 ref={fileInputRef}
                                                 type="file"
                                                 accept="image/*,video/*,audio/*"
                                                 onChange={(e) => handleFileSelect(e.target.files)}
-                                                className="hidden"
+                                                className="sr-only"
                                             />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            /* AI Generation */
-                            <div className="bg-white rounded-xl p-6 shadow-sm">
-                                <h2 className="text-xl font-semibold text-gray-900 mb-6">AI Generate Art</h2>
-
-                                <div className="space-y-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Describe your artwork
+                                            <div className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 transition-colors flex flex-col items-center justify-center cursor-pointer">
+                                                <ImageIcon className="h-12 w-12 text-muted-foreground mb-4" />
+                                                <p className="text-sm text-muted-foreground mb-1">
+                                                    Click to upload or drag and drop
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    PNG, JPG, GIF, MP4, MP3 up to 50MB
+                                                </p>
+                                            </div>
                                         </label>
-                                        <textarea
-                                            value={aiPrompt.prompt}
-                                            onChange={(e) => setAiPrompt(prev => ({ ...prev, prompt: e.target.value }))}
-                                            placeholder="A futuristic cityscape with neon lights and flying cars..."
-                                            className="w-full p-3 border border-gray-200 rounded-lg resize-none"
-                                            rows={4}
-                                        />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Art Style
-                                            </label>
-                                            <select
-                                                value={aiPrompt.style}
-                                                onChange={(e) => setAiPrompt(prev => ({ ...prev, style: e.target.value }))}
-                                                className="w-full p-3 border border-gray-200 rounded-lg"
-                                            >
-                                                {aiStyles.map(style => (
-                                                    <option key={style.value} value={style.value}>
-                                                        {style.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Quality
-                                            </label>
-                                            <select
-                                                value={aiPrompt.quality}
-                                                onChange={(e) => setAiPrompt(prev => ({ ...prev, quality: e.target.value }))}
-                                                className="w-full p-3 border border-gray-200 rounded-lg"
-                                            >
-                                                <option value="standard">Standard</option>
-                                                <option value="high">High Quality</option>
-                                                <option value="ultra">Ultra HD</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <Button
-                                        onClick={handleGenerateAI}
-                                        disabled={isUploading || !aiPrompt.prompt.trim()}
-                                        className="w-full bg-purple-600 hover:bg-purple-700"
-                                    >
-                                        {isUploading ? (
-                                            <>
-                                                <LoadingSpinner size="sm" className="mr-2" />
-                                                Generating...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Sparkles className="h-4 w-4 mr-2" />
-                                                Generate Art
-                                            </>
-                                        )}
-                                    </Button>
-
-                                    {nftData.previewUrl && (
-                                        <div className="mt-6">
-                                            <img
-                                                src={nftData.previewUrl}
-                                                alt="Generated"
-                                                className="w-full h-64 object-cover rounded-lg"
-                                            />
-                                        </div>
                                     )}
                                 </div>
                             </div>
-                        )}
-                    </div>
 
-                    {/* Right Column - NFT Details */}
-                    <div className="bg-white rounded-xl p-6 shadow-sm">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-6">NFT Details</h2>
+                            <Separator />
 
-                        <div className="space-y-6">
-                            {/* Title */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Title *
-                                </label>
-                                <Input
-                                    value={nftData.title}
-                                    onChange={(e) => setNftData(prev => ({ ...prev, title: e.target.value }))}
-                                    placeholder="Enter NFT title"
-                                />
+                            {/* Title and Description */}
+                            <div className="space-y-4">
+                                <div>
+                                    <label htmlFor="title" className="block text-sm font-bold mb-2">
+                                        Title *
+                                    </label>
+                                    <Input
+                                        id="title"
+                                        value={nftData.title}
+                                        onChange={(e) => setNftData(prev => ({ ...prev, title: e.target.value }))}
+                                        placeholder="Give your NFT a name"
+                                        maxLength={50}
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        {nftData.title.length}/50 characters
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="description" className="block text-sm font-medium mb-2">
+                                        Description *
+                                    </label>
+                                    <textarea
+                                        id="description"
+                                        value={nftData.description}
+                                        onChange={(e) => setNftData(prev => ({ ...prev, description: e.target.value }))}
+                                        placeholder="Tell the story of your NFT"
+                                        className="w-full min-h-[100px] rounded-md border bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        maxLength={500}
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        {nftData.description.length}/500 characters
+                                    </p>
+                                </div>
                             </div>
 
-                            {/* Description */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Description *
-                                </label>
-                                <textarea
-                                    value={nftData.description}
-                                    onChange={(e) => setNftData(prev => ({ ...prev, description: e.target.value }))}
-                                    placeholder="Describe your NFT..."
-                                    className="w-full p-3 border border-gray-200 rounded-lg resize-none"
-                                    rows={4}
-                                />
-                            </div>
+                            <Separator />
 
                             {/* Category */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label htmlFor="category" className="block text-sm font-medium mb-2">
                                     Category
                                 </label>
                                 <select
+                                    id="category"
                                     value={nftData.category}
                                     onChange={(e) => setNftData(prev => ({ ...prev, category: e.target.value }))}
                                     className="w-full p-3 border border-gray-200 rounded-lg"
@@ -501,74 +375,102 @@ export function UploadPage() {
                                 </select>
                             </div>
 
+                            <Separator />
+
+                            {/* Price and Royalty */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label htmlFor="price" className="block text-sm font-medium mb-2">
+                                        Price (PiCO) *
+                                    </label>
+                                    <div className="relative">
+                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            id="price"
+                                            type="number"
+                                            value={nftData.price}
+                                            onChange={(e) => setNftData(prev => ({ ...prev, price: e.target.value }))}
+                                            placeholder="0.00"
+                                            className="pl-9"
+                                            min="0"
+                                            step="0.01"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="royalty" className="block text-sm font-medium mb-2">
+                                        Royalty %
+                                    </label>
+                                    <div className="relative">
+                                        <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            id="royalty"
+                                            type="number"
+                                            value={nftData.royalty}
+                                            onChange={(e) => setNftData(prev => ({ ...prev, royalty: e.target.value }))}
+                                            placeholder="2.5"
+                                            className="pl-9"
+                                            min="0"
+                                            max="15"
+                                            step="0.1"
+                                        />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Maximum 15%
+                                    </p>
+                                </div>
+                            </div>
+
+                            <Separator />
+
                             {/* Tags */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium mb-2">
                                     Tags
                                 </label>
-                                <div className="flex gap-2 mb-2">
-                                    <Input
-                                        value={currentTag}
-                                        onChange={(e) => setCurrentTag(e.target.value)}
-                                        placeholder="Add a tag"
-                                        onKeyPress={(e) => e.key === 'Enter' && addTag()}
-                                        className="flex-1"
-                                    />
-                                    <Button type="button" onClick={addTag} size="sm">
-                                        <Plus className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                    {nftData.tags.map(tag => (
-                                        <span
-                                            key={tag}
-                                            className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"
-                                        >
-                                            #{tag}
-                                            <button onClick={() => removeTag(tag)}>
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Price */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Price (PiCO) *
-                                </label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                                    <Input
-                                        type="number"
-                                        value={nftData.price}
-                                        onChange={(e) => setNftData(prev => ({ ...prev, price: e.target.value }))}
-                                        placeholder="0.00"
-                                        className="pl-10"
-                                        step="0.01"
-                                        min="0"
-                                    />
+                                <div className="space-y-3">
+                                    <div className="flex flex-wrap gap-2">
+                                        {nftData.tags.map((tag) => (
+                                            <Badge
+                                                key={tag}
+                                                variant="secondary"
+                                                className="flex items-center gap-1"
+                                            >
+                                                {tag}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeTag(tag)}
+                                                    className="hover:text-destructive"
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </button>
+                                            </Badge>
+                                        ))}
+                                        {nftData.tags.length < 5 && (
+                                            <div className="relative">
+                                                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                <Input
+                                                    value={currentTag}
+                                                    onChange={(e) => {
+                                                        setCurrentTag(e.target.value);
+                                                        addTag();
+                                                    }}
+                                                    onKeyDown={(e) => e.key === 'Enter' && addTag()}
+                                                    placeholder="Add a tag"
+                                                    className="pl-9"
+                                                    maxLength={20}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Press enter to add a tag. Maximum 5 tags.
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* Royalty */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Royalty (%)
-                                </label>
-                                <Input
-                                    type="number"
-                                    value={nftData.royalty}
-                                    onChange={(e) => setNftData(prev => ({ ...prev, royalty: e.target.value }))}
-                                    placeholder="10"
-                                    min="0"
-                                    max="30"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Percentage you'll earn from future sales (max 30%)
-                                </p>
-                            </div>
+                            <Separator />
 
                             {/* For Sale Toggle */}
                             <div className="flex items-center gap-3">
@@ -608,28 +510,48 @@ export function UploadPage() {
                                 </div>
                             )}
 
-                            {/* Mint Button */}
-                            <Button
-                                onClick={handleMintNFT}
-                                disabled={isUploading || !nftData.title.trim() || !nftData.description.trim() || !nftData.price.trim() || !nftData.previewUrl}
-                                className="w-full bg-blue-600 hover:bg-blue-700"
-                                size="lg"
-                            >
-                                {isUploading ? (
-                                    <>
-                                        <LoadingSpinner size="sm" className="mr-2" />
-                                        Minting...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Palette className="h-5 w-5 mr-2" />
-                                        Mint NFT
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
+                            <Separator />
+
+                            {/* Submit Button */}
+                            <div className="flex justify-end gap-4">
+                                <Button
+                                    type="reset"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setNftData(prev => ({
+                                            ...prev,
+                                            title: '',
+                                            description: '',
+                                            price: '',
+                                            royalty: '10',
+                                            isForSale: true,
+                                            tags: []
+                                        }));
+                                    }}
+                                >
+                                    Reset
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={isUploading || !nftData.title.trim() || !nftData.description.trim() || !nftData.price.trim() || !nftData.previewUrl}
+                                    className="min-w-[120px]"
+                                >
+                                    {isUploading ? (
+                                        <>
+                                            <Clock className="h-4 w-4 mr-2 animate-spin" />
+                                            Minting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Palette className="h-4 w-4 mr-2" />
+                                            Mint NFT
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

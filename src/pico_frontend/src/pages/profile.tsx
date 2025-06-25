@@ -1,7 +1,20 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import {
+    Button,
+    Input,
+    Card,
+    CardContent,
+    Badge,
+    Avatar,
+    AvatarImage,
+    AvatarFallback,
+    Tabs,
+    TabsList,
+    TabsTrigger,
+    TabsContent,
+    Separator
+} from '@/components/ui';
 import { useAuth } from '@/context/auth-context';
 import {
     Settings,
@@ -17,7 +30,11 @@ import {
     ExternalLink,
     ArrowLeft,
     Upload,
-    Wallet
+    Wallet,
+    Link as LinkIcon,
+    Twitter,
+    Instagram,
+    Globe
 } from 'lucide-react';
 
 interface UserProfile {
@@ -147,275 +164,298 @@ export function ProfilePage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-background">
             {/* Cover Image */}
-            <div className="relative h-64 bg-gradient-to-r from-purple-600 to-blue-600 overflow-hidden">
+            <div className="relative h-64 overflow-hidden">
                 <img
                     src={userProfile.coverImage}
                     alt="Cover"
-                    className="w-full h-full object-cover opacity-50"
+                    className="w-full h-full object-cover"
                 />
-                <div className="absolute top-4 left-4">
+                <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+                <div className="absolute top-4 left-4 flex gap-2">
                     <Link to="/explore">
-                        <Button variant="outline" size="sm" className="bg-white/90 backdrop-blur-sm">
+                        <Button variant="outline" size="sm" className="bg-background/90 backdrop-blur-sm">
                             <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back to Explore
+                            Back
                         </Button>
                     </Link>
                 </div>
                 <div className="absolute top-4 right-4 flex gap-2">
-                    <Button variant="outline" size="sm" className="bg-white/90 backdrop-blur-sm">
+                    <Button variant="outline" size="sm" className="bg-background/90 backdrop-blur-sm">
                         <Share2 className="h-4 w-4" />
                     </Button>
-                    <Button onClick={handleEditProfile} size="sm" className="bg-white/90 backdrop-blur-sm text-gray-900 hover:bg-white">
+                    <Button onClick={handleEditProfile} size="sm" className="bg-background/90 backdrop-blur-sm">
                         <Settings className="h-4 w-4 mr-2" />
                         {isEditing ? 'Cancel' : 'Edit Profile'}
                     </Button>
                 </div>
             </div>
 
-            {/* Profile Info */}
+            {/* Profile Content */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="relative -mt-16 mb-8">
-                    <div className="bg-white rounded-xl shadow-lg p-8">
-                        <div className="flex flex-col lg:flex-row gap-8">
-                            {/* Avatar and Basic Info */}
-                            <div className="flex flex-col items-center lg:items-start">
-                                <div className="relative">
-                                    <img
-                                        src={userProfile.avatar}
-                                        alt={userProfile.name}
-                                        className="w-32 h-32 rounded-full border-4 border-white shadow-lg"
-                                    />
-                                    {isEditing && (
-                                        <button className="absolute bottom-2 right-2 p-2 bg-blue-600 rounded-full text-white hover:bg-blue-700">
-                                            <Camera className="h-4 w-4" />
-                                        </button>
+                <div className="relative -mt-24">
+                    <Card className="border-none shadow-xl">
+                        <CardContent className="p-6">
+                            <div className="flex flex-col lg:flex-row gap-8">
+                                {/* Avatar and Basic Info */}
+                                <div className="flex flex-col items-center lg:items-start">
+                                    <div className="relative">
+                                        <Avatar className="w-32 h-32 border-4 border-background">
+                                            <AvatarImage src={userProfile.avatar} alt={userProfile.name} />
+                                            <AvatarFallback>{userProfile.name[0]}</AvatarFallback>
+                                        </Avatar>
+                                        {isEditing && (
+                                            <button className="absolute bottom-2 right-2 p-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90">
+                                                <Camera className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="text-center lg:text-left mt-4 space-y-2">
+                                        {isEditing ? (
+                                            <>
+                                                <Input
+                                                    value={userProfile.name}
+                                                    onChange={(e) => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
+                                                    placeholder="Your name"
+                                                    className="text-lg font-bold"
+                                                />
+                                                <Input
+                                                    value={userProfile.username}
+                                                    onChange={(e) => setUserProfile(prev => ({ ...prev, username: e.target.value }))}
+                                                    placeholder="@username"
+                                                />
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="flex items-center gap-2 justify-center lg:justify-start">
+                                                    <h1 className="text-2xl font-bold">{userProfile.name}</h1>
+                                                    {userProfile.verified && (
+                                                        <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center">
+                                                            <div className="h-2.5 w-2.5 bg-primary rounded-full" />
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <p className="text-muted-foreground">@{userProfile.username}</p>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* Social Links */}
+                                    {!isEditing && userProfile.social && (
+                                        <div className="flex gap-3 mt-4">
+                                            {userProfile.website && (
+                                                <a href={userProfile.website} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                                                    <Globe className="h-5 w-5" />
+                                                </a>
+                                            )}
+                                            {userProfile.social.twitter && (
+                                                <a href={`https://twitter.com/${userProfile.social.twitter}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                                                    <Twitter className="h-5 w-5" />
+                                                </a>
+                                            )}
+                                            {userProfile.social.instagram && (
+                                                <a href={`https://instagram.com/${userProfile.social.instagram}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                                                    <Instagram className="h-5 w-5" />
+                                                </a>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
 
-                                <div className="text-center lg:text-left mt-4">
-                                    {isEditing ? (
-                                        <div className="space-y-2">
-                                            <Input
-                                                value={userProfile.name}
-                                                onChange={(e) => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
-                                                className="text-center lg:text-left font-bold text-xl"
-                                            />
-                                            <Input
-                                                value={userProfile.username}
-                                                onChange={(e) => setUserProfile(prev => ({ ...prev, username: e.target.value }))}
-                                                className="text-center lg:text-left text-gray-600"
-                                                placeholder="@username"
-                                            />
+                                {/* Profile Details */}
+                                <div className="flex-1">
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                                        <div className="text-center p-4 bg-muted rounded-lg">
+                                            <p className="text-2xl font-bold">{userProfile.followers.toLocaleString()}</p>
+                                            <p className="text-muted-foreground">Followers</p>
                                         </div>
-                                    ) : (
-                                        <>
-                                            <div className="flex items-center gap-2 justify-center lg:justify-start">
-                                                <h1 className="text-2xl font-bold text-gray-900">{userProfile.name}</h1>
-                                                {userProfile.verified && (
-                                                    <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                                                        <div className="w-3 h-3 bg-white rounded-full"></div>
+                                        <div className="text-center p-4 bg-muted rounded-lg">
+                                            <p className="text-2xl font-bold">{userProfile.following.toLocaleString()}</p>
+                                            <p className="text-muted-foreground">Following</p>
+                                        </div>
+                                        <div className="text-center p-4 bg-muted rounded-lg">
+                                            <p className="text-2xl font-bold">{userProfile.totalNFTs}</p>
+                                            <p className="text-muted-foreground">NFTs Created</p>
+                                        </div>
+                                        <div className="text-center p-4 bg-muted rounded-lg">
+                                            <p className="text-2xl font-bold text-primary">{userProfile.totalSales} PiCO</p>
+                                            <p className="text-muted-foreground">Total Sales</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Bio */}
+                                    <div className="mb-6">
+                                        {isEditing ? (
+                                            <textarea
+                                                value={userProfile.bio}
+                                                onChange={(e) => setUserProfile(prev => ({ ...prev, bio: e.target.value }))}
+                                                className="w-full p-3 rounded-lg bg-muted resize-none"
+                                                rows={3}
+                                                placeholder="Tell us about yourself..."
+                                            />
+                                        ) : (
+                                            <p className="text-muted-foreground">{userProfile.bio}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Wallet Info */}
+                                    {principal && (
+                                        <Card className="mb-6">
+                                            <CardContent className="p-4">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-sm text-muted-foreground">Wallet Balance</p>
+                                                        <p className="font-semibold text-primary">{userBalance} PiCO</p>
                                                     </div>
-                                                )}
-                                            </div>
-                                            <p className="text-gray-600">@{userProfile.username}</p>
-                                        </>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-xs font-mono text-muted-foreground">{principal.slice(0, 10)}...</p>
+                                                        <Button size="sm" variant="outline" onClick={copyPrincipalToClipboard}>
+                                                            <Copy className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
                                     )}
+
+                                    {/* Action Buttons */}
+                                    <div className="flex flex-wrap gap-3">
+                                        {isEditing ? (
+                                            <Button onClick={handleSaveProfile} className="bg-primary">
+                                                Save Changes
+                                            </Button>
+                                        ) : (
+                                            <>
+                                                <Link to="/upload">
+                                                    <Button className="bg-primary">
+                                                        <Upload className="h-4 w-4 mr-2" />
+                                                        Upload NFT
+                                                    </Button>
+                                                </Link>
+                                                <Button variant="outline">
+                                                    <Users className="h-4 w-4 mr-2" />
+                                                    Follow
+                                                </Button>
+                                                <Button variant="outline">
+                                                    <Wallet className="h-4 w-4 mr-2" />
+                                                    Tip Creator
+                                                </Button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-
-                            {/* Profile Details */}
-                            <div className="flex-1">
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                                    <div className="text-center">
-                                        <p className="text-2xl font-bold text-gray-900">{userProfile.followers.toLocaleString()}</p>
-                                        <p className="text-gray-600">Followers</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-2xl font-bold text-gray-900">{userProfile.following.toLocaleString()}</p>
-                                        <p className="text-gray-600">Following</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-2xl font-bold text-gray-900">{userProfile.totalNFTs}</p>
-                                        <p className="text-gray-600">NFTs Created</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-2xl font-bold text-blue-600">{userProfile.totalSales} PiCO</p>
-                                        <p className="text-gray-600">Total Sales</p>
-                                    </div>
-                                </div>
-
-                                {/* Bio */}
-                                <div className="mb-6">
-                                    {isEditing ? (
-                                        <textarea
-                                            value={userProfile.bio}
-                                            onChange={(e) => setUserProfile(prev => ({ ...prev, bio: e.target.value }))}
-                                            className="w-full p-3 border border-gray-200 rounded-lg resize-none"
-                                            rows={3}
-                                            placeholder="Tell us about yourself..."
-                                        />
-                                    ) : (
-                                        <p className="text-gray-700">{userProfile.bio}</p>
-                                    )}
-                                </div>
-
-                                {/* Wallet Info */}
-                                {principal && (
-                                    <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-sm text-gray-600">Wallet Balance</p>
-                                                <p className="font-semibold text-blue-600">{userBalance} PiCO</p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <p className="text-xs text-gray-500 font-mono">{principal.slice(0, 10)}...</p>
-                                                <Button size="sm" variant="outline" onClick={copyPrincipalToClipboard}>
-                                                    <Copy className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Action Buttons */}
-                                <div className="flex flex-wrap gap-3">
-                                    {isEditing ? (
-                                        <Button onClick={handleSaveProfile} className="bg-blue-600 hover:bg-blue-700">
-                                            Save Changes
-                                        </Button>
-                                    ) : (
-                                        <>
-                                            <Link to="/upload">
-                                                <Button className="bg-green-600 hover:bg-green-700">
-                                                    <Upload className="h-4 w-4 mr-2" />
-                                                    Upload NFT
-                                                </Button>
-                                            </Link>
-                                            <Button variant="outline">
-                                                <Users className="h-4 w-4 mr-2" />
-                                                Follow
-                                            </Button>
-                                            <Button variant="outline">
-                                                <Wallet className="h-4 w-4 mr-2" />
-                                                Tip Creator
-                                            </Button>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
-                {/* Tabs */}
-                <div className="mb-8">
-                    <div className="border-b border-gray-200">
-                        <div className="flex space-x-8">
+                {/* NFT Tabs */}
+                <div className="py-8">
+                    <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="w-full justify-start border-b rounded-none p-0 h-12 bg-transparent">
                             {tabs.map((tab) => (
-                                <button
+                                <TabsTrigger
                                     key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
-                                        ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                        }`}
+                                    value={tab.id}
+                                    className="flex items-center gap-2 px-4 py-3 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                                 >
                                     <tab.icon className="h-4 w-4" />
                                     {tab.label}
-                                    <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs">
+                                    <Badge variant="secondary" className="ml-2">
                                         {tab.count}
-                                    </span>
-                                </button>
+                                    </Badge>
+                                </TabsTrigger>
                             ))}
-                        </div>
-                    </div>
-                </div>
+                        </TabsList>
 
-                {/* NFT Grid */}
-                <div className="pb-8">
-                    {getCurrentNFTs().length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {getCurrentNFTs().map((nft) => (
-                                <div key={nft.id} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="aspect-square bg-gray-100 relative">
-                                        <img
-                                            src={nft.image}
-                                            alt={nft.title}
-                                            className="w-full h-full object-cover"
-                                        />
-                                        {nft.isForSale && (
-                                            <div className="absolute top-3 left-3 px-2 py-1 bg-green-500 text-white text-xs rounded-full">
-                                                For Sale
-                                            </div>
-                                        )}
-                                        <button className="absolute top-3 right-3 p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors">
-                                            <Heart className="h-4 w-4" />
-                                        </button>
+                        {tabs.map((tab) => (
+                            <TabsContent key={tab.id} value={tab.id}>
+                                {getCurrentNFTs().length > 0 ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                        {getCurrentNFTs().map((nft) => (
+                                            <Card key={nft.id} className="group overflow-hidden">
+                                                <div className="aspect-square relative">
+                                                    <img
+                                                        src={nft.image}
+                                                        alt={nft.title}
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                    />
+                                                    {nft.isForSale && (
+                                                        <Badge className="absolute top-3 left-3">
+                                                            For Sale
+                                                        </Badge>
+                                                    )}
+                                                    <button className="absolute top-3 right-3 p-2 bg-background/80 backdrop-blur-sm rounded-full hover:bg-background transition-colors">
+                                                        <Heart className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+
+                                                <CardContent className="p-4">
+                                                    <h3 className="font-semibold mb-2">{nft.title}</h3>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-bold text-primary">{nft.price} PiCO</span>
+                                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                            <Heart className="h-4 w-4" />
+                                                            {nft.likes}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex gap-2 mt-3">
+                                                        <Link to={`/posts/${nft.id}`} className="flex-1">
+                                                            <Button variant="outline" className="w-full">
+                                                                View
+                                                            </Button>
+                                                        </Link>
+                                                        {activeTab === 'created' && (
+                                                            <Button className="flex-1">
+                                                                Edit
+                                                            </Button>
+                                                        )}
+                                                        {activeTab === 'wishlist' && (
+                                                            <Button className="flex-1">
+                                                                Buy
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
                                     </div>
-
-                                    <div className="p-4">
-                                        <h3 className="font-semibold text-gray-900 mb-2">{nft.title}</h3>
-                                        <div className="flex items-center justify-between">
-                                            <span className="font-bold text-blue-600">{nft.price} PiCO</span>
-                                            <div className="flex items-center gap-1 text-sm text-gray-600">
-                                                <Heart className="h-4 w-4" />
-                                                {nft.likes}
-                                            </div>
+                                ) : (
+                                    <div className="text-center py-16">
+                                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <Grid3X3 className="h-8 w-8 text-muted-foreground" />
                                         </div>
-
-                                        <div className="flex gap-2 mt-3">
-                                            <Link to={`/posts/${nft.id}`} className="flex-1">
-                                                <Button size="sm" variant="outline" className="w-full">
-                                                    View
+                                        <h3 className="text-lg font-semibold mb-2">
+                                            No {tab.label.toLowerCase()} yet
+                                        </h3>
+                                        <p className="text-muted-foreground mb-6">
+                                            {tab.id === 'created' && "You haven't created any NFTs yet. Start creating!"}
+                                            {tab.id === 'collected' && "You haven't collected any NFTs yet. Start exploring!"}
+                                            {tab.id === 'wishlist' && "You haven't added any NFTs to your wishlist yet."}
+                                        </p>
+                                        {tab.id === 'created' && (
+                                            <Link to="/upload">
+                                                <Button>
+                                                    <Upload className="h-4 w-4 mr-2" />
+                                                    Create your first NFT
                                                 </Button>
                                             </Link>
-                                            {activeTab === 'created' && (
-                                                <Button size="sm" className="flex-1">
-                                                    Edit
+                                        )}
+                                        {tab.id === 'collected' && (
+                                            <Link to="/explore">
+                                                <Button>
+                                                    Explore NFTs
                                                 </Button>
-                                            )}
-                                            {activeTab === 'wishlist' && (
-                                                <Button size="sm" className="flex-1">
-                                                    Buy
-                                                </Button>
-                                            )}
-                                        </div>
+                                            </Link>
+                                        )}
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-16">
-                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Grid3X3 className="h-8 w-8 text-gray-400" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                No {tabs.find(tab => tab.id === activeTab)?.label.toLowerCase()} yet
-                            </h3>
-                            <p className="text-gray-600 mb-6">
-                                {activeTab === 'created' && "You haven't created any NFTs yet. Start creating!"}
-                                {activeTab === 'collected' && "You haven't collected any NFTs yet. Start exploring!"}
-                                {activeTab === 'wishlist' && "You haven't added any NFTs to your wishlist yet."}
-                            </p>
-                            {activeTab === 'created' && (
-                                <Link to="/upload">
-                                    <Button>
-                                        <Upload className="h-4 w-4 mr-2" />
-                                        Create your first NFT
-                                    </Button>
-                                </Link>
-                            )}
-                            {activeTab === 'collected' && (
-                                <Link to="/explore">
-                                    <Button>
-                                        Explore NFTs
-                                    </Button>
-                                </Link>
-                            )}
-                        </div>
-                    )}
+                                )}
+                            </TabsContent>
+                        ))}
+                    </Tabs>
                 </div>
             </div>
         </div>

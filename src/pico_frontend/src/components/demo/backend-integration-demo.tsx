@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useAuth } from '@/context/auth-context';
 import { useBackend } from '@/hooks/useBackend';
+
 import {
     Wallet,
     Coins,
@@ -317,8 +318,8 @@ export function BackendIntegrationDemo() {
             {/* Status Messages */}
             {message && (
                 <div className={`rounded-lg p-4 ${message.includes('✅') ? 'bg-green-50 border border-green-200' :
-                        message.includes('❌') ? 'bg-red-50 border border-red-200' :
-                            'bg-blue-50 border border-blue-200'
+                    message.includes('❌') ? 'bg-red-50 border border-red-200' :
+                        'bg-blue-50 border border-blue-200'
                     }`}>
                     <div className="flex items-center gap-2">
                         {message.includes('✅') ? (
@@ -329,8 +330,8 @@ export function BackendIntegrationDemo() {
                             <Activity className="h-5 w-5 text-blue-600" />
                         )}
                         <p className={`text-sm ${message.includes('✅') ? 'text-green-800' :
-                                message.includes('❌') ? 'text-red-800' :
-                                    'text-blue-800'
+                            message.includes('❌') ? 'text-red-800' :
+                                'text-blue-800'
                             }`}>
                             {message}
                         </p>

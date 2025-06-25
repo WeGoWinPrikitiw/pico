@@ -256,25 +256,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
             let info: TokenInfo | null = null;
 
-            // Prefer dedicated token canister if method exists
+            // 1. Try dedicated token contract (if deployed)
             if (tokActor && typeof tokActor.get_token_info === 'function') {
                 info = await tokActor.get_token_info();
             }
 
-            // Fallback: derive token info directly from the ICRC-1 ledger canister
+            // 2. Fallback: derive token info directly from the ICRC-1 ledger canister
             if (!info && ledgerActor) {
                 const [name, symbol, decimals, totalSupply] = await Promise.all([
                     ledgerActor.icrc1_name(),
                     ledgerActor.icrc1_symbol(),
                     ledgerActor.icrc1_decimals(),
-                    ledgerActor.icrc1_total_supply()
+                    ledgerActor.icrc1_total_supply(),
                 ]);
 
                 info = {
                     name,
                     symbol,
                     decimals: Number(decimals),
-                    totalSupply: totalSupply as bigint
+                    totalSupply: totalSupply as bigint,
                 } as TokenInfo;
             }
 
@@ -292,18 +292,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
             let balance: number | null = null;
 
-            if (opActor && typeof opActor.getUserBalance === 'function') {
-                const balanceResult = await opActor.getUserBalance(userPrincipal);
-                if (balanceResult.ok !== undefined) {
-                    balance = balanceResult.ok;
-                }
-            }
-
-            // Fallback: query balance directly from ledger
-            if (balance === null && ledgerActor) {
+            // Query balance directly from ledger
+            if (ledgerActor) {
                 const account = {
                     owner: Principal.fromText(userPrincipal),
-                    subaccount: [] as number[]
+                    subaccount: [] as number[],
                 };
                 const rawBal: bigint = await ledgerActor.icrc1_balance_of(account);
                 balance = Number(rawBal / BigInt(100000000)); // convert from 8-dec units
@@ -319,18 +312,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.error('❌ Failed to load user balance:', error);
         }
 
-        // Load user transactions (no easy fallback if method missing)
-        try {
-            if (opActor && typeof opActor.getUserTransactions === 'function') {
-                const transactionsResult = await opActor.getUserTransactions(userPrincipal);
-                if (transactionsResult.ok !== undefined) {
-                    setTransactions(transactionsResult.ok);
-                    console.log('✅ User transactions loaded');
-                }
-            }
-        } catch (error) {
-            console.error('❌ Failed to load user transactions:', error);
-        }
+        // User transactions from the operational canister are not available.
+        // Clearing any existing transactions.
+        setTransactions([]);
     };
 
     const loadUserData = async () => {
