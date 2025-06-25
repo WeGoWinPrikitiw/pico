@@ -31,6 +31,10 @@
       "main": "src/pico_backend/preferences.mo",
       "type": "motoko"
     },
+    "forums_contract": {
+      "main": "src/pico_backend/forums.mo",
+      "type": "motoko"
+    },
     "pico_backend": {
       "main": "src/pico_backend/nft.mo",
       "type": "motoko"
