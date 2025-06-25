@@ -109,12 +109,14 @@ export function Header() {
               {/* Profile Menu */}
               <Popover>
                 <PopoverTrigger asChild>
-                  <Avatar className="cursor-pointer hover:opacity-80">
-                    <AvatarImage src={`https://avatar.vercel.sh/${principal}.png`} alt={principal} />
-                    <AvatarFallback>
-                      <User className="h-4 w-4" />
-                    </AvatarFallback>
-                  </Avatar>
+                  <button className="cursor-pointer hover:opacity-80 rounded-full">
+                    <Avatar>
+                      <AvatarImage src={`https://avatar.vercel.sh/${principal}.png`} alt={principal} />
+                      <AvatarFallback>
+                        <User className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-56 p-2" align="end">
                   <div className="flex flex-col gap-2">

@@ -20,8 +20,6 @@ export {
 } from './navigation-menu';
 export {
     Sheet,
-    SheetPortal,
-    SheetOverlay,
     SheetTrigger,
     SheetClose,
     SheetContent,

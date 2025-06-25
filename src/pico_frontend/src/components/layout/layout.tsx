@@ -11,7 +11,7 @@ export function Layout({ children }: LayoutProps) {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen flex flex-col">
       {/* Global navigation header */}
       {isAuthenticated && <Header />}
 

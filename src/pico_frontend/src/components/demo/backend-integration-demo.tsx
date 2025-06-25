@@ -287,7 +287,7 @@ export function BackendIntegrationDemo() {
                     <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Transactions</h3>
                     <div className="space-y-3">
                         {transactions.slice(0, 5).map((tx, index) => (
-                            <div key={tx.transaction_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div key={tx.transaction_id} className="flex items-center justify-between p-3 rounded-lg">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                                         <ArrowDownLeft className="h-4 w-4 text-blue-600" />
