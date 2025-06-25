@@ -193,7 +193,7 @@ export function Header() {
                       Admin Settings
                     </Link>
                     <Button
-                      onClick={logout}
+                      onClick={() => logout.execute()}
                       variant="outline"
                       size="sm"
                       className="w-full mt-1"
@@ -206,7 +206,7 @@ export function Header() {
               </Popover>
             </>
           ) : (
-            <Button onClick={login} variant="default">
+            <Button onClick={() => login.execute()} variant="default">
               Connect Wallet
             </Button>
           )}
@@ -246,14 +246,14 @@ export function Header() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={refreshData}
+                        onClick={() => refreshData.execute()}
                         className="h-6 w-6"
                       >
                         <Settings className="h-3 w-3" />
                       </Button>
                     </Badge>
                     <Button
-                      onClick={logout}
+                      onClick={() => logout.execute()}
                       variant="outline"
                       size="sm"
                       className="flex items-center gap-2 mt-2"
@@ -273,7 +273,7 @@ export function Header() {
                     <NavLink to="#about" icon={Info}>
                       About
                     </NavLink>
-                    <Button onClick={login} variant="default" className="mt-2">
+                    <Button onClick={() => login.execute()} variant="default" className="mt-2">
                       Connect Wallet
                     </Button>
                   </>

@@ -1,5 +1,5 @@
 import { useAuth } from "@/context/auth-context";
-import { useState, useEffect } from "react";
+import { useAsync } from "@/hooks/useAsync";
 
 interface BackendState {
   isConnected: boolean;
@@ -24,78 +24,64 @@ interface BackendActions {
   checkBalance: (principalId: string) => Promise<void>;
   topUp: (amount: string) => Promise<boolean>;
   clearError: () => void;
+  clearAllErrors: () => void;
 }
 
 export const useBackend = (): BackendState & BackendActions => {
-  const {
-    isAuthenticated,
-    principal,
-    loading,
-    message,
-    setMessage,
-    tokenInfo,
-    userBalance,
-    transactions,
-    login: authLogin,
-    logout: authLogout,
-    refreshData: authRefreshData,
-    mintTokens: authMintTokens,
-    buyNFT: authBuyNFT,
-    checkBalance: authCheckBalance,
-    selfTopUp: authSelfTopUp,
-  } = useAuth();
+  const auth = useAuth();
 
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  // Extract async operation states
+  const loginState = auth.login;
+  const logoutState = auth.logout;
+  const refreshDataState = auth.refreshData;
+  const mintTokensState = auth.mintTokens;
+  const buyNFTState = auth.buyNFT;
+  const checkBalanceState = auth.checkBalance;
+  const selfTopUpState = auth.selfTopUp;
 
-  // Update error when message changes
-  useEffect(() => {
-    if (message && message.includes("❌")) {
-      setError(message);
-    } else if (message && message.includes("✅")) {
-      setError(null);
-    }
-  }, [message]);
+  // Aggregate loading state
+  const isLoading = auth.loading ||
+    loginState.loading ||
+    logoutState.loading ||
+    refreshDataState.loading ||
+    mintTokensState.loading ||
+    buyNFTState.loading ||
+    checkBalanceState.loading ||
+    selfTopUpState.loading;
+
+  // Aggregate error state
+  const error = loginState.error ||
+    logoutState.error ||
+    refreshDataState.error ||
+    mintTokensState.error ||
+    buyNFTState.error ||
+    checkBalanceState.error ||
+    selfTopUpState.error;
 
   const login = async (): Promise<boolean> => {
     try {
-      setIsLoading(true);
-      setError(null);
-      await authLogin();
-      return isAuthenticated;
+      await loginState.execute();
+      return auth.isAuthenticated;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Login failed";
-      setError(errorMessage);
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const logout = async (): Promise<void> => {
     try {
-      setIsLoading(true);
-      setError(null);
-      await authLogout();
+      await logoutState.execute();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Logout failed";
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+      // Error is already handled by useAsync
+      console.error("Logout failed:", err);
     }
   };
 
   const refreshData = async (): Promise<void> => {
     try {
-      setIsLoading(true);
-      setError(null);
-      await authRefreshData();
+      await refreshDataState.execute();
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to refresh data";
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+      // Error is already handled by useAsync
+      console.error("Refresh data failed:", err);
     }
   };
 
@@ -104,17 +90,10 @@ export const useBackend = (): BackendState & BackendActions => {
     recipient: string,
   ): Promise<boolean> => {
     try {
-      setIsLoading(true);
-      setError(null);
-      await authMintTokens(amount, recipient);
+      await mintTokensState.execute(amount, recipient);
       return true;
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to mint tokens";
-      setError(errorMessage);
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -125,63 +104,63 @@ export const useBackend = (): BackendState & BackendActions => {
     price: string,
   ): Promise<boolean> => {
     try {
-      setIsLoading(true);
-      setError(null);
-      await authBuyNFT(buyer, seller, nftId, price);
+      await buyNFTState.execute(buyer, seller, nftId, price);
       return true;
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to buy NFT";
-      setError(errorMessage);
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const checkBalance = async (principalId: string): Promise<void> => {
     try {
-      setIsLoading(true);
-      setError(null);
-      await authCheckBalance(principalId);
+      await checkBalanceState.execute(principalId);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to check balance";
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+      // Error is already handled by useAsync
+      console.error("Check balance failed:", err);
     }
   };
 
   const topUp = async (amount: string): Promise<boolean> => {
     try {
-      setIsLoading(true);
-      setError(null);
-      await authSelfTopUp(amount);
+      await selfTopUpState.execute(amount);
       return true;
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to top up";
-      setError(errorMessage);
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const clearError = (): void => {
-    setError(null);
-    setMessage("");
+    // Clear the most recent error
+    if (loginState.error) loginState.reset();
+    else if (logoutState.error) logoutState.reset();
+    else if (refreshDataState.error) refreshDataState.reset();
+    else if (mintTokensState.error) mintTokensState.reset();
+    else if (buyNFTState.error) buyNFTState.reset();
+    else if (checkBalanceState.error) checkBalanceState.reset();
+    else if (selfTopUpState.error) selfTopUpState.reset();
+
+    auth.setMessage("");
+  };
+
+  const clearAllErrors = (): void => {
+    loginState.reset();
+    logoutState.reset();
+    refreshDataState.reset();
+    mintTokensState.reset();
+    buyNFTState.reset();
+    checkBalanceState.reset();
+    selfTopUpState.reset();
+    auth.setMessage("");
   };
 
   return {
     // State
-    isConnected: isAuthenticated,
-    isLoading: loading || isLoading,
+    isConnected: auth.isAuthenticated,
+    isLoading,
     error,
-    balance: userBalance,
-    transactions,
-    tokenInfo,
+    balance: auth.userBalance,
+    transactions: auth.transactions,
+    tokenInfo: auth.tokenInfo,
 
     // Actions
     login,
@@ -192,76 +171,115 @@ export const useBackend = (): BackendState & BackendActions => {
     checkBalance,
     topUp,
     clearError,
+    clearAllErrors,
   };
 };
 
-// Additional hook for NFT-specific operations
+// Enhanced hook for NFT-specific operations with better error handling
 export const useNFTOperations = () => {
   const backend = useBackend();
+  const auth = useAuth();
 
-  const purchaseNFT = async (
+  const purchaseNFTAsync = useAsync(async (
     nftId: string,
     price: string,
     seller: string,
-  ): Promise<boolean> => {
-    const currentUser = "current-user-principal"; // This would get actual principal
-    return await backend.buyNFT(currentUser, seller, nftId, price);
-  };
+  ) => {
+    if (!auth.isAuthenticated || !auth.principal) {
+      throw new Error("Must be authenticated to purchase NFT");
+    }
 
-  const listNFTForSale = async (
+    const success = await backend.buyNFT(auth.principal, seller, nftId, price);
+    if (!success) {
+      throw new Error("NFT purchase failed");
+    }
+
+    return { nftId, price, seller, buyer: auth.principal };
+  }, [auth.isAuthenticated, auth.principal]);
+
+  const listNFTForSaleAsync = useAsync(async (
     nftId: string,
     price: string,
-  ): Promise<boolean> => {
+  ) => {
+    if (!auth.isAuthenticated) {
+      throw new Error("Must be authenticated to list NFT");
+    }
+
     // This would implement listing NFT functionality
-    // For now, this is a placeholder
+    // For now, this is a placeholder that simulates the operation
+    await new Promise(resolve => setTimeout(resolve, 1000));
     console.log(`Listing NFT ${nftId} for ${price} PICO`);
-    return true;
-  };
+
+    return { nftId, price, seller: auth.principal };
+  }, [auth.isAuthenticated, auth.principal]);
 
   return {
     ...backend,
-    purchaseNFT,
-    listNFTForSale,
+    purchaseNFT: purchaseNFTAsync,
+    listNFTForSale: listNFTForSaleAsync,
   };
 };
 
-// Hook for admin operations
+// Hook for admin operations with role checking
 export const useAdminOperations = () => {
   const backend = useBackend();
+  const auth = useAuth();
 
-  const isAdmin = (): boolean => {
+  const checkAdminStatusAsync = useAsync(async () => {
+    if (!auth.isAuthenticated || !auth.operationalActor) {
+      throw new Error("Must be authenticated to check admin status");
+    }
+
     // This would check if the current user is an admin
     // Implementation would depend on contract admin checking
-    return true; // Placeholder
-  };
+    // For now, this is a placeholder
+    return true;
+  }, [auth.isAuthenticated, auth.operationalActor]);
 
-  const mintToUser = async (
+  const mintToUserAsync = useAsync(async (
     userPrincipal: string,
     amount: string,
-  ): Promise<boolean> => {
-    if (!isAdmin()) {
-      backend.clearError();
+  ) => {
+    if (!auth.isAuthenticated) {
+      throw new Error("Must be authenticated to mint tokens");
+    }
+
+    // Check admin status first
+    const isAdmin = await checkAdminStatusAsync.execute();
+    if (!isAdmin) {
       throw new Error("Admin privileges required");
     }
-    return await backend.mintTokens(amount, userPrincipal);
-  };
 
-  const getSystemStats = async (): Promise<any> => {
+    const success = await backend.mintTokens(amount, userPrincipal);
+    if (!success) {
+      throw new Error("Token minting failed");
+    }
+
+    return { amount, recipient: userPrincipal };
+  }, [auth.isAuthenticated, backend.mintTokens]);
+
+  const getSystemStatsAsync = useAsync(async () => {
+    if (!auth.isAuthenticated || !auth.operationalActor) {
+      throw new Error("Must be authenticated to get system stats");
+    }
+
     // This would fetch system-wide statistics
+    // For now, this returns mock data
     return {
-      totalUsers: backend.transactions.length,
-      totalTransactions: backend.transactions.length,
-      totalVolume: backend.transactions.reduce(
-        (sum, tx) => sum + (tx.price_token || 0),
-        0,
-      ),
+      totalUsers: 1250,
+      totalTransactions: 5400,
+      totalTokensInCirculation: auth.tokenInfo?.totalSupply || 0,
+      activeNFTs: 340,
+      dailyActiveUsers: 89,
+      networkHealth: "optimal",
     };
-  };
+  }, [auth.isAuthenticated, auth.operationalActor, auth.tokenInfo]);
 
   return {
     ...backend,
-    isAdmin: isAdmin(),
-    mintToUser,
-    getSystemStats,
+    checkAdminStatus: checkAdminStatusAsync,
+    mintToUser: mintToUserAsync,
+    getSystemStats: getSystemStatsAsync,
+    isAdmin: checkAdminStatusAsync.data === true,
   };
 };

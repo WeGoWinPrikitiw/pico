@@ -83,9 +83,15 @@ export function OperationalDashboard() {
       setMessage("❌ Please enter both amount and recipient");
       return;
     }
-    await mintTokens(mintAmount, mintRecipient);
-    setMintAmount("");
-    setMintRecipient("");
+
+    try {
+      await mintTokens.execute(mintAmount, mintRecipient);
+      setMintAmount("");
+      setMintRecipient("");
+    } catch (error) {
+      // Error is already handled by useAsync
+      console.error("Mint tokens failed:", error);
+    }
   };
 
   const handleApproveContract = async () => {
@@ -93,8 +99,14 @@ export function OperationalDashboard() {
       setMessage("❌ Please enter approval amount");
       return;
     }
-    await approveContract(approveAmount);
-    setApproveAmount("");
+
+    try {
+      await approveContract.execute(approveAmount);
+      setApproveAmount("");
+    } catch (error) {
+      // Error is already handled by useAsync
+      console.error("Approve contract failed:", error);
+    }
   };
 
   const handleBuyNFT = async () => {
@@ -102,11 +114,17 @@ export function OperationalDashboard() {
       setMessage("❌ Please fill all NFT purchase fields");
       return;
     }
-    await buyNFT(nftBuyer, nftSeller, nftId, nftPrice);
-    setNftBuyer("");
-    setNftSeller("");
-    setNftId("");
-    setNftPrice("");
+
+    try {
+      await buyNFT.execute(nftBuyer, nftSeller, nftId, nftPrice);
+      setNftBuyer("");
+      setNftSeller("");
+      setNftId("");
+      setNftPrice("");
+    } catch (error) {
+      // Error is already handled by useAsync
+      console.error("Buy NFT failed:", error);
+    }
   };
 
   const handleSelfTopUp = async () => {
@@ -114,8 +132,14 @@ export function OperationalDashboard() {
       setMessage("❌ Please enter top-up amount");
       return;
     }
-    await selfTopUp(selfTopUpAmount);
-    setSelfTopUpAmount("");
+
+    try {
+      await selfTopUp.execute(selfTopUpAmount);
+      setSelfTopUpAmount("");
+    } catch (error) {
+      // Error is already handled by useAsync
+      console.error("Self top-up failed:", error);
+    }
   };
 
   const handleCheckBalance = async () => {
@@ -123,8 +147,41 @@ export function OperationalDashboard() {
       setMessage("❌ Please enter principal ID");
       return;
     }
-    await checkBalance(checkBalancePrincipal);
-    setCheckBalancePrincipal("");
+
+    try {
+      await checkBalance.execute(checkBalancePrincipal);
+      setCheckBalancePrincipal("");
+    } catch (error) {
+      // Error is already handled by useAsync
+      console.error("Check balance failed:", error);
+    }
+  };
+
+  const handleLogin = async () => {
+    try {
+      await login.execute();
+    } catch (error) {
+      // Error is already handled by useAsync
+      console.error("Login failed:", error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout.execute();
+    } catch (error) {
+      // Error is already handled by useAsync
+      console.error("Logout failed:", error);
+    }
+  };
+
+  const handleRefreshData = async () => {
+    try {
+      await refreshData.execute();
+    } catch (error) {
+      // Error is already handled by useAsync
+      console.error("Refresh data failed:", error);
+    }
   };
 
   const stats = [
@@ -166,6 +223,20 @@ export function OperationalDashboard() {
 
   const recentTransactions = (transactions || []).slice(0, 5);
 
+  // Combined loading state from all async operations
+  const isLoading = loading || login.loading || logout.loading || refreshData.loading ||
+    mintTokens.loading || approveContract.loading || buyNFT.loading ||
+    checkBalance.loading || selfTopUp.loading;
+
+  // Error display helper
+  const getErrorMessage = () => {
+    return login.error || logout.error || refreshData.error ||
+      mintTokens.error || approveContract.error || buyNFT.error ||
+      checkBalance.error || selfTopUp.error || null;
+  };
+
+  const currentError = getErrorMessage();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       {!isAuthenticated ? (
@@ -205,11 +276,11 @@ export function OperationalDashboard() {
                 </div>
 
                 <Button
-                  onClick={login}
-                  disabled={loading}
+                  onClick={handleLogin}
+                  disabled={isLoading}
                   className="w-full h-12 text-base font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
                 >
-                  {loading ? (
+                  {login.loading ? (
                     <>
                       <LoadingSpinner size="sm" className="mr-2" />
                       Connecting...
@@ -222,9 +293,22 @@ export function OperationalDashboard() {
                   )}
                 </Button>
 
-                {message && (
-                  <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
-                    <p className="text-primary text-sm">{message}</p>
+                {(message || currentError) && (
+                  <div className={`p-4 border rounded-lg ${currentError
+                    ? "bg-destructive/10 border-destructive/20 text-destructive"
+                    : "bg-primary/10 border-primary/20 text-primary"
+                    }`}>
+                    <p className="text-sm">{currentError || message}</p>
+                    {currentError && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => login.reset()}
+                        className="mt-2"
+                      >
+                        Dismiss
+                      </Button>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -253,11 +337,16 @@ export function OperationalDashboard() {
                   </div>
                 </div>
                 <Button
-                  onClick={logout}
+                  onClick={handleLogout}
+                  disabled={logout.loading}
                   variant="outline"
                   className="border-destructive/20 text-destructive hover:bg-destructive hover:text-destructive-foreground"
                 >
-                  <LogOut className="h-4 w-4 mr-2" />
+                  {logout.loading ? (
+                    <LoadingSpinner size="sm" className="mr-2" />
+                  ) : (
+                    <LogOut className="h-4 w-4 mr-2" />
+                  )}
                   Logout
                 </Button>
               </div>
@@ -339,12 +428,12 @@ export function OperationalDashboard() {
               {/* Refresh Button */}
               <div className="mt-6 flex justify-end">
                 <Button
-                  onClick={refreshData}
-                  disabled={loading}
+                  onClick={handleRefreshData}
+                  disabled={refreshData.loading}
                   variant="outline"
                   className="shadow-sm"
                 >
-                  {loading ? (
+                  {refreshData.loading ? (
                     <LoadingSpinner size="sm" className="mr-2" />
                   ) : (
                     <RefreshCw className="h-4 w-4 mr-2" />
@@ -356,9 +445,37 @@ export function OperationalDashboard() {
           </Card>
 
           {/* Message Display */}
-          {message && (
-            <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-xl backdrop-blur-sm">
-              <p className="text-primary font-medium">{message}</p>
+          {(message || currentError) && (
+            <div className={`mb-6 p-4 border rounded-xl backdrop-blur-sm ${currentError
+              ? "bg-destructive/10 border-destructive/20"
+              : "bg-primary/10 border-primary/20"
+              }`}>
+              <div className="flex items-center justify-between">
+                <p className={`font-medium ${currentError ? "text-destructive" : "text-primary"
+                  }`}>
+                  {currentError || message}
+                </p>
+                {currentError && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        login.reset();
+                        logout.reset();
+                        refreshData.reset();
+                        mintTokens.reset();
+                        approveContract.reset();
+                        buyNFT.reset();
+                        checkBalance.reset();
+                        selfTopUp.reset();
+                      }}
+                    >
+                      Clear All Errors
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -666,12 +783,27 @@ export function OperationalDashboard() {
                       />
                     </div>
                   </div>
+
+                  {buyNFT.error && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <p className="text-destructive text-sm">{buyNFT.error}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => buyNFT.reset()}
+                        className="mt-1"
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  )}
+
                   <Button
                     onClick={handleBuyNFT}
-                    disabled={loading}
+                    disabled={buyNFT.loading}
                     className="w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
                   >
-                    {loading ? (
+                    {buyNFT.loading ? (
                       <LoadingSpinner size="sm" className="mr-2" />
                     ) : (
                       <ShoppingCart className="h-4 w-4 mr-2" />
@@ -719,12 +851,27 @@ export function OperationalDashboard() {
                       />
                     </div>
                   </div>
+
+                  {mintTokens.error && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <p className="text-destructive text-sm">{mintTokens.error}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => mintTokens.reset()}
+                        className="mt-1"
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  )}
+
                   <Button
                     onClick={handleMintTokens}
-                    disabled={loading}
+                    disabled={mintTokens.loading}
                     className="w-full h-12 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-600 text-white shadow-lg"
                   >
-                    {loading ? (
+                    {mintTokens.loading ? (
                       <LoadingSpinner size="sm" className="mr-2" />
                     ) : (
                       <DollarSign className="h-4 w-4 mr-2" />
@@ -755,12 +902,27 @@ export function OperationalDashboard() {
                       className="bg-background/50"
                     />
                   </div>
+
+                  {selfTopUp.error && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <p className="text-destructive text-sm">{selfTopUp.error}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => selfTopUp.reset()}
+                        className="mt-1"
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  )}
+
                   <Button
                     onClick={handleSelfTopUp}
-                    disabled={loading}
+                    disabled={selfTopUp.loading}
                     className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white shadow-lg"
                   >
-                    {loading ? (
+                    {selfTopUp.loading ? (
                       <LoadingSpinner size="sm" className="mr-2" />
                     ) : (
                       <ArrowUpRight className="h-4 w-4 mr-2" />
@@ -790,13 +952,34 @@ export function OperationalDashboard() {
                       className="bg-background/50"
                     />
                   </div>
+
+                  {checkBalance.error && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <p className="text-destructive text-sm">{checkBalance.error}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => checkBalance.reset()}
+                        className="mt-1"
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  )}
+
+                  {checkBalance.data && (
+                    <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                      <p className="text-primary text-sm">{checkBalance.data}</p>
+                    </div>
+                  )}
+
                   <Button
                     onClick={handleCheckBalance}
-                    disabled={loading}
+                    disabled={checkBalance.loading}
                     variant="outline"
                     className="w-full h-12 border-primary/20 hover:bg-primary hover:text-primary-foreground"
                   >
-                    {loading ? (
+                    {checkBalance.loading ? (
                       <LoadingSpinner size="sm" className="mr-2" />
                     ) : (
                       <Activity className="h-4 w-4 mr-2" />

@@ -9,6 +9,7 @@ import { AuthClient } from "@dfinity/auth-client";
 import { Actor, HttpAgent } from "@dfinity/agent";
 import { Principal } from "@dfinity/principal";
 import { IcrcLedgerCanister } from "@dfinity/ledger-icrc";
+import { useAsync } from "@/hooks/useAsync";
 
 // Import the generated declarations
 import {
@@ -51,7 +52,7 @@ interface AuthContextType {
   tokenActor: any;
   ledgerActor: any;
 
-  // UI state
+  // UI state - now using useAsync
   loading: boolean;
   message: string;
   setMessage: (message: string) => void;
@@ -63,25 +64,70 @@ interface AuthContextType {
   transactions: Transaction[];
   tokenHolders: any[];
 
-  // Authentication functions
-  login: () => Promise<void>;
-  logout: () => Promise<void>;
+  // Authentication functions with async states
+  login: {
+    execute: () => Promise<void>;
+    loading: boolean;
+    error: string | null;
+    reset: () => void;
+  };
+  logout: {
+    execute: () => Promise<void>;
+    loading: boolean;
+    error: string | null;
+    reset: () => void;
+  };
 
-  // Data functions
-  refreshData: () => Promise<void>;
-  loadUserData: () => Promise<void>;
+  // Data functions with async states
+  refreshData: {
+    execute: () => Promise<void>;
+    loading: boolean;
+    error: string | null;
+    reset: () => void;
+  };
+  loadUserData: {
+    execute: () => Promise<void>;
+    loading: boolean;
+    error: string | null;
+    reset: () => void;
+  };
 
-  // Contract functions
-  mintTokens: (amount: string, recipient: string) => Promise<void>;
-  approveContract: (amount: string) => Promise<void>;
-  buyNFT: (
-    buyer: string,
-    seller: string,
-    nftId: string,
-    price: string,
-  ) => Promise<void>;
-  checkBalance: (principalId: string) => Promise<void>;
-  selfTopUp: (amount: string) => Promise<void>;
+  // Contract functions with async states
+  mintTokens: {
+    execute: (amount: string, recipient: string) => Promise<string>;
+    loading: boolean;
+    error: string | null;
+    data: string | null;
+    reset: () => void;
+  };
+  approveContract: {
+    execute: (amount: string) => Promise<string>;
+    loading: boolean;
+    error: string | null;
+    data: string | null;
+    reset: () => void;
+  };
+  buyNFT: {
+    execute: (buyer: string, seller: string, nftId: string, price: string) => Promise<string>;
+    loading: boolean;
+    error: string | null;
+    data: string | null;
+    reset: () => void;
+  };
+  checkBalance: {
+    execute: (principalId: string) => Promise<string>;
+    loading: boolean;
+    error: string | null;
+    data: string | null;
+    reset: () => void;
+  };
+  selfTopUp: {
+    execute: (amount: string) => Promise<string>;
+    loading: boolean;
+    error: string | null;
+    data: string | null;
+    reset: () => void;
+  };
 
   // Utility functions
   copyPrincipalToClipboard: () => Promise<void>;
@@ -126,30 +172,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [tokenHolders, setTokenHolders] = useState<any[]>([]);
 
-  // Initialize authentication
-  useEffect(() => {
-    initAuth();
-  }, []);
-
-  const initAuth = async () => {
-    setLoading(true);
-    try {
-      const client = await AuthClient.create();
-      setAuthClient(client);
-
-      if (await client.isAuthenticated()) {
-        await handleAuthenticated(client);
-      }
-    } catch (error) {
-      console.error("Auth initialization failed:", error);
-      setMessage("Authentication initialization failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAuthenticated = async (client: AuthClient) => {
-    setLoading(true);
+  // Helper function to create authenticated agent and actors
+  const createAuthenticatedActors = async (client: AuthClient) => {
     const identity = client.getIdentity();
     const principal = identity.getPrincipal();
 
@@ -157,131 +181,71 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setPrincipal(principal.toString());
     setIsAuthenticated(true);
 
-    try {
-      // Create authenticated agent
-      const isLocal =
-        import.meta.env.DEV ||
-        window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1";
-      const host = isLocal ? "http://localhost:4943" : "https://ic0.app";
+    // Create authenticated agent
+    const isLocal =
+      import.meta.env.DEV ||
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+    const host = isLocal ? "http://localhost:4943" : "https://ic0.app";
 
-      console.log("Creating agent with host:", host, "isLocal:", isLocal);
+    console.log("Creating agent with host:", host, "isLocal:", isLocal);
 
-      const agent = new HttpAgent({
-        identity,
-        host,
-      });
+    const agent = new HttpAgent({
+      identity,
+      host,
+    });
 
-      if (isLocal) {
-        await agent.fetchRootKey();
-        console.log("Root key fetched for local development");
-      }
-
-      setAgent(agent);
-
-      // Create authenticated actors with fallback canister IDs
-      const operationalCanisterId =
-        (operational_contract as any)?.canisterId ||
-        "u6s2n-gx777-77774-qaaba-cai";
-      const tokenCanisterId =
-        (token_contract as any)?.canisterId || "umunu-kh777-77774-qaaca-cai";
-      const ledgerCanisterId = "uxrrr-q7777-77774-qaaaq-cai";
-
-      console.log("Creating actors with canister IDs:");
-      console.log("operational_contract:", operationalCanisterId);
-      console.log("token_contract:", tokenCanisterId);
-      console.log("ledger_canister:", ledgerCanisterId);
-
-      // Use directly imported IDL factories as fallback
-      const operationalIdl =
-        (operational_contract as any)?.idlFactory || operationalIdlFactory;
-      const tokenIdl = (token_contract as any)?.idlFactory || tokenIdlFactory;
-
-      const operationalActor = Actor.createActor(operationalIdl, {
-        agent,
-        canisterId: operationalCanisterId,
-      });
-
-      const tokenActor = Actor.createActor(tokenIdl, {
-        agent,
-        canisterId: tokenCanisterId,
-      });
-
-      // Create ICRC ledger actor
-      const ledgerActor = IcrcLedgerCanister.create({
-        agent,
-        canisterId: Principal.fromText(ledgerCanisterId),
-      });
-
-      console.log("Actors created successfully");
-
-      setOperationalActor(operationalActor);
-      setTokenActor(tokenActor);
-      setLedgerActor(ledgerActor);
-
-      // Load initial data
-      await loadUserDataInternal(
-        operationalActor,
-        tokenActor,
-        principal.toString(),
-      );
-
-      setMessage("✅ Successfully authenticated and connected to contracts!");
-    } catch (error) {
-      console.error("Error during authentication setup:", error);
-      setMessage(
-        `❌ Failed to connect to contracts: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    } finally {
-      setLoading(false);
+    if (isLocal) {
+      await agent.fetchRootKey();
+      console.log("Root key fetched for local development");
     }
+
+    setAgent(agent);
+
+    // Create authenticated actors with fallback canister IDs
+    const operationalCanisterId =
+      (operational_contract as any)?.canisterId ||
+      "u6s2n-gx777-77774-qaaba-cai";
+    const tokenCanisterId =
+      (token_contract as any)?.canisterId || "umunu-kh777-77774-qaaca-cai";
+    const ledgerCanisterId = "uxrrr-q7777-77774-qaaaq-cai";
+
+    console.log("Creating actors with canister IDs:");
+    console.log("operational_contract:", operationalCanisterId);
+    console.log("token_contract:", tokenCanisterId);
+    console.log("ledger_canister:", ledgerCanisterId);
+
+    // Use directly imported IDL factories as fallback
+    const operationalIdl =
+      (operational_contract as any)?.idlFactory || operationalIdlFactory;
+    const tokenIdl = (token_contract as any)?.idlFactory || tokenIdlFactory;
+
+    const operationalActor = Actor.createActor(operationalIdl, {
+      agent,
+      canisterId: operationalCanisterId,
+    });
+
+    const tokenActor = Actor.createActor(tokenIdl, {
+      agent,
+      canisterId: tokenCanisterId,
+    });
+
+    // Create ICRC ledger actor
+    const ledgerActor = IcrcLedgerCanister.create({
+      agent,
+      canisterId: Principal.fromText(ledgerCanisterId),
+    });
+
+    console.log("Actors created successfully");
+
+    setOperationalActor(operationalActor);
+    setTokenActor(tokenActor);
+    setLedgerActor(ledgerActor);
+
+    return { operationalActor, tokenActor, ledgerActor, principalStr: principal.toString() };
   };
 
-  const login = async () => {
-    if (!authClient) return;
-
-    try {
-      setLoading(true);
-      const isLocal =
-        import.meta.env.DEV ||
-        window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1";
-      const identityProvider = isLocal
-        ? `http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:4943`
-        : "https://identity.ic0.app";
-
-      console.log("Logging in with identity provider:", identityProvider);
-
-      await authClient.login({
-        identityProvider,
-        onSuccess: () => handleAuthenticated(authClient),
-        onError: (error) => {
-          console.error("Login failed:", error);
-          setMessage("Login failed");
-          setLoading(false);
-        },
-      });
-    } catch (error) {
-      console.error("Login error:", error);
-      setMessage("Login error occurred");
-      setLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    if (!authClient) return;
-
-    await authClient.logout();
-    setIsAuthenticated(false);
-    setIdentity(null);
-    setPrincipal("");
-    setAgent(null);
-    setOperationalActor(null);
-    setTokenActor(null);
-    setLedgerActor(null);
-    setMessage("Logged out successfully");
-  };
-
+  // Load user data helper function
   const loadUserDataInternal = async (
     opActor: any,
     tokActor: any,
@@ -323,13 +287,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error("❌ Failed to load token info:", error);
+      throw new Error(`Failed to load token info: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
 
     // Load user balance
     try {
       let balance: number | null = null;
 
-      // Query balance directly from ledger
       if (ledgerActor) {
         const account = {
           owner: Principal.fromText(userPrincipal),
@@ -347,6 +311,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error("❌ Failed to load user balance:", error);
+      throw new Error(`Failed to load user balance: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
 
     // User transactions from the operational canister are not available.
@@ -354,183 +319,234 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setTransactions([]);
   };
 
-  const loadUserData = async () => {
-    if (operationalActor && tokenActor && principal) {
-      await loadUserDataInternal(operationalActor, tokenActor, principal);
-    }
-  };
+  // Initialize authentication
+  const initAuth = async () => {
+    const client = await AuthClient.create();
+    setAuthClient(client);
 
-  const refreshData = async () => {
-    if (operationalActor && tokenActor && principal) {
-      setLoading(true);
-      await loadUserDataInternal(operationalActor, tokenActor, principal);
-      setLoading(false);
-    }
-  };
-
-  const mintTokens = async (amount: string, recipient: string) => {
-    if (!operationalActor || !validatePrincipal(recipient)) {
-      setMessage("❌ Invalid recipient principal or no operational actor");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const result = await operationalActor.top_up(recipient, parseInt(amount));
-
-      if (result.ok) {
-        setMessage(
-          `✅ Successfully minted ${amount} PiCO tokens to ${recipient.substring(0, 10)}...`,
-        );
-        await refreshData();
-      } else {
-        setMessage(`❌ Minting failed: ${result.err}`);
-      }
-    } catch (error) {
-      console.error("Minting error:", error);
-      setMessage(
-        `❌ Minting error: ${error instanceof Error ? error.message : "Unknown error"}`,
+    if (await client.isAuthenticated()) {
+      const actors = await createAuthenticatedActors(client);
+      await loadUserDataInternal(
+        actors.operationalActor,
+        actors.tokenActor,
+        actors.principalStr,
       );
-    } finally {
-      setLoading(false);
+      setMessage("✅ Successfully authenticated and connected to contracts!");
     }
   };
 
-  const approveContract = async (amount: string) => {
-    if (!ledgerActor || !operationalActor) {
-      setMessage("❌ Ledger or operational actor not available");
-      return;
-    }
-
+  // Utility functions
+  const validatePrincipal = (principalStr: string): boolean => {
     try {
-      setLoading(true);
-      const spenderPrincipal = Principal.fromText(
-        operationalActor.canisterId || "u6s2n-gx777-77774-qaaba-cai",
-      );
-      const amountNat = BigInt(parseInt(amount) * 100000000); // Convert to 8 decimals
+      Principal.fromText(principalStr);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
-      const approveArgs = {
-        fee: [],
-        memo: [],
-        from_subaccount: [],
-        created_at_time: [],
-        amount: amountNat,
-        expected_allowance: [],
-        expires_at: [],
-        spender: {
-          owner: spenderPrincipal,
-          subaccount: [],
+  // Initialize on mount
+  useEffect(() => {
+    setLoading(true);
+    initAuth()
+      .catch((error) => {
+        console.error("Auth initialization failed:", error);
+        setMessage("Authentication initialization failed");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  // Create async hooks for all operations
+  const loginAsync = useAsync(async () => {
+    if (!authClient) throw new Error("Auth client not initialized");
+
+    const isLocal =
+      import.meta.env.DEV ||
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+    const identityProvider = isLocal
+      ? `http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:4943`
+      : "https://identity.ic0.app";
+
+    console.log("Logging in with identity provider:", identityProvider);
+
+    return new Promise<void>((resolve, reject) => {
+      authClient.login({
+        identityProvider,
+        onSuccess: async () => {
+          try {
+            const actors = await createAuthenticatedActors(authClient);
+            await loadUserDataInternal(
+              actors.operationalActor,
+              actors.tokenActor,
+              actors.principalStr,
+            );
+            setMessage("✅ Successfully authenticated and connected to contracts!");
+            resolve();
+          } catch (error) {
+            console.error("Error during authentication setup:", error);
+            const errorMsg = `❌ Failed to connect to contracts: ${error instanceof Error ? error.message : "Unknown error"}`;
+            setMessage(errorMsg);
+            reject(new Error(errorMsg));
+          }
         },
-      };
+        onError: (error) => {
+          console.error("Login failed:", error);
+          const errorMsg = "Login failed";
+          setMessage(errorMsg);
+          reject(new Error(errorMsg));
+        },
+      });
+    });
+  }, [authClient]);
 
-      const result = await ledgerActor.icrc2_approve(approveArgs);
-      console.log("Approval result:", result);
+  const logoutAsync = useAsync(async () => {
+    if (!authClient) return;
 
-      if (result.Ok !== undefined) {
-        setMessage(
-          `✅ Successfully approved ${amount} PiCO tokens for operational contract`,
-        );
-        await refreshData();
-      } else {
-        setMessage(`❌ Approval failed: ${JSON.stringify(result.Err)}`);
-      }
-    } catch (error) {
-      console.error("Approval error:", error);
-      setMessage(
-        `❌ Approval error: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    } finally {
-      setLoading(false);
+    await authClient.logout();
+    setIsAuthenticated(false);
+    setIdentity(null);
+    setPrincipal("");
+    setAgent(null);
+    setOperationalActor(null);
+    setTokenActor(null);
+    setLedgerActor(null);
+    setMessage("Logged out successfully");
+  }, [authClient]);
+
+  const refreshDataAsync = useAsync(async () => {
+    if (!operationalActor || !tokenActor || !principal) {
+      throw new Error("Not authenticated or actors not available");
     }
-  };
+    await loadUserDataInternal(operationalActor, tokenActor, principal);
+  }, [operationalActor, tokenActor, principal]);
 
-  const buyNFT = async (
-    buyer: string,
-    seller: string,
-    nftId: string,
-    price: string,
-  ) => {
+  const loadUserDataAsync = useAsync(async () => {
+    if (!operationalActor || !tokenActor || !principal) {
+      throw new Error("Not authenticated or actors not available");
+    }
+    await loadUserDataInternal(operationalActor, tokenActor, principal);
+  }, [operationalActor, tokenActor, principal]);
+
+  const mintTokensAsync = useAsync(async (amount: string, recipient: string) => {
+    if (!operationalActor || !validatePrincipal(recipient)) {
+      throw new Error("Invalid recipient principal or no operational actor");
+    }
+
+    const result = await operationalActor.top_up(recipient, parseInt(amount));
+
+    if (result.ok) {
+      const successMsg = `✅ Successfully minted ${amount} PiCO tokens to ${recipient.substring(0, 10)}...`;
+      setMessage(successMsg);
+      await refreshDataAsync.execute();
+      return successMsg;
+    } else {
+      const errorMsg = `❌ Minting failed: ${result.err}`;
+      setMessage(errorMsg);
+      throw new Error(errorMsg);
+    }
+  }, [operationalActor, validatePrincipal]);
+
+  const approveContractAsync = useAsync(async (amount: string) => {
+    if (!ledgerActor || !operationalActor) {
+      throw new Error("Ledger or operational actor not available");
+    }
+
+    const spenderPrincipal = Principal.fromText(
+      operationalActor.canisterId || "u6s2n-gx777-77774-qaaba-cai",
+    );
+    const amountNat = BigInt(parseInt(amount) * 100000000); // Convert to 8 decimals
+
+    const approveArgs = {
+      fee: [],
+      memo: [],
+      from_subaccount: [],
+      created_at_time: [],
+      amount: amountNat,
+      expected_allowance: [],
+      expires_at: [],
+      spender: {
+        owner: spenderPrincipal,
+        subaccount: [],
+      },
+    };
+
+    const result = await ledgerActor.icrc2_approve(approveArgs);
+    console.log("Approval result:", result);
+
+    if (result.Ok !== undefined) {
+      const successMsg = `✅ Successfully approved ${amount} PiCO tokens for operational contract`;
+      setMessage(successMsg);
+      await refreshDataAsync.execute();
+      return successMsg;
+    } else {
+      const errorMsg = `❌ Approval failed: ${JSON.stringify(result.Err)}`;
+      setMessage(errorMsg);
+      throw new Error(errorMsg);
+    }
+  }, [ledgerActor, operationalActor]);
+
+  const buyNFTAsync = useAsync(async (buyer: string, seller: string, nftId: string, price: string) => {
     if (!operationalActor || !validatePrincipal(buyer)) {
-      setMessage("❌ Invalid buyer principal or no operational actor");
-      return;
+      throw new Error("Invalid buyer principal or no operational actor");
     }
 
-    try {
-      setLoading(true);
-      const result = await operationalActor.buy_nft(
-        buyer,
-        parseInt(nftId),
-        parseInt(price),
-        [], // No forum ID
-      );
+    const result = await operationalActor.buy_nft(
+      buyer,
+      parseInt(nftId),
+      parseInt(price),
+      [], // No forum ID
+    );
 
-      if (result.ok) {
-        setMessage(
-          `✅ NFT purchase successful! Transaction ID: ${result.ok.transaction_id}`,
-        );
-        await refreshData();
-      } else {
-        setMessage(`❌ NFT purchase failed: ${result.err}`);
-      }
-    } catch (error) {
-      console.error("NFT purchase error:", error);
-      setMessage(
-        `❌ NFT purchase error: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    } finally {
-      setLoading(false);
+    if (result.ok) {
+      const successMsg = `✅ NFT purchase successful! Transaction ID: ${result.ok.transaction_id}`;
+      setMessage(successMsg);
+      await refreshDataAsync.execute();
+      return successMsg;
+    } else {
+      const errorMsg = `❌ NFT purchase failed: ${result.err}`;
+      setMessage(errorMsg);
+      throw new Error(errorMsg);
     }
-  };
+  }, [operationalActor, validatePrincipal]);
 
-  const checkBalance = async (principalId: string) => {
+  const checkBalanceAsync = useAsync(async (principalId: string) => {
     if (!operationalActor || !validatePrincipal(principalId)) {
-      setMessage("❌ Invalid principal or no operational actor");
-      return;
+      throw new Error("Invalid principal or no operational actor");
     }
 
-    try {
-      const result = await operationalActor.getUserBalance(principalId);
-      if (result.ok !== undefined) {
-        setMessage(
-          `💰 Balance for ${principalId.substring(0, 10)}...: ${result.ok} PiCO`,
-        );
-      } else {
-        setMessage(`❌ Failed to get balance: ${result.err}`);
-      }
-    } catch (error) {
-      setMessage(
-        `❌ Error checking balance: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
+    const result = await operationalActor.getUserBalance(principalId);
+    if (result.ok !== undefined) {
+      const successMsg = `💰 Balance for ${principalId.substring(0, 10)}...: ${result.ok} PiCO`;
+      setMessage(successMsg);
+      return successMsg;
+    } else {
+      const errorMsg = `❌ Failed to get balance: ${result.err}`;
+      setMessage(errorMsg);
+      throw new Error(errorMsg);
     }
-  };
+  }, [operationalActor, validatePrincipal]);
 
-  const selfTopUp = async (amount: string) => {
+  const selfTopUpAsync = useAsync(async (amount: string) => {
     if (!operationalActor || !principal) {
-      setMessage("❌ Not authenticated or no operational actor");
-      return;
+      throw new Error("Not authenticated or no operational actor");
     }
 
-    try {
-      setLoading(true);
-      const result = await operationalActor.top_up(principal, parseInt(amount));
+    const result = await operationalActor.top_up(principal, parseInt(amount));
 
-      if (result.ok) {
-        setMessage(
-          `✅ Successfully topped up ${amount} PiCO tokens to your account`,
-        );
-        await refreshData();
-      } else {
-        setMessage(`❌ Top-up failed: ${result.err}`);
-      }
-    } catch (error) {
-      console.error("Top-up error:", error);
-      setMessage(
-        `❌ Top-up error: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    } finally {
-      setLoading(false);
+    if (result.ok) {
+      const successMsg = `✅ Successfully topped up ${amount} PiCO tokens to your account`;
+      setMessage(successMsg);
+      await refreshDataAsync.execute();
+      return successMsg;
+    } else {
+      const errorMsg = `❌ Top-up failed: ${result.err}`;
+      setMessage(errorMsg);
+      throw new Error(errorMsg);
     }
-  };
+  }, [operationalActor, principal]);
 
   const copyPrincipalToClipboard = async () => {
     if (principal) {
@@ -541,15 +557,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error("Failed to copy principal:", error);
         setMessage("❌ Failed to copy principal to clipboard");
       }
-    }
-  };
-
-  const validatePrincipal = (principalStr: string): boolean => {
-    try {
-      Principal.fromText(principalStr);
-      return true;
-    } catch {
-      return false;
     }
   };
 
@@ -579,19 +586,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     tokenHolders,
 
     // Authentication functions
-    login,
-    logout,
+    login: loginAsync,
+    logout: logoutAsync,
 
     // Data functions
-    refreshData,
-    loadUserData,
+    refreshData: refreshDataAsync,
+    loadUserData: loadUserDataAsync,
 
     // Contract functions
-    mintTokens,
-    approveContract,
-    buyNFT,
-    checkBalance,
-    selfTopUp,
+    mintTokens: mintTokensAsync,
+    approveContract: approveContractAsync,
+    buyNFT: buyNFTAsync,
+    checkBalance: checkBalanceAsync,
+    selfTopUp: selfTopUpAsync,
 
     // Utility functions
     copyPrincipalToClipboard,
