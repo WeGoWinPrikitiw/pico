@@ -70,7 +70,7 @@ export function ExplorePage() {
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
-            <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b">
+            <div className="sticky top-14 z-40 bg-background/80 backdrop-blur-lg border-b">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div className="flex flex-col sm:flex-row gap-4 items-center">
                         {/* Search */}

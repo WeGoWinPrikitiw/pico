@@ -219,7 +219,7 @@ export function PostsPage() {
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
-            <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b">
+            <div className="sticky top-14 z-40 bg-background/80 backdrop-blur-lg border-b">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-4">
@@ -317,8 +317,8 @@ export function PostsPage() {
                                         <div className="flex items-center gap-1">
                                             <span className="text-sm font-medium">{post.creator.name}</span>
                                             {post.creator.verified && (
-                                                <Badge variant="info" className="h-5 w-5 p-0 flex items-center justify-center">
-                                                    <div className="h-2.5 w-2.5 bg-white rounded-full" />
+                                                <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center">
+                                                    <div className="h-2.5 w-2.5 bg-blue-500 rounded-full" />
                                                 </Badge>
                                             )}
                                         </div>
@@ -380,8 +380,8 @@ export function PostsPage() {
                                                         <div className="flex items-center gap-1">
                                                             <span className="font-medium">{post.creator.name}</span>
                                                             {post.creator.verified && (
-                                                                <Badge variant="info" className="h-5 w-5 p-0 flex items-center justify-center">
-                                                                    <div className="h-2.5 w-2.5 bg-white rounded-full" />
+                                                                <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center">
+                                                                    <div className="h-2.5 w-2.5 bg-blue-500 rounded-full" />
                                                                 </Badge>
                                                             )}
                                                         </div>
