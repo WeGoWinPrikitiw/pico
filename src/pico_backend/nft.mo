@@ -10,8 +10,6 @@ import Text "mo:base/Text";
 import Hash "mo:base/Hash";
 import Error "mo:base/Error";
 import Blob "mo:base/Blob";
-import Debug "mo:base/Debug";
-import Option "mo:base/Option";
 import OpenAI "openai";
 
 actor class NFT() = {

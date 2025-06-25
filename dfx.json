@@ -11,28 +11,29 @@
       },
       "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz"
     },
+
+    "nft_contract": {
+      "main": "src/pico_backend/nft.mo",
+      "type": "motoko"
+    },
     "operational_contract": {
       "main": "src/pico_backend/operational.mo",
-      "type": "motoko"
-    },
-    "operational_v2": {
-      "main": "src/pico_backend/operational_v2.mo",
-      "type": "motoko"
-    },
-    "operational_v3": {
-      "main": "src/pico_backend/operational_v3.mo",
       "type": "motoko"
     },
     "token_contract": {
       "main": "src/pico_backend/token.mo",
       "type": "motoko"
     },
-    "pico_backend": {
-      "main": "src/pico_backend/nft.mo",
+    "preferences_contract": {
+      "main": "src/pico_backend/preferences.mo",
+      "type": "motoko"
+    },
+    "forums_contract": {
+      "main": "src/pico_backend/forums.mo",
       "type": "motoko"
     },
     "pico_frontend": {
-      "dependencies": ["pico_backend", "operational_contract"],
+      "dependencies": ["nft_contract", "operational_contract", "preferences_contract", "forums_contract", "token_contract"],
       "source": ["src/pico_frontend/dist"],
       "type": "assets",
       "workspace": "pico_frontend"

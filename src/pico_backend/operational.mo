@@ -27,8 +27,8 @@ actor Operational {
   // Admin principal (for initial supply and management)
   private let ADMIN_PRINCIPAL = "2sl3b-tf63d-g5z2g-44tut-vfgiw-af5tm-j65bi-37h3o-uce26-wvs2v-qqe";
   
-  // This contract is now the minter
-  private let MINTER_PRINCIPAL = "uxrrr-q7777-77774-qaaaq-cai"; // This operational contract
+  // This contract is now the minter, it's use operational contract
+  private let MINTER_PRINCIPAL = "uxrrr-q7777-77774-qaaaq-cai";
   
   // ICRC-1 Ledger canister
   private let LEDGER_CANISTER_ID = "u6s2n-gx777-77774-qaaba-cai";
@@ -36,7 +36,6 @@ actor Operational {
   // Transaction counter for unique IDs
   private stable var transactionCounter : Nat = 0;
   
-  // Transaction status types
   public type TransactionStatus = {
     #Pending;
     #Completed;
@@ -44,7 +43,6 @@ actor Operational {
     #Cancelled;
   };
   
-  // Operational transaction record
   public type OperationalTransaction = {
     transaction_id : Nat;
     from_principal_id : Text;
@@ -77,7 +75,7 @@ actor Operational {
   };
   
   public type TransferError = {
-    #BadFee : { expected_fee : Nat };
+  #BadFee : { expected_fee : Nat };
     #BadBurn : { min_burn_amount : Nat };
     #InsufficientFunds : { balance : Nat };
     #CreatedInFuture : { ledger_time : Nat64 };
@@ -92,17 +90,13 @@ actor Operational {
     Nat32.fromNat(n % 4294967295) 
   });
   
-  // Registry of all users who have received tokens
   private var tokenHolders = HashMap.HashMap<Text, Bool>(10, Text.equal, Text.hash);
   
-  // Initialize admin as a token holder (since they have initial supply)
-  // Note: This contract is the minter, but admin gets the initial supply
   private func initializeAdmin() {
     tokenHolders.put(ADMIN_PRINCIPAL, true);
-    tokenHolders.put(MINTER_PRINCIPAL, true); // Also register this contract
+    tokenHolders.put(MINTER_PRINCIPAL, true);
   };
   
-  // Call initialization
   initializeAdmin();
   
   // ICRC-2 types for approval system
@@ -123,7 +117,7 @@ actor Operational {
   };
   
   public type ApproveError = {
-    #BadFee : { expected_fee : Nat };
+  #BadFee : { expected_fee : Nat };
     #InsufficientFunds : { balance : Nat };
     #AllowanceChanged : { current_allowance : Nat };
     #Expired : { ledger_time : Nat64 };
@@ -150,7 +144,7 @@ actor Operational {
   };
   
   public type TransferFromError = {
-    #BadFee : { expected_fee : Nat };
+  #BadFee : { expected_fee : Nat };
     #BadBurn : { min_burn_amount : Nat };
     #InsufficientFunds : { balance : Nat };
     #InsufficientAllowance : { allowance : Nat };
@@ -185,7 +179,6 @@ actor Operational {
     icrc2_allowance : (AllowanceArgs) -> async AllowanceResponse;
   };
   
-  // Helper functions
   private func picoToUnits(pico : Nat) : Nat {
     pico * 100_000_000 // 8 decimals
   };
@@ -204,10 +197,6 @@ actor Operational {
     return "Healthy bray! don't worry about it.";
   };
   
-  // Operational Token -> ICRC1 Functions
-  
-  // Mint PiCO tokens to user (HACKATHON VERSION - NO AUTH REQUIRED)
-  // Since this contract is now the minter, it can mint tokens directly
   public func top_up(userPrincipal : Text, amount : Nat) : async Result.Result<{transaction_id: Nat; message: Text}, Text> {
     let transactionId = generateTransactionId();
     let currentTime = Time.now();
@@ -215,7 +204,7 @@ actor Operational {
     // Create pending transaction record
     let transaction : OperationalTransaction = {
       transaction_id = transactionId;
-      from_principal_id = MINTER_PRINCIPAL; // This contract is now the minter
+      from_principal_id = MINTER_PRINCIPAL;
       to_principal_id = userPrincipal;
       status = #Pending;
       price_token = amount;
@@ -391,7 +380,7 @@ const result = await ledger.approve({
   // OPERATIONAL Functions
   
   // Buy NFT action - uses ICRC-2 approval to transfer tokens from buyer to seller
-  public func buy_nft(buyerPrincipal : Text, sellerPrincipal : Text, nftId : Nat, price : Nat) : async Result.Result<{transaction_id: Nat; message: Text}, Text> {
+  public func buy_nft(buyerPrincipal : Text, sellerPrincipal : Text, nftId : Nat, price : Nat, forumId : ?Nat) : async Result.Result<{transaction_id: Nat; message: Text}, Text> {
     // Generate transaction ID first
     let transactionId = transactionCounter + 1;
     transactionCounter := transactionId;
@@ -406,7 +395,7 @@ const result = await ledger.approve({
       price_token = price;
       created_at = currentTime;
       nft_id = ?nftId;
-      forum_id = null;
+      forum_id = forumId;
     };
     
     // Store transaction as pending
@@ -637,6 +626,53 @@ const result = await ledger.approve({
       }
     );
     sellerNFTTxs
+  };
+  
+  // Get forum transaction history
+  public query func getForumTransactionHistory(forumId : Nat) : async [OperationalTransaction] {
+    let forumTxs = Array.filter<OperationalTransaction>(
+      Iter.toArray(transactions.vals()),
+      func(tx : OperationalTransaction) : Bool {
+        switch (tx.forum_id) {
+          case (?id) { id == forumId };
+          case null { false };
+        }
+      }
+    );
+    forumTxs
+  };
+  
+  // Get all forum-related transactions
+  public query func getAllForumTransactions() : async [OperationalTransaction] {
+    let forumTxs = Array.filter<OperationalTransaction>(
+      Iter.toArray(transactions.vals()),
+      func(tx : OperationalTransaction) : Bool {
+        switch (tx.forum_id) {
+          case (?_) { true };
+          case null { false };
+        }
+      }
+    );
+    forumTxs
+  };
+  
+  // Get NFT transactions by forum ID
+  public query func getNFTTransactionsByForum(forumId : Nat) : async [OperationalTransaction] {
+    let forumNFTTxs = Array.filter<OperationalTransaction>(
+      Iter.toArray(transactions.vals()),
+      func(tx : OperationalTransaction) : Bool {
+        let hasNFT = switch (tx.nft_id) {
+          case (?_) { true };
+          case null { false };
+        };
+        let hasForumId = switch (tx.forum_id) {
+          case (?id) { id == forumId };
+          case null { false };
+        };
+        hasNFT and hasForumId
+      }
+    );
+    forumNFTTxs
   };
   
   // Utility functions
