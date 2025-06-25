@@ -36,7 +36,7 @@ function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-content">
-          <h1>🎨 Pico NFT</h1>
+          <h1>🎨 PiCO NFT</h1>
           <div className="stats">
             <span className="stat">
               <strong>{stats.total_nfts}</strong> Total NFTs

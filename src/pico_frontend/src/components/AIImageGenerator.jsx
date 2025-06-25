@@ -28,7 +28,7 @@ function AIImageGenerator() {
     setGeneratedImage(null);
 
     try {
-      const result = await pico_backend.generate_ai_image_with_traits(prompt);
+      const result = await pico_backend.generate_ai_image(prompt);
 
       if ("ok" in result) {
         const imageData = {

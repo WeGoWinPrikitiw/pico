@@ -136,7 +136,7 @@ module {
         let headers : [HttpHeader] = [
             { name = "Content-Type"; value = "application/json" },
             { name = "Authorization"; value = "Bearer " # apiKey },
-            { name = "User-Agent"; value = "Pico-NFT/1.0" }
+            { name = "User-Agent"; value = "PiCO-NFT/1.0" }
         ];
 
         // Prepare HTTP request

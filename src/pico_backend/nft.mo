@@ -216,8 +216,8 @@ actor class NFT() = {
     // icrc7_collection_metadata
     public query func icrc7_collection_metadata(): async Metadata {
         [
-            ("icrc7:name", #Text("Pico NFT Collection")),
-            ("icrc7:symbol", #Text("PICO")),
+            ("icrc7:name", #Text("PiCO NFT Collection")),
+            ("icrc7:symbol", #Text("PiCO")),
             ("icrc7:description", #Text("AI-powered NFT collection with dynamic traits")),
             ("icrc7:logo", #Text("https://example.com/logo.png")),
             ("icrc7:total_supply", #Nat(nextTokenId - 1)),
@@ -227,12 +227,12 @@ actor class NFT() = {
 
     // icrc7_name
     public query func icrc7_name(): async Text {
-        "Pico NFT Collection"
+        "PiCO NFT Collection"
     };
 
     // icrc7_symbol
     public query func icrc7_symbol(): async Text {
-        "PICO"
+        "PiCO"
     };
 
     // icrc7_total_supply
@@ -405,7 +405,7 @@ actor class NFT() = {
     };
 
     // Generate AI image with suggested traits
-    public func generate_ai_image_with_traits(prompt: Text): async Result.Result<AIImageResult, Text> {
+    public func generate_ai_image(prompt: Text): async Result.Result<AIImageResult, Text> {
         // Check if API key is set
         switch (openaiApiKey) {
             case (null) {
@@ -440,14 +440,7 @@ actor class NFT() = {
         }
     };
 
-    // Legacy function for backward compatibility
-    public func generate_ai_image(prompt: Text): async Result.Result<Text, Text> {
-        let result = await generate_ai_image_with_traits(prompt);
-        switch (result) {
-            case (#ok(aiResult)) #ok(aiResult.image_url);
-            case (#err(error)) #err(error);
-        }
-    };
+
 
     // NFT Management Functions
 
@@ -497,15 +490,7 @@ actor class NFT() = {
         results
     };
 
-    public query func get_nfts_by_owner(owner: Principal): async [NFTInfo] {
-        var results: [NFTInfo] = [];
-        for ((tokenId, nft) in nfts.entries()) {
-            if (Principal.equal(nft.owner, owner)) {
-                results := Array.append(results, [nft]);
-            };
-        };
-        results
-    };
+
 
     public query func get_ai_generated_nfts(): async [NFTInfo] {
         var results: [NFTInfo] = [];
@@ -517,13 +502,9 @@ actor class NFT() = {
         results
     };
 
-    public query func total_supply(): async Nat {
-        nextTokenId - 1
-    };
 
-    public query func collection_name(): async Text {
-        "Pico NFT Collection"
-    };
+
+
 
     public query func get_stats(): async {
         total_nfts: Nat;
