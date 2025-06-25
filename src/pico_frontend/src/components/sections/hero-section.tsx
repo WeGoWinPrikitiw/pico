@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/auth-context";
 
 export function HeroSection() {
     const [mounted, setMounted] = useState(false);
-    const navigate = useNavigate();
+    const { login, loading } = useAuth();
 
     useEffect(() => {
         setMounted(true);
@@ -71,11 +71,22 @@ export function HeroSection() {
 
                 {/* CTA Button */}
                 <Button
-                    onClick={() => navigate('/app')}
-                    className="flex text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl w-auto h-auto px-4 py-2 sm:px-6 sm:py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 justify-center items-center gap-2 rounded-full border border-white/37 bg-[rgba(255,158,251,0.23)] text-white hover:bg-[rgba(255,158,251,0.35)] transition-all duration-300 hover:scale-105 backdrop-blur-sm min-w-max"
+                    onClick={login}
+                    disabled={loading}
+                    className="flex text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl w-auto h-auto px-4 py-2 sm:px-6 sm:py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 justify-center items-center gap-2 rounded-full border border-white/37 bg-[rgba(255,158,251,0.23)] text-white hover:bg-[rgba(255,158,251,0.35)] transition-all duration-300 hover:scale-105 backdrop-blur-sm min-w-max disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    <span className="hidden sm:inline">Explore Now for Free</span>
-                    <span className="sm:hidden">Explore Now</span>
+                    {loading ? (
+                        <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span className="hidden sm:inline">Connecting...</span>
+                            <span className="sm:hidden">Connecting...</span>
+                        </>
+                    ) : (
+                        <>
+                            <span className="hidden sm:inline">Explore Now for Free</span>
+                            <span className="sm:hidden">Explore Now</span>
+                        </>
+                    )}
                 </Button>
             </div>
 
