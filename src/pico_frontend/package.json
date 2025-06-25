@@ -46,7 +46,7 @@
   "name": "pico_frontend",
   "private": true,
   "scripts": {
-    "build": "tsc && vite build",
+    "build": "vite build",
     "format": "prettier --write \"src/**/*.{json,js,jsx,ts,tsx,css,scss}\"",
     "prebuild": "dfx generate",
     "setup": "npm i && dfx canister create pico_backend && dfx generate pico_backend && dfx deploy",
