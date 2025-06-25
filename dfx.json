@@ -27,13 +27,13 @@
       "main": "src/pico_backend/token.mo",
       "type": "motoko"
     },
+    "pico_backend": {
+      "main": "src/pico_backend/nft.mo",
+      "type": "motoko"
+    },
     "pico_frontend": {
-      "dependencies": [
-        "operational_contract"
-      ],
-      "source": [
-        "src/pico_frontend/dist"
-      ],
+      "dependencies": ["pico_backend", "operational_contract"],
+      "source": ["src/pico_frontend/dist"],
       "type": "assets",
       "workspace": "pico_frontend"
     },
