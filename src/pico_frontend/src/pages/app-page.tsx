@@ -1,27 +1,25 @@
-import { useState } from 'react';
-import { pico_backend } from 'declarations/pico_backend';
+import { useState } from "react";
+import { pico_backend } from "declarations/pico_backend";
 import {
   Button,
   Card,
   CardContent,
   CardHeader,
   Input,
-  Separator
-} from '@/components/ui';
-import { useAsync } from '@/hooks';
-import { Send, ArrowLeft } from 'lucide-react';
+  Separator,
+} from "@/components/ui";
+import { useAsync } from "@/hooks";
+import { Send, ArrowLeft } from "lucide-react";
 
 export function AppPage() {
-  const [name, setName] = useState('');
+  const [name, setName] = useState("");
 
-  const greetAsync = useAsync(
-    (name: string) => pico_backend.greet(name)
-  );
+  const greetAsync = useAsync((name: string) => pico_backend.greet(name));
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const nameValue = formData.get('name') as string;
+    const nameValue = formData.get("name") as string;
 
     if (nameValue.trim()) {
       greetAsync.execute(nameValue);
@@ -42,7 +40,10 @@ export function AppPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium mb-2">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium mb-2"
+                >
                   Your Name
                 </label>
                 <Input
@@ -94,4 +95,4 @@ export function AppPage() {
       </div>
     </div>
   );
-} 
+}

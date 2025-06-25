@@ -36,20 +36,35 @@ import { cn } from "@/lib/utils";
 
 export function Header() {
   const location = useLocation();
-  const { isAuthenticated, login, logout, principal, userBalance, refreshData } = useAuth();
+  const {
+    isAuthenticated,
+    login,
+    logout,
+    principal,
+    userBalance,
+    refreshData,
+  } = useAuth();
 
   const isActive = (path: string) => {
     return location.pathname === path;
   };
 
-  const NavLink = ({ to, icon: Icon, children }: { to: string; icon: React.ElementType; children: React.ReactNode }) => (
+  const NavLink = ({
+    to,
+    icon: Icon,
+    children,
+  }: {
+    to: string;
+    icon: React.ElementType;
+    children: React.ReactNode;
+  }) => (
     <Link
       to={to}
       className={cn(
         "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
         isActive(to)
           ? "text-primary bg-primary/10"
-          : "text-muted-foreground hover:text-foreground hover:bg-accent"
+          : "text-muted-foreground hover:text-foreground hover:bg-accent",
       )}
     >
       <Icon className="h-4 w-4" />
@@ -71,25 +86,37 @@ export function Header() {
             {isAuthenticated ? (
               <>
                 <NavigationMenuItem>
-                  <NavLink to="/explore" icon={Search}>Explore</NavLink>
+                  <NavLink to="/explore" icon={Search}>
+                    Explore
+                  </NavLink>
                 </NavigationMenuItem>
                 <NavigationMenuItem>
-                  <NavLink to="/posts" icon={Grid3X3}>Posts</NavLink>
+                  <NavLink to="/posts" icon={Grid3X3}>
+                    Posts
+                  </NavLink>
                 </NavigationMenuItem>
                 <NavigationMenuItem>
-                  <NavLink to="/upload" icon={Upload}>Upload</NavLink>
+                  <NavLink to="/upload" icon={Upload}>
+                    Upload
+                  </NavLink>
                 </NavigationMenuItem>
               </>
             ) : (
               <>
                 <NavigationMenuItem>
-                  <NavLink to="/" icon={Home}>Home</NavLink>
+                  <NavLink to="/" icon={Home}>
+                    Home
+                  </NavLink>
                 </NavigationMenuItem>
                 <NavigationMenuItem>
-                  <NavLink to="#features" icon={Star}>Features</NavLink>
+                  <NavLink to="#features" icon={Star}>
+                    Features
+                  </NavLink>
                 </NavigationMenuItem>
                 <NavigationMenuItem>
-                  <NavLink to="#about" icon={Info}>About</NavLink>
+                  <NavLink to="#about" icon={Info}>
+                    About
+                  </NavLink>
                 </NavigationMenuItem>
               </>
             )}
@@ -101,7 +128,10 @@ export function Header() {
           {isAuthenticated ? (
             <>
               {/* Balance Display */}
-              <Badge variant="secondary" className="hidden sm:flex items-center gap-2 px-3 py-1">
+              <Badge
+                variant="secondary"
+                className="hidden sm:flex items-center gap-2 px-3 py-1"
+              >
                 <Wallet className="h-4 w-4" />
                 <span>{userBalance} PiCO</span>
               </Badge>
@@ -111,7 +141,10 @@ export function Header() {
                 <PopoverTrigger asChild>
                   <button className="cursor-pointer hover:opacity-80 rounded-full">
                     <Avatar>
-                      <AvatarImage src={`https://avatar.vercel.sh/${principal}.png`} alt={principal} />
+                      <AvatarImage
+                        src={`https://avatar.vercel.sh/${principal}.png`}
+                        alt={principal}
+                      />
                       <AvatarFallback>
                         <User className="h-4 w-4" />
                       </AvatarFallback>
@@ -122,15 +155,23 @@ export function Header() {
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2 px-2 py-1.5">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={`https://avatar.vercel.sh/${principal}.png`} alt={principal} />
+                        <AvatarImage
+                          src={`https://avatar.vercel.sh/${principal}.png`}
+                          alt={principal}
+                        />
                         <AvatarFallback>
                           <User className="h-4 w-4" />
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
                         <span className="text-sm font-medium">Profile</span>
-                        <span className="text-xs text-muted-foreground max-w-[150px] truncate" title={principal}>
-                          {principal?.length > 20 ? `${principal.slice(0, 10)}...${principal.slice(-10)}` : principal}
+                        <span
+                          className="text-xs text-muted-foreground max-w-[150px] truncate"
+                          title={principal}
+                        >
+                          {principal?.length > 20
+                            ? `${principal.slice(0, 10)}...${principal.slice(-10)}`
+                            : principal}
                         </span>
                       </div>
                     </div>
@@ -184,11 +225,22 @@ export function Header() {
               <nav className="flex flex-col gap-4 mt-4">
                 {isAuthenticated ? (
                   <>
-                    <NavLink to="/explore" icon={Search}>Explore</NavLink>
-                    <NavLink to="/posts" icon={Grid3X3}>Posts</NavLink>
-                    <NavLink to="/upload" icon={Upload}>Upload</NavLink>
-                    <NavLink to="/profile" icon={User}>Profile</NavLink>
-                    <Badge variant="secondary" className="flex items-center gap-2 px-3 py-2">
+                    <NavLink to="/explore" icon={Search}>
+                      Explore
+                    </NavLink>
+                    <NavLink to="/posts" icon={Grid3X3}>
+                      Posts
+                    </NavLink>
+                    <NavLink to="/upload" icon={Upload}>
+                      Upload
+                    </NavLink>
+                    <NavLink to="/profile" icon={User}>
+                      Profile
+                    </NavLink>
+                    <Badge
+                      variant="secondary"
+                      className="flex items-center gap-2 px-3 py-2"
+                    >
                       <Wallet className="h-4 w-4" />
                       <span>{userBalance} PiCO</span>
                       <Button
@@ -212,9 +264,15 @@ export function Header() {
                   </>
                 ) : (
                   <>
-                    <NavLink to="/" icon={Home}>Home</NavLink>
-                    <NavLink to="#features" icon={Star}>Features</NavLink>
-                    <NavLink to="#about" icon={Info}>About</NavLink>
+                    <NavLink to="/" icon={Home}>
+                      Home
+                    </NavLink>
+                    <NavLink to="#features" icon={Star}>
+                      Features
+                    </NavLink>
+                    <NavLink to="#about" icon={Info}>
+                      About
+                    </NavLink>
                     <Button onClick={login} variant="default" className="mt-2">
                       Connect Wallet
                     </Button>
@@ -227,4 +285,4 @@ export function Header() {
       </nav>
     </header>
   );
-} 
+}

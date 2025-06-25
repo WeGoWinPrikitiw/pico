@@ -16,12 +16,10 @@ export function Layout({ children }: LayoutProps) {
       {isAuthenticated && <Header />}
 
       {/* Main content */}
-      <main className="flex-1">
-        {children}
-      </main>
+      <main className="flex-1">{children}</main>
 
       {/* Show marketing footer only when the user is not logged in */}
       {!isAuthenticated && <Footer />}
     </div>
   );
-}   
+}

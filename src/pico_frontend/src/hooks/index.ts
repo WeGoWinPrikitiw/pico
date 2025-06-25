@@ -1,1 +1,1 @@
-export { useAsync, type UseAsyncState } from './useAsync'; 
+export { useAsync, type UseAsyncState } from "./useAsync";

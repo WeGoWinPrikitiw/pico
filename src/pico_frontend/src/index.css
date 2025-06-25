@@ -66,8 +66,8 @@ body {
   /* gray scale */
   --h-grey: 0;
   --c-grey: 0;
-  --l-bg: 1;      /* white */
-  --l-fg: 0.145;  /* dark text */
+  --l-bg: 1; /* white */
+  --l-fg: 0.145; /* dark text */
   --l-border: 0.922;
   --l-input: var(--l-border);
   --l-ring: 0.708;
@@ -86,23 +86,15 @@ body {
 
   /* primary */
   --l-primary: 0.205;
-  --primary: oklch(
-    var(--l-primary)
-    var(--chroma)
-    var(--hue)
-  );
+  --primary: oklch(var(--l-primary) var(--chroma) var(--hue));
   --primary-foreground: var(--background);
 
   /* secondary / muted / accent */
   --secondary: var(--background);
   --secondary-foreground: var(--primary);
-  --l-muted: 0.40;             /* adjust for how light you want it */
-  --c-muted: var(--chroma);    /* or use a smaller chroma if you want grayer */
-  --muted: oklch(
-    var(--l-muted)
-    var(--c-muted)
-    var(--hue)
-  );
+  --l-muted: 0.4; /* adjust for how light you want it */
+  --c-muted: var(--chroma); /* or use a smaller chroma if you want grayer */
+  --muted: oklch(var(--l-muted) var(--c-muted) var(--hue));
   --muted-foreground: oklch(0.556 var(--c-grey) var(--h-grey));
   --accent: var(--background);
   --accent-foreground: var(--primary);
@@ -112,9 +104,7 @@ body {
   --c-destructive: 0.245;
   --h-destructive: 27.325;
   --destructive: oklch(
-    var(--l-destructive)
-    var(--c-destructive)
-    var(--h-destructive)
+    var(--l-destructive) var(--c-destructive) var(--h-destructive)
   );
 
   /* borders / inputs / rings */
@@ -123,37 +113,27 @@ body {
   --ring: oklch(var(--l-ring) var(--c-grey) var(--h-grey));
 
   /* chart palette */
-  --l-chart-1: 0.646;  --c-chart-1: 0.222; --h-chart-1: 41.116;
-  --l-chart-2: 0.600;  --c-chart-2: 0.118; --h-chart-2: 184.704;
-  --l-chart-3: 0.398;  --c-chart-3: 0.070; --h-chart-3: 227.392;
-  --l-chart-4: 0.828;  --c-chart-4: 0.189; --h-chart-4: 84.429;
-  --l-chart-5: 0.769;  --c-chart-5: 0.188; --h-chart-5: 70.080;
+  --l-chart-1: 0.646;
+  --c-chart-1: 0.222;
+  --h-chart-1: 41.116;
+  --l-chart-2: 0.6;
+  --c-chart-2: 0.118;
+  --h-chart-2: 184.704;
+  --l-chart-3: 0.398;
+  --c-chart-3: 0.07;
+  --h-chart-3: 227.392;
+  --l-chart-4: 0.828;
+  --c-chart-4: 0.189;
+  --h-chart-4: 84.429;
+  --l-chart-5: 0.769;
+  --c-chart-5: 0.188;
+  --h-chart-5: 70.08;
 
-  --chart-1: oklch(
-    var(--l-chart-1)
-    var(--c-chart-1)
-    var(--h-chart-1)
-  );
-  --chart-2: oklch(
-    var(--l-chart-2)
-    var(--c-chart-2)
-    var(--h-chart-2)
-  );
-  --chart-3: oklch(
-    var(--l-chart-3)
-    var(--c-chart-3)
-    var(--h-chart-3)
-  );
-  --chart-4: oklch(
-    var(--l-chart-4)
-    var(--c-chart-4)
-    var(--h-chart-4)
-  );
-  --chart-5: oklch(
-    var(--l-chart-5)
-    var(--c-chart-5)
-    var(--h-chart-5)
-  );
+  --chart-1: oklch(var(--l-chart-1) var(--c-chart-1) var(--h-chart-1));
+  --chart-2: oklch(var(--l-chart-2) var(--c-chart-2) var(--h-chart-2));
+  --chart-3: oklch(var(--l-chart-3) var(--c-chart-3) var(--h-chart-3));
+  --chart-4: oklch(var(--l-chart-4) var(--c-chart-4) var(--h-chart-4));
+  --chart-5: oklch(var(--l-chart-5) var(--c-chart-5) var(--h-chart-5));
 
   /* sidebar */
   --sidebar: var(--background);
@@ -178,7 +158,7 @@ body {
 
   /* 3) Backgrounds & foregrounds */
   --background: var(--base);
-  --foreground: oklch(0.985 0 0);              /* pure white */
+  --foreground: oklch(0.985 0 0); /* pure white */
   --card: var(--base-light);
   --card-foreground: var(--foreground);
   --popover: var(--card);
@@ -187,15 +167,11 @@ body {
   /* 4) Primary / secondary / muted / accent */
   --primary: oklch(0.75 var(--chroma) var(--hue));
   --primary-foreground: var(--base);
-  --secondary: oklch(0.50 var(--chroma) var(--hue));
+  --secondary: oklch(0.5 var(--chroma) var(--hue));
   --secondary-foreground: var(--foreground);
-  --l-muted: 0.40;             /* adjust for how light you want it */
-  --c-muted: var(--chroma);    /* or use a smaller chroma if you want grayer */
-  --muted: oklch(
-    var(--l-muted)
-    var(--c-muted)
-    var(--hue)
-  );       /* gray-ish */
+  --l-muted: 0.4; /* adjust for how light you want it */
+  --c-muted: var(--chroma); /* or use a smaller chroma if you want grayer */
+  --muted: oklch(var(--l-muted) var(--c-muted) var(--hue)); /* gray-ish */
   --muted-foreground: oklch(0.708 0 0);
   --accent: var(--secondary);
   --accent-foreground: var(--secondary-foreground);
@@ -209,11 +185,11 @@ body {
   --ring: oklch(0.556 var(--chroma) var(--hue));
 
   /* 7) Charts as monotone purple‐scale */
-  --chart-1: oklch(0.60 var(--chroma) var(--hue));
-  --chart-2: oklch(0.70 var(--chroma) var(--hue));
-  --chart-3: oklch(0.80 var(--chroma) var(--hue));
-  --chart-4: oklch(0.90 var(--chroma) var(--hue));
-  --chart-5: oklch(1.00 var(--chroma) var(--hue));
+  --chart-1: oklch(0.6 var(--chroma) var(--hue));
+  --chart-2: oklch(0.7 var(--chroma) var(--hue));
+  --chart-3: oklch(0.8 var(--chroma) var(--hue));
+  --chart-4: oklch(0.9 var(--chroma) var(--hue));
+  --chart-5: oklch(1 var(--chroma) var(--hue));
 
   /* 8) Sidebar uses same system */
   --sidebar: var(--base);

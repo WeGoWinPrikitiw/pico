@@ -7,12 +7,18 @@ interface ErrorMessageProps {
   onRetry?: () => void;
 }
 
-export function ErrorMessage({ message, className, onRetry }: ErrorMessageProps) {
+export function ErrorMessage({
+  message,
+  className,
+  onRetry,
+}: ErrorMessageProps) {
   return (
-    <div className={cn(
-      "flex items-center gap-2 p-4 text-sm text-red-800 bg-red-50 border border-red-200 rounded-md",
-      className
-    )}>
+    <div
+      className={cn(
+        "flex items-center gap-2 p-4 text-sm text-red-800 bg-red-50 border border-red-200 rounded-md",
+        className,
+      )}
+    >
       <AlertCircle className="h-4 w-4 shrink-0" />
       <div className="flex-1">
         <p>{message}</p>
@@ -27,4 +33,4 @@ export function ErrorMessage({ message, className, onRetry }: ErrorMessageProps)
       </div>
     </div>
   );
-} 
+}
