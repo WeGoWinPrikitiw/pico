@@ -15,7 +15,7 @@ import Array "mo:base/Array";
 
 actor Token {
   // Reference to the ICRC-1 ledger canister
-  let ledger = actor("uxrrr-q7777-77774-qaaaq-cai") : actor {
+  let ledger = actor("u6s2n-gx777-77774-qaaba-cai") : actor {
     icrc1_name : () -> async Text;
     icrc1_symbol : () -> async Text;
     icrc1_decimals : () -> async Nat8;
@@ -26,7 +26,7 @@ actor Token {
   };
   
   // Reference to the operational contract
-  let operational = actor("u6s2n-gx777-77774-qaaba-cai") : actor {
+  let operational = actor("uxrrr-q7777-77774-qaaaq-cai") : actor {
     getAllTokenHolders : () -> async [Text];
     getTokenHoldersCount : () -> async Nat;
     isTokenHolder : (Text) -> async Bool;

@@ -25,13 +25,13 @@ import Text "mo:base/Text";
 actor Operational {
   
   // Admin principal (for initial supply and management)
-  private let ADMIN_PRINCIPAL = "igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe";
+  private let ADMIN_PRINCIPAL = "2sl3b-tf63d-g5z2g-44tut-vfgiw-af5tm-j65bi-37h3o-uce26-wvs2v-qqe";
   
   // This contract is now the minter
-  private let MINTER_PRINCIPAL = "u6s2n-gx777-77774-qaaba-cai"; // This operational contract
+  private let MINTER_PRINCIPAL = "uxrrr-q7777-77774-qaaaq-cai"; // This operational contract
   
   // ICRC-1 Ledger canister
-  private let LEDGER_CANISTER_ID = "uxrrr-q7777-77774-qaaaq-cai";
+  private let LEDGER_CANISTER_ID = "u6s2n-gx777-77774-qaaba-cai";
   
   // Transaction counter for unique IDs
   private stable var transactionCounter : Nat = 0;
@@ -416,15 +416,48 @@ const result = await ledger.approve({
       // Convert text to principals
       let buyerPrincipalObj = Principal.fromText(buyerPrincipal);
       let sellerPrincipalObj = Principal.fromText(sellerPrincipal);
+      let contractPrincipalObj = Principal.fromText(MINTER_PRINCIPAL);
       
       // Create accounts
       let buyerAccount = { owner = buyerPrincipalObj; subaccount = null : ?[Nat8] };
       let sellerAccount = { owner = sellerPrincipalObj; subaccount = null : ?[Nat8] };
+      let contractAccount = { owner = contractPrincipalObj; subaccount = null : ?[Nat8] };
       
       // Convert price to units (PiCO has 8 decimals)
       let amountInUnits = price * 100_000_000;
       
-      // Perform ICRC-2 transfer_from
+      // STEP 1: Check if buyer has approved this contract to spend the required amount
+      let allowanceArgs = {
+        account = buyerAccount;
+        spender = contractAccount;
+      };
+      
+      let allowanceResponse = await ledger.icrc2_allowance(allowanceArgs);
+      let currentAllowance = allowanceResponse.allowance;
+      
+      if (currentAllowance < amountInUnits) {
+        let failedTransaction = {
+          transaction with
+          status = #Failed;
+        };
+        transactions.put(transactionId, failedTransaction);
+        
+        return #err("❌ Insufficient approval! Please approve the contract to spend " # Nat.toText(price) # " PiCO tokens first. Current allowance: " # Nat.toText(unitsToPico(currentAllowance)) # " PiCO. Use the 'Approve Contract' function in the Admin tab.");
+      };
+      
+      // STEP 2: Check if buyer has sufficient balance
+      let buyerBalance = await ledger.icrc1_balance_of(buyerAccount);
+      if (buyerBalance < amountInUnits) {
+        let failedTransaction = {
+          transaction with
+          status = #Failed;
+        };
+        transactions.put(transactionId, failedTransaction);
+        
+        return #err("❌ Insufficient balance! Required: " # Nat.toText(price) # " PiCO, Available: " # Nat.toText(unitsToPico(buyerBalance)) # " PiCO");
+      };
+      
+      // STEP 3: Perform ICRC-2 transfer_from (now safe to do)
       let transferArgs = {
         spender_subaccount = null : ?[Nat8];
         from = buyerAccount;
@@ -452,7 +485,7 @@ const result = await ledger.approve({
           
           #ok({
             transaction_id = transactionId;
-            message = "🎉 NFT #" # Nat.toText(nftId) # " purchased! " # Nat.toText(price) # " PiCO transferred from buyer to seller. Block: " # Nat.toText(blockIndex);
+            message = "🎉 NFT #" # Nat.toText(nftId) # " purchased successfully! " # Nat.toText(price) # " PiCO transferred from " # buyerPrincipal # " to " # sellerPrincipal # ". Block: " # Nat.toText(blockIndex);
           })
         };
         case (#Err(error)) {
@@ -465,7 +498,7 @@ const result = await ledger.approve({
           
           let errorMsg = switch (error) {
             case (#InsufficientFunds({ balance })) { "❌ Insufficient funds. Balance: " # Nat.toText(balance / 100_000_000) # " PiCO" };
-            case (#InsufficientAllowance({ allowance })) { "❌ Insufficient allowance. Approved: " # Nat.toText(allowance / 100_000_000) # " PiCO" };
+            case (#InsufficientAllowance({ allowance })) { "❌ Insufficient allowance. Approved: " # Nat.toText(allowance / 100_000_000) # " PiCO. Please approve more tokens." };
             case (#BadFee({ expected_fee })) { "❌ Bad fee. Expected: " # Nat.toText(expected_fee) };
             case (#GenericError({ error_code; message })) { "❌ Error " # Nat.toText(error_code) # ": " # message };
             case (_) { "❌ Transfer failed" };
@@ -482,6 +515,48 @@ const result = await ledger.approve({
       transactions.put(transactionId, failedTransaction);
       
       #err("❌ Purchase failed: " # Error.message(e))
+    }
+  };
+  
+  // Helper function to check if user has enough approval for a specific amount
+  public func check_nft_purchase_approval(buyerPrincipal : Text, price : Nat) : async Result.Result<{
+    has_sufficient_approval: Bool;
+    current_allowance_pico: Nat;
+    required_amount_pico: Nat;
+    approval_message: Text;
+  }, Text> {
+    try {
+      let buyerPrincipalObj = Principal.fromText(buyerPrincipal);
+      let contractPrincipalObj = Principal.fromText(MINTER_PRINCIPAL);
+      
+      let buyerAccount = { owner = buyerPrincipalObj; subaccount = null : ?[Nat8] };
+      let contractAccount = { owner = contractPrincipalObj; subaccount = null : ?[Nat8] };
+      
+      let allowanceArgs = {
+        account = buyerAccount;
+        spender = contractAccount;
+      };
+      
+      let allowanceResponse = await ledger.icrc2_allowance(allowanceArgs);
+      let currentAllowancePico = unitsToPico(allowanceResponse.allowance);
+      let requiredAmountPico = price;
+      
+      let hasSufficientApproval = currentAllowancePico >= requiredAmountPico;
+      
+      let approvalMessage = if (hasSufficientApproval) {
+        "✅ Sufficient approval! You can purchase this NFT."
+      } else {
+        "❌ Need to approve " # Nat.toText(requiredAmountPico - currentAllowancePico) # " more PiCO tokens before purchase."
+      };
+      
+      #ok({
+        has_sufficient_approval = hasSufficientApproval;
+        current_allowance_pico = currentAllowancePico;
+        required_amount_pico = requiredAmountPico;
+        approval_message = approvalMessage;
+      })
+    } catch (e) {
+      #err("❌ Error checking approval: " # Error.message(e))
     }
   };
   

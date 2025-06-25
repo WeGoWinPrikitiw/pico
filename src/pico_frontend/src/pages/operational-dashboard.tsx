@@ -45,6 +45,7 @@ interface TokenInfo {
 }
 
 export function OperationalDashboard() {
+  const auth = useAuth();
   const {
     isAuthenticated,
     principal,
@@ -64,7 +65,7 @@ export function OperationalDashboard() {
     selfTopUp,
     copyPrincipalToClipboard,
     validatePrincipal,
-  } = useAuth();
+  } = auth;
 
   // Form inputs
   const [mintAmount, setMintAmount] = useState("");
@@ -77,6 +78,8 @@ export function OperationalDashboard() {
   const [selfTopUpAmount, setSelfTopUpAmount] = useState("");
   const [checkBalancePrincipal, setCheckBalancePrincipal] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
+  const [approvalStatus, setApprovalStatus] = useState<any>(null);
+  const [showApprovalWarning, setShowApprovalWarning] = useState(false);
 
   const handleMintTokens = async () => {
     if (!mintAmount || !mintRecipient) {
@@ -116,14 +119,55 @@ export function OperationalDashboard() {
     }
 
     try {
+      // First check if the buyer has sufficient approval
+      try {
+        const approvalCheck = await auth.checkNFTApproval.execute(nftBuyer, nftPrice);
+
+        if (!approvalCheck.has_sufficient_approval) {
+          setApprovalStatus(approvalCheck);
+          setShowApprovalWarning(true);
+          setMessage(approvalCheck.approval_message + " Please approve the required amount first.");
+          return;
+        }
+      } catch (approvalError) {
+        console.warn("Could not check approval, proceeding with purchase:", approvalError);
+        setMessage("⚠️ Could not verify approval status. Proceeding with purchase...");
+      }
+
+      // If approval is sufficient or check failed, proceed with purchase
       await buyNFT.execute(nftBuyer, nftSeller, nftId, nftPrice);
       setNftBuyer("");
       setNftSeller("");
       setNftId("");
       setNftPrice("");
+      setApprovalStatus(null);
+      setShowApprovalWarning(false);
     } catch (error) {
       // Error is already handled by useAsync
       console.error("Buy NFT failed:", error);
+    }
+  };
+
+  const handleCheckApproval = async () => {
+    if (!nftBuyer || !nftPrice) {
+      setMessage("❌ Please enter buyer and price to check approval");
+      return;
+    }
+
+    try {
+      const approvalCheck = await auth.checkNFTApproval.execute(nftBuyer, nftPrice);
+      setApprovalStatus(approvalCheck);
+      setMessage(approvalCheck.approval_message);
+
+      // Auto-fill approval amount if insufficient
+      if (!approvalCheck.has_sufficient_approval) {
+        const neededAmount = Math.max(0, approvalCheck.required_amount_pico - approvalCheck.current_allowance_pico);
+        setApproveAmount(neededAmount.toString());
+      }
+    } catch (error) {
+      console.error("Check approval failed:", error);
+      setMessage("❌ Could not check approval status. This might be due to a backend contract update needed.");
+      setApprovalStatus(null);
     }
   };
 
@@ -733,8 +777,19 @@ export function OperationalDashboard() {
                     NFT Purchase
                   </h3>
                   <p className="text-muted-foreground">
-                    Execute NFT transactions on the marketplace
+                    Execute NFT transactions on the marketplace (requires ICRC-2 approval)
                   </p>
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-950/20 dark:border-blue-800/50">
+                    <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                      📋 How to purchase NFTs:
+                    </p>
+                    <ol className="text-sm text-blue-700 dark:text-blue-300 space-y-1 list-decimal list-inside">
+                      <li>Fill in the NFT details below</li>
+                      <li>Click "Check Approval" to verify the buyer has sufficient approval</li>
+                      <li>If insufficient, go to <strong>Admin tab → Approve Contract</strong> and approve the required amount</li>
+                      <li>Return here and click "Purchase NFT"</li>
+                    </ol>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -784,6 +839,38 @@ export function OperationalDashboard() {
                     </div>
                   </div>
 
+                  {/* Approval Status Display */}
+                  {approvalStatus && (
+                    <div className={`p-4 rounded-lg border ${approvalStatus.has_sufficient_approval
+                      ? "bg-green-50 border-green-200 dark:bg-green-950/50 dark:border-green-800"
+                      : "bg-yellow-50 border-yellow-200 dark:bg-yellow-950/50 dark:border-yellow-800"
+                      }`}>
+                      <div className="flex items-start gap-3">
+                        {approvalStatus.has_sufficient_approval ? (
+                          <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+                        ) : (
+                          <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                        )}
+                        <div className="flex-1">
+                          <p className={`font-medium ${approvalStatus.has_sufficient_approval
+                            ? "text-green-800 dark:text-green-200"
+                            : "text-yellow-800 dark:text-yellow-200"
+                            }`}>
+                            {approvalStatus.approval_message}
+                          </p>
+                          <div className={`text-sm mt-2 ${approvalStatus.has_sufficient_approval
+                            ? "text-green-700 dark:text-green-300"
+                            : "text-yellow-700 dark:text-yellow-300"
+                            }`}>
+                            <p>Current Allowance: {approvalStatus.current_allowance_pico} PiCO</p>
+                            <p>Required Amount: {approvalStatus.required_amount_pico} PiCO</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Error Display */}
                   {buyNFT.error && (
                     <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
                       <p className="text-destructive text-sm">{buyNFT.error}</p>
@@ -798,18 +885,53 @@ export function OperationalDashboard() {
                     </div>
                   )}
 
-                  <Button
-                    onClick={handleBuyNFT}
-                    disabled={buyNFT.loading}
-                    className="w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
-                  >
-                    {buyNFT.loading ? (
-                      <LoadingSpinner size="sm" className="mr-2" />
-                    ) : (
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                    )}
-                    Purchase NFT
-                  </Button>
+                  {/* Action Buttons */}
+                  <div className="flex gap-4">
+                    <Button
+                      onClick={handleCheckApproval}
+                      disabled={auth.checkNFTApproval.loading}
+                      variant="outline"
+                      className="flex-1 h-12 border-primary/20 hover:bg-primary hover:text-primary-foreground"
+                    >
+                      {auth.checkNFTApproval.loading ? (
+                        <LoadingSpinner size="sm" className="mr-2" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 mr-2" />
+                      )}
+                      Check Approval
+                    </Button>
+
+                    <Button
+                      onClick={handleBuyNFT}
+                      disabled={buyNFT.loading || (approvalStatus && !approvalStatus.has_sufficient_approval)}
+                      className="flex-1 h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
+                    >
+                      {buyNFT.loading ? (
+                        <LoadingSpinner size="sm" className="mr-2" />
+                      ) : (
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                      )}
+                      Purchase NFT
+                    </Button>
+                  </div>
+
+                  {/* Approval Warning */}
+                  {showApprovalWarning && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-950/50 dark:border-blue-800">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-blue-800 dark:text-blue-200">
+                            Approval Required
+                          </p>
+                          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                            Before purchasing this NFT, the buyer must approve the contract to spend {nftPrice} PiCO tokens.
+                            Go to the Admin tab and use the "Approve Contract" function.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -877,6 +999,75 @@ export function OperationalDashboard() {
                       <DollarSign className="h-4 w-4 mr-2" />
                     )}
                     Mint Tokens
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+                <CardHeader>
+                  <h3 className="text-xl font-semibold flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    Approve Contract
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Approve the operational contract to spend your tokens for NFT purchases
+                  </p>
+                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg dark:bg-green-950/20 dark:border-green-800/50">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-2">
+                      💡 About Token Approval:
+                    </p>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      ICRC-2 tokens require explicit approval before contracts can spend them on your behalf.
+                      This is a security feature. Once approved, the contract can transfer the approved amount
+                      from your wallet for NFT purchases.
+                    </p>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Approval Amount (PiCO)</label>
+                    <Input
+                      type="number"
+                      placeholder="Enter amount to approve for spending"
+                      value={approveAmount}
+                      onChange={(e) => setApproveAmount(e.target.value)}
+                      className="bg-background/50"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This approves the operational contract to spend your tokens for NFT purchases
+                    </p>
+                    {auth.allowance > 0 && (
+                      <p className="text-xs text-blue-600 dark:text-blue-400">
+                        Current allowance: {auth.allowance} PiCO
+                      </p>
+                    )}
+                  </div>
+
+                  {approveContract.error && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <p className="text-destructive text-sm">{approveContract.error}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => approveContract.reset()}
+                        className="mt-1"
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={handleApproveContract}
+                    disabled={approveContract.loading}
+                    className="w-full h-12 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-600 text-white shadow-lg"
+                  >
+                    {approveContract.loading ? (
+                      <LoadingSpinner size="sm" className="mr-2" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                    )}
+                    Approve Contract
                   </Button>
                 </CardContent>
               </Card>

@@ -23,6 +23,7 @@ interface BackendActions {
   ) => Promise<boolean>;
   checkBalance: (principalId: string) => Promise<void>;
   topUp: (amount: string) => Promise<boolean>;
+  checkNFTApproval: (buyer: string, price: string) => Promise<any>;
   clearError: () => void;
   clearAllErrors: () => void;
 }
@@ -38,6 +39,7 @@ export const useBackend = (): BackendState & BackendActions => {
   const buyNFTState = auth.buyNFT;
   const checkBalanceState = auth.checkBalance;
   const selfTopUpState = auth.selfTopUp;
+  const checkNFTApprovalState = auth.checkNFTApproval;
 
   // Aggregate loading state
   const isLoading = auth.loading ||
@@ -47,7 +49,8 @@ export const useBackend = (): BackendState & BackendActions => {
     mintTokensState.loading ||
     buyNFTState.loading ||
     checkBalanceState.loading ||
-    selfTopUpState.loading;
+    selfTopUpState.loading ||
+    checkNFTApprovalState.loading;
 
   // Aggregate error state
   const error = loginState.error ||
@@ -56,7 +59,8 @@ export const useBackend = (): BackendState & BackendActions => {
     mintTokensState.error ||
     buyNFTState.error ||
     checkBalanceState.error ||
-    selfTopUpState.error;
+    selfTopUpState.error ||
+    checkNFTApprovalState.error;
 
   const login = async (): Promise<boolean> => {
     try {
@@ -129,6 +133,15 @@ export const useBackend = (): BackendState & BackendActions => {
     }
   };
 
+  const checkNFTApproval = async (buyer: string, price: string): Promise<any> => {
+    try {
+      return await checkNFTApprovalState.execute(buyer, price);
+    } catch (err) {
+      console.error("Check NFT approval failed:", err);
+      throw err;
+    }
+  };
+
   const clearError = (): void => {
     // Clear the most recent error
     if (loginState.error) loginState.reset();
@@ -138,6 +151,7 @@ export const useBackend = (): BackendState & BackendActions => {
     else if (buyNFTState.error) buyNFTState.reset();
     else if (checkBalanceState.error) checkBalanceState.reset();
     else if (selfTopUpState.error) selfTopUpState.reset();
+    else if (checkNFTApprovalState.error) checkNFTApprovalState.reset();
 
     auth.setMessage("");
   };
@@ -150,6 +164,7 @@ export const useBackend = (): BackendState & BackendActions => {
     buyNFTState.reset();
     checkBalanceState.reset();
     selfTopUpState.reset();
+    checkNFTApprovalState.reset();
     auth.setMessage("");
   };
 
@@ -170,6 +185,7 @@ export const useBackend = (): BackendState & BackendActions => {
     buyNFT,
     checkBalance,
     topUp,
+    checkNFTApproval,
     clearError,
     clearAllErrors,
   };

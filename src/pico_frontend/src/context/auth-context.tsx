@@ -128,6 +128,13 @@ interface AuthContextType {
     data: string | null;
     reset: () => void;
   };
+  checkNFTApproval: {
+    execute: (buyer: string, price: string) => Promise<any>;
+    loading: boolean;
+    error: string | null;
+    data: any | null;
+    reset: () => void;
+  };
 
   // Utility functions
   copyPrincipalToClipboard: () => Promise<void>;
@@ -205,10 +212,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Create authenticated actors with fallback canister IDs
     const operationalCanisterId =
       (operational_contract as any)?.canisterId ||
-      "u6s2n-gx777-77774-qaaba-cai";
+      "uxrrr-q7777-77774-qaaaq-cai";
     const tokenCanisterId =
-      (token_contract as any)?.canisterId || "umunu-kh777-77774-qaaca-cai";
-    const ledgerCanisterId = "uxrrr-q7777-77774-qaaaq-cai";
+      (token_contract as any)?.canisterId || "ucwa4-rx777-77774-qaada-cai";
+    const ledgerCanisterId = "u6s2n-gx777-77774-qaaba-cai";
 
     console.log("Creating actors with canister IDs:");
     console.log("operational_contract:", operationalCanisterId);
@@ -265,10 +272,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // 2. Fallback: derive token info directly from the ICRC-1 ledger canister
       if (!info && ledgerActor) {
         const [name, symbol, decimals, totalSupply] = await Promise.all([
-          ledgerActor.icrc1_name(),
-          ledgerActor.icrc1_symbol(),
-          ledgerActor.icrc1_decimals(),
-          ledgerActor.icrc1_total_supply(),
+          ledgerActor.name(),
+          ledgerActor.symbol(),
+          ledgerActor.decimals(),
+          ledgerActor.totalSupply(),
         ]);
 
         info = {
@@ -297,9 +304,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (ledgerActor) {
         const account = {
           owner: Principal.fromText(userPrincipal),
-          subaccount: [] as number[],
+          subaccount: undefined, // Use undefined instead of empty array for IcrcLedgerCanister
         };
-        const rawBal: bigint = await ledgerActor.icrc1_balance_of(account);
+        const rawBal: bigint = await ledgerActor.balance(account);
         balance = Number(rawBal / BigInt(100000000)); // convert from 8-dec units
       }
 
@@ -455,49 +462,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     const spenderPrincipal = Principal.fromText(
-      operationalActor.canisterId || "u6s2n-gx777-77774-qaaba-cai",
+      operationalActor.canisterId || "uxrrr-q7777-77774-qaaaq-cai",
     );
     const amountNat = BigInt(parseInt(amount) * 100000000); // Convert to 8 decimals
 
+    // Build arguments without explicitly passing `null` for optional fields.
+    // In Candid, omitting an optional field is equivalent to `null` (None).
     const approveArgs = {
-      fee: [],
-      memo: [],
-      from_subaccount: [],
-      created_at_time: [],
       amount: amountNat,
-      expected_allowance: [],
-      expires_at: [],
+      // Optional fields are omitted unless we need to set them.
+      // fee, memo, expected_allowance, expires_at, created_at_time, from_subaccount are all optional.
       spender: {
         owner: spenderPrincipal,
-        subaccount: [],
+        subaccount: [], // Empty array represents None for optional subaccount
       },
     };
 
-    const result = await ledgerActor.icrc2_approve(approveArgs);
+    const result = await ledgerActor.approve(approveArgs);
     console.log("Approval result:", result);
 
-    if (result.Ok !== undefined) {
+    if (typeof result === 'bigint') {
       const successMsg = `✅ Successfully approved ${amount} PiCO tokens for operational contract`;
       setMessage(successMsg);
       await refreshDataAsync.execute();
       return successMsg;
     } else {
-      const errorMsg = `❌ Approval failed: ${JSON.stringify(result.Err)}`;
+      const errorMsg = `❌ Approval failed: ${JSON.stringify(result)}`;
       setMessage(errorMsg);
       throw new Error(errorMsg);
     }
   }, [ledgerActor, operationalActor]);
 
   const buyNFTAsync = useAsync(async (buyer: string, seller: string, nftId: string, price: string) => {
-    if (!operationalActor || !validatePrincipal(buyer)) {
-      throw new Error("Invalid buyer principal or no operational actor");
+    if (!operationalActor || !validatePrincipal(buyer) || !validatePrincipal(seller)) {
+      throw new Error("Invalid buyer/seller principal or no operational actor");
     }
 
     const result = await operationalActor.buy_nft(
       buyer,
+      seller,
       parseInt(nftId),
-      parseInt(price),
-      [], // No forum ID
+      parseInt(price)
     );
 
     if (result.ok) {
@@ -547,6 +552,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw new Error(errorMsg);
     }
   }, [operationalActor, principal]);
+
+  const checkNFTApprovalAsync = useAsync(async (buyer: string, price: string) => {
+    if (!operationalActor || !validatePrincipal(buyer)) {
+      throw new Error("Invalid buyer principal or no operational actor");
+    }
+
+    try {
+      // Use the existing check_allowance function
+      const allowanceResult = await operationalActor.check_allowance(buyer);
+      if (allowanceResult.ok !== undefined) {
+        // Convert BigInt to number safely
+        const currentAllowancePico = typeof allowanceResult.ok === 'bigint'
+          ? Number(allowanceResult.ok)
+          : allowanceResult.ok;
+        const requiredAmountPico = parseInt(price);
+        const hasSufficientApproval = currentAllowancePico >= requiredAmountPico;
+
+        const shortfallAmount = hasSufficientApproval ? 0 : requiredAmountPico - currentAllowancePico;
+
+        const approvalMessage = hasSufficientApproval
+          ? "✅ Sufficient approval! You can purchase this NFT."
+          : `❌ Need to approve ${shortfallAmount} more PiCO tokens before purchase.`;
+
+        return {
+          has_sufficient_approval: hasSufficientApproval,
+          current_allowance_pico: currentAllowancePico,
+          required_amount_pico: requiredAmountPico,
+          approval_message: approvalMessage,
+        };
+      } else {
+        throw new Error(allowanceResult.err || "Failed to check allowance");
+      }
+    } catch (error) {
+      const errorMsg = `❌ Failed to check approval: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      setMessage(errorMsg);
+      throw new Error(errorMsg);
+    }
+  }, [operationalActor, validatePrincipal]);
 
   const copyPrincipalToClipboard = async () => {
     if (principal) {
@@ -599,6 +642,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     buyNFT: buyNFTAsync,
     checkBalance: checkBalanceAsync,
     selfTopUp: selfTopUpAsync,
+    checkNFTApproval: checkNFTApprovalAsync,
 
     // Utility functions
     copyPrincipalToClipboard,
