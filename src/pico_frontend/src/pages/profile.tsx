@@ -34,7 +34,12 @@ import {
     Link as LinkIcon,
     Twitter,
     Instagram,
-    Globe
+    Globe,
+    Eye,
+    MessageCircle,
+    MoreHorizontal,
+    Filter,
+    Search
 } from 'lucide-react';
 
 interface UserProfile {
@@ -64,17 +69,20 @@ interface NFTItem {
     price: string;
     likes: number;
     isForSale: boolean;
+    views?: number;
+    creator?: string;
 }
 
 export function ProfilePage() {
     const { principal, userBalance, copyPrincipalToClipboard } = useAuth();
     const [activeTab, setActiveTab] = useState('created');
     const [isEditing, setIsEditing] = useState(false);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
     const [userProfile, setUserProfile] = useState<UserProfile>({
         name: 'Digital Artist',
         username: 'digitalart_master',
-        bio: 'Creating unique digital experiences through NFT art. Passionate about blockchain technology and creative expression.',
+        bio: 'Creating unique digital experiences through NFT art. Passionate about blockchain technology and creative expression. Building the future of digital ownership.',
         avatar: '/brand/pico-logo.svg',
         coverImage: '/landing/landing-hero.png',
         verified: true,
@@ -93,11 +101,13 @@ export function ProfilePage() {
     const [createdNFTs] = useState<NFTItem[]>([
         {
             id: '1',
-            title: 'Cosmic Sunrise',
+            title: 'Cosmic Sunrise #001',
             image: '/landing/landing-hero.png',
             price: '25.5',
             likes: 142,
-            isForSale: true
+            isForSale: true,
+            views: 2841,
+            creator: userProfile.username
         },
         {
             id: '2',
@@ -105,7 +115,9 @@ export function ProfilePage() {
             image: '/brand/pico-glow.png',
             price: '18.2',
             likes: 89,
-            isForSale: false
+            isForSale: false,
+            views: 1567,
+            creator: userProfile.username
         },
         {
             id: '3',
@@ -113,7 +125,19 @@ export function ProfilePage() {
             image: '/brand/pico-logo.svg',
             price: '32.1',
             likes: 256,
-            isForSale: true
+            isForSale: true,
+            views: 3420,
+            creator: userProfile.username
+        },
+        {
+            id: '4',
+            title: 'Neon Pulse',
+            image: '/landing/landing-hero.png',
+            price: '45.0',
+            likes: 189,
+            isForSale: true,
+            views: 2156,
+            creator: userProfile.username
         }
     ]);
 
@@ -124,18 +148,42 @@ export function ProfilePage() {
             image: '/brand/pico-glow.png',
             price: '12.8',
             likes: 67,
-            isForSale: false
+            isForSale: false,
+            views: 1245,
+            creator: 'crypto_artist'
+        },
+        {
+            id: '5',
+            title: 'Virtual Realm',
+            image: '/landing/landing-hero.png',
+            price: '28.0',
+            likes: 134,
+            isForSale: false,
+            views: 1876,
+            creator: 'meta_creator'
         }
     ]);
 
     const [wishlistNFTs] = useState<NFTItem[]>([
         {
-            id: '5',
+            id: '6',
             title: 'Future Landscape',
             image: '/landing/landing-hero.png',
             price: '45.0',
             likes: 289,
-            isForSale: true
+            isForSale: true,
+            views: 4123,
+            creator: 'future_artist'
+        },
+        {
+            id: '7',
+            title: 'Quantum Dreams',
+            image: '/brand/pico-glow.png',
+            price: '67.5',
+            likes: 425,
+            isForSale: true,
+            views: 5234,
+            creator: 'quantum_dev'
         }
     ]);
 
@@ -163,100 +211,151 @@ export function ProfilePage() {
         setIsEditing(false);
     };
 
+    const stats = [
+        {
+            label: 'Followers',
+            value: userProfile.followers,
+            icon: Users,
+            color: 'from-blue-500 to-blue-600'
+        },
+        {
+            label: 'Following',
+            value: userProfile.following,
+            icon: Users,
+            color: 'from-green-500 to-green-600'
+        },
+        {
+            label: 'NFTs Created',
+            value: userProfile.totalNFTs,
+            icon: Grid3X3,
+            color: 'from-purple-500 to-purple-600'
+        },
+        {
+            label: 'Total Sales',
+            value: `${userProfile.totalSales} PiCO`,
+            icon: TrendingUp,
+            color: 'from-orange-500 to-orange-600'
+        }
+    ];
+
     return (
-        <div className="min-h-screen bg-background">
-            {/* Cover Image */}
-            <div className="relative h-64 overflow-hidden">
+        <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+            {/* Enhanced Cover Section */}
+            <div className="relative h-80 overflow-hidden">
                 <img
                     src={userProfile.coverImage}
                     alt="Cover"
                     className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-                <div className="absolute top-4 left-4 flex gap-2">
-                    <Link to="/explore">
-                        <Button variant="outline" size="sm" className="bg-background/90 backdrop-blur-sm">
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back
-                        </Button>
-                    </Link>
-                </div>
-                <div className="absolute top-4 right-4 flex gap-2">
-                    <Button variant="outline" size="sm" className="bg-background/90 backdrop-blur-sm">
-                        <Share2 className="h-4 w-4" />
-                    </Button>
-                    <Button onClick={handleEditProfile} size="sm" className="bg-background/90 backdrop-blur-sm">
-                        <Settings className="h-4 w-4 mr-2" />
-                        {isEditing ? 'Cancel' : 'Edit Profile'}
-                    </Button>
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+
+                {/* Navigation */}
+                <div className="absolute top-6 left-0 right-0 z-10">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex justify-between items-center">
+                            <Link to="/explore">
+                                <Button variant="outline" size="sm" className="bg-background/90 backdrop-blur-sm border-0 shadow-lg hover:bg-background">
+                                    <ArrowLeft className="h-4 w-4 mr-2" />
+                                    Back to Explore
+                                </Button>
+                            </Link>
+
+                            <div className="flex gap-3">
+                                <Button variant="outline" size="sm" className="bg-background/90 backdrop-blur-sm border-0 shadow-lg hover:bg-background">
+                                    <Share2 className="h-4 w-4" />
+                                </Button>
+                                <Button onClick={handleEditProfile} size="sm" className="bg-primary/90 backdrop-blur-sm shadow-lg hover:bg-primary">
+                                    {isEditing ? (
+                                        <>
+                                            <ArrowLeft className="h-4 w-4 mr-2" />
+                                            Cancel
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Settings className="h-4 w-4 mr-2" />
+                                            Edit Profile
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             {/* Profile Content */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="relative -mt-24">
-                    <Card className="border-none shadow-xl">
-                        <CardContent className="p-6">
+                <div className="relative -mt-32 pb-8">
+                    {/* Main Profile Card */}
+                    <Card className="border-0 shadow-2xl bg-card/95 backdrop-blur-sm">
+                        <CardContent className="p-8">
                             <div className="flex flex-col lg:flex-row gap-8">
-                                {/* Avatar and Basic Info */}
+                                {/* Profile Info Section */}
                                 <div className="flex flex-col items-center lg:items-start">
-                                    <div className="relative">
-                                        <Avatar className="w-32 h-32 border-4 border-background">
-                                            <AvatarImage src={userProfile.avatar} alt={userProfile.name} />
-                                            <AvatarFallback>{userProfile.name[0]}</AvatarFallback>
-                                        </Avatar>
+                                    {/* Avatar */}
+                                    <div className="relative mb-6">
+                                        <div className="relative">
+                                            <Avatar className="w-40 h-40 border-4 border-background shadow-xl">
+                                                <AvatarImage src={userProfile.avatar} alt={userProfile.name} />
+                                                <AvatarFallback className="text-2xl">{userProfile.name[0]}</AvatarFallback>
+                                            </Avatar>
+                                            {userProfile.verified && (
+                                                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-primary rounded-full flex items-center justify-center border-2 border-background">
+                                                    <Star className="h-4 w-4 text-primary-foreground" fill="currentColor" />
+                                                </div>
+                                            )}
+                                        </div>
                                         {isEditing && (
-                                            <button className="absolute bottom-2 right-2 p-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90">
+                                            <button className="absolute bottom-4 right-4 p-3 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 shadow-lg transition-all">
                                                 <Camera className="h-4 w-4" />
                                             </button>
                                         )}
                                     </div>
 
-                                    <div className="text-center lg:text-left mt-4 space-y-2">
+                                    {/* Name and Username */}
+                                    <div className="text-center lg:text-left space-y-3 mb-6">
                                         {isEditing ? (
-                                            <>
+                                            <div className="space-y-3">
                                                 <Input
                                                     value={userProfile.name}
                                                     onChange={(e) => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
                                                     placeholder="Your name"
-                                                    className="text-lg font-bold"
+                                                    className="text-xl font-bold text-center lg:text-left"
                                                 />
                                                 <Input
                                                     value={userProfile.username}
                                                     onChange={(e) => setUserProfile(prev => ({ ...prev, username: e.target.value }))}
                                                     placeholder="@username"
+                                                    className="text-center lg:text-left"
                                                 />
-                                            </>
+                                            </div>
                                         ) : (
                                             <>
-                                                <div className="flex items-center gap-2 justify-center lg:justify-start">
-                                                    <h1 className="text-2xl font-bold">{userProfile.name}</h1>
-                                                    {userProfile.verified && (
-                                                        <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center">
-                                                            <div className="h-2.5 w-2.5 bg-primary rounded-full" />
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                                <p className="text-muted-foreground">@{userProfile.username}</p>
+                                                <h1 className="text-3xl font-bold">{userProfile.name}</h1>
+                                                <p className="text-lg text-muted-foreground">@{userProfile.username}</p>
+                                                <p className="text-sm text-muted-foreground">Joined {userProfile.joinDate}</p>
                                             </>
                                         )}
                                     </div>
 
                                     {/* Social Links */}
                                     {!isEditing && userProfile.social && (
-                                        <div className="flex gap-3 mt-4">
+                                        <div className="flex gap-4 mb-6">
                                             {userProfile.website && (
-                                                <a href={userProfile.website} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                                                <a href={userProfile.website} target="_blank" rel="noopener noreferrer"
+                                                    className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-primary hover:text-primary-foreground transition-colors">
                                                     <Globe className="h-5 w-5" />
                                                 </a>
                                             )}
                                             {userProfile.social.twitter && (
-                                                <a href={`https://twitter.com/${userProfile.social.twitter}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                                                <a href={`https://twitter.com/${userProfile.social.twitter}`} target="_blank" rel="noopener noreferrer"
+                                                    className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-blue-500 hover:text-white transition-colors">
                                                     <Twitter className="h-5 w-5" />
                                                 </a>
                                             )}
                                             {userProfile.social.instagram && (
-                                                <a href={`https://instagram.com/${userProfile.social.instagram}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                                                <a href={`https://instagram.com/${userProfile.social.instagram}`} target="_blank" rel="noopener noreferrer"
+                                                    className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-gradient-to-r hover:from-purple-500 hover:to-pink-500 hover:text-white transition-colors">
                                                     <Instagram className="h-5 w-5" />
                                                 </a>
                                             )}
@@ -264,55 +363,54 @@ export function ProfilePage() {
                                     )}
                                 </div>
 
-                                {/* Profile Details */}
-                                <div className="flex-1">
-                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                                        <div className="text-center p-4 bg-muted rounded-lg">
-                                            <p className="text-2xl font-bold">{userProfile.followers.toLocaleString()}</p>
-                                            <p className="text-muted-foreground">Followers</p>
-                                        </div>
-                                        <div className="text-center p-4 bg-muted rounded-lg">
-                                            <p className="text-2xl font-bold">{userProfile.following.toLocaleString()}</p>
-                                            <p className="text-muted-foreground">Following</p>
-                                        </div>
-                                        <div className="text-center p-4 bg-muted rounded-lg">
-                                            <p className="text-2xl font-bold">{userProfile.totalNFTs}</p>
-                                            <p className="text-muted-foreground">NFTs Created</p>
-                                        </div>
-                                        <div className="text-center p-4 bg-muted rounded-lg">
-                                            <p className="text-2xl font-bold text-primary">{userProfile.totalSales} PiCO</p>
-                                            <p className="text-muted-foreground">Total Sales</p>
-                                        </div>
+                                {/* Main Content */}
+                                <div className="flex-1 space-y-8">
+                                    {/* Stats Grid */}
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                        {stats.map((stat) => (
+                                            <Card key={stat.label} className="border-0 bg-gradient-to-br from-muted/50 to-muted/30 hover:shadow-lg transition-all">
+                                                <CardContent className="p-4 text-center">
+                                                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${stat.color} flex items-center justify-center mx-auto mb-2`}>
+                                                        <stat.icon className="h-4 w-4 text-white" />
+                                                    </div>
+                                                    <p className="text-2xl font-bold">{typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}</p>
+                                                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
                                     </div>
 
-                                    {/* Bio */}
-                                    <div className="mb-6">
+                                    {/* Bio Section */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-lg font-semibold">About</h3>
                                         {isEditing ? (
                                             <textarea
                                                 value={userProfile.bio}
                                                 onChange={(e) => setUserProfile(prev => ({ ...prev, bio: e.target.value }))}
-                                                className="w-full p-3 rounded-lg bg-muted resize-none"
-                                                rows={3}
+                                                className="w-full p-4 rounded-xl bg-muted/50 border-0 resize-none focus:ring-2 focus:ring-primary"
+                                                rows={4}
                                                 placeholder="Tell us about yourself..."
                                             />
                                         ) : (
-                                            <p className="text-muted-foreground">{userProfile.bio}</p>
+                                            <p className="text-muted-foreground leading-relaxed">{userProfile.bio}</p>
                                         )}
                                     </div>
 
                                     {/* Wallet Info */}
                                     {principal && (
-                                        <Card className="mb-6">
-                                            <CardContent className="p-4">
+                                        <Card className="border-0 bg-gradient-to-r from-primary/10 to-primary/5">
+                                            <CardContent className="p-6">
                                                 <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="text-sm text-muted-foreground">Wallet Balance</p>
-                                                        <p className="font-semibold text-primary">{userBalance} PiCO</p>
+                                                    <div className="space-y-1">
+                                                        <p className="text-sm font-medium text-primary">Wallet Connected</p>
+                                                        <p className="text-2xl font-bold text-primary">{userBalance} PiCO</p>
+                                                        <p className="text-xs text-muted-foreground">Available Balance</p>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex flex-col items-end gap-2">
                                                         <p className="text-xs font-mono text-muted-foreground">{principal.slice(0, 10)}...</p>
-                                                        <Button size="sm" variant="outline" onClick={copyPrincipalToClipboard}>
-                                                            <Copy className="h-3 w-3" />
+                                                        <Button size="sm" variant="outline" onClick={copyPrincipalToClipboard} className="border-primary/20">
+                                                            <Copy className="h-3 w-3 mr-1" />
+                                                            Copy ID
                                                         </Button>
                                                     </div>
                                                 </div>
@@ -323,24 +421,25 @@ export function ProfilePage() {
                                     {/* Action Buttons */}
                                     <div className="flex flex-wrap gap-3">
                                         {isEditing ? (
-                                            <Button onClick={handleSaveProfile} className="bg-primary">
+                                            <Button onClick={handleSaveProfile} className="bg-gradient-to-r from-primary to-primary/90 shadow-lg">
+                                                <Edit3 className="h-4 w-4 mr-2" />
                                                 Save Changes
                                             </Button>
                                         ) : (
                                             <>
                                                 <Link to="/upload">
-                                                    <Button className="bg-primary">
+                                                    <Button className="bg-gradient-to-r from-primary to-primary/90 shadow-lg">
                                                         <Upload className="h-4 w-4 mr-2" />
-                                                        Upload NFT
+                                                        Create NFT
                                                     </Button>
                                                 </Link>
-                                                <Button variant="outline">
+                                                <Button variant="outline" className="shadow-sm">
                                                     <Users className="h-4 w-4 mr-2" />
                                                     Follow
                                                 </Button>
-                                                <Button variant="outline">
+                                                <Button variant="outline" className="shadow-sm">
                                                     <Wallet className="h-4 w-4 mr-2" />
-                                                    Tip Creator
+                                                    Send Tip
                                                 </Button>
                                             </>
                                         )}
@@ -351,111 +450,218 @@ export function ProfilePage() {
                     </Card>
                 </div>
 
-                {/* NFT Tabs */}
+                {/* NFT Tabs Section */}
                 <div className="py-8">
-                    <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="w-full justify-start border-b rounded-none p-0 h-12 bg-transparent">
-                            {tabs.map((tab) => (
-                                <TabsTrigger
-                                    key={tab.id}
-                                    value={tab.id}
-                                    className="flex items-center gap-2 px-4 py-3 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
-                                >
-                                    <tab.icon className="h-4 w-4" />
-                                    {tab.label}
-                                    <Badge variant="secondary" className="ml-2">
-                                        {tab.count}
-                                    </Badge>
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-
-                        {tabs.map((tab) => (
-                            <TabsContent key={tab.id} value={tab.id}>
-                                {getCurrentNFTs().length > 0 ? (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                        {getCurrentNFTs().map((nft) => (
-                                            <Card key={nft.id} className="group overflow-hidden">
-                                                <div className="aspect-square relative">
-                                                    <img
-                                                        src={nft.image}
-                                                        alt={nft.title}
-                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                                                    />
-                                                    {nft.isForSale && (
-                                                        <Badge className="absolute top-3 left-3">
-                                                            For Sale
-                                                        </Badge>
-                                                    )}
-                                                    <button className="absolute top-3 right-3 p-2 bg-background/80 backdrop-blur-sm rounded-full hover:bg-background transition-colors">
-                                                        <Heart className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-
-                                                <CardContent className="p-4">
-                                                    <h3 className="font-semibold mb-2">{nft.title}</h3>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="font-bold text-primary">{nft.price} PiCO</span>
-                                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                            <Heart className="h-4 w-4" />
-                                                            {nft.likes}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex gap-2 mt-3">
-                                                        <Link to={`/posts/${nft.id}`} className="flex-1">
-                                                            <Button variant="outline" className="w-full">
-                                                                View
-                                                            </Button>
-                                                        </Link>
-                                                        {activeTab === 'created' && (
-                                                            <Button className="flex-1">
-                                                                Edit
-                                                            </Button>
-                                                        )}
-                                                        {activeTab === 'wishlist' && (
-                                                            <Button className="flex-1">
-                                                                Buy
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
+                    <Card className="border-0 shadow-xl bg-card/95 backdrop-blur-sm">
+                        <CardContent className="p-8">
+                            <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                                {/* Enhanced Tab Header */}
+                                <div className="flex items-center justify-between">
+                                    <TabsList className="bg-muted/50 p-1 rounded-xl">
+                                        {tabs.map((tab) => (
+                                            <TabsTrigger
+                                                key={tab.id}
+                                                value={tab.id}
+                                                className="flex items-center gap-2 px-6 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium"
+                                            >
+                                                <tab.icon className="h-4 w-4" />
+                                                {tab.label}
+                                                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] flex items-center justify-center">
+                                                    {tab.count}
+                                                </Badge>
+                                            </TabsTrigger>
                                         ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-16">
-                                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <Grid3X3 className="h-8 w-8 text-muted-foreground" />
+                                    </TabsList>
+
+                                    {/* View Mode Toggle */}
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center bg-muted/50 rounded-lg p-1">
+                                            <Button
+                                                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                                                size="sm"
+                                                onClick={() => setViewMode('grid')}
+                                                className="h-8 w-8 p-0"
+                                            >
+                                                <Grid3X3 className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                                                size="sm"
+                                                onClick={() => setViewMode('list')}
+                                                className="h-8 w-8 p-0"
+                                            >
+                                                <Grid3X3 className="h-4 w-4 rotate-90" />
+                                            </Button>
                                         </div>
-                                        <h3 className="text-lg font-semibold mb-2">
-                                            No {tab.label.toLowerCase()} yet
-                                        </h3>
-                                        <p className="text-muted-foreground mb-6">
-                                            {tab.id === 'created' && "You haven't created any NFTs yet. Start creating!"}
-                                            {tab.id === 'collected' && "You haven't collected any NFTs yet. Start exploring!"}
-                                            {tab.id === 'wishlist' && "You haven't added any NFTs to your wishlist yet."}
-                                        </p>
-                                        {tab.id === 'created' && (
-                                            <Link to="/upload">
-                                                <Button>
-                                                    <Upload className="h-4 w-4 mr-2" />
-                                                    Create your first NFT
-                                                </Button>
-                                            </Link>
-                                        )}
-                                        {tab.id === 'collected' && (
-                                            <Link to="/explore">
-                                                <Button>
-                                                    Explore NFTs
-                                                </Button>
-                                            </Link>
-                                        )}
                                     </div>
-                                )}
-                            </TabsContent>
-                        ))}
-                    </Tabs>
+                                </div>
+
+                                {/* Tab Content */}
+                                {tabs.map((tab) => (
+                                    <TabsContent key={tab.id} value={tab.id} className="space-y-6">
+                                        {getCurrentNFTs().length > 0 ? (
+                                            <div className={viewMode === 'grid'
+                                                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                                                : "space-y-4"
+                                            }>
+                                                {getCurrentNFTs().map((nft) => (
+                                                    <Card key={nft.id} className="group overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                                                        {viewMode === 'grid' ? (
+                                                            <>
+                                                                <div className="aspect-square relative overflow-hidden">
+                                                                    <img
+                                                                        src={nft.image}
+                                                                        alt={nft.title}
+                                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                                    />
+                                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                                                                    {/* Overlay Actions */}
+                                                                    <div className="absolute top-3 left-3 right-3 flex justify-between">
+                                                                        {nft.isForSale && (
+                                                                            <Badge className="bg-green-500/90 text-white border-0">
+                                                                                For Sale
+                                                                            </Badge>
+                                                                        )}
+                                                                        <div className="flex gap-2 ml-auto">
+                                                                            <button className="w-8 h-8 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-background transition-colors">
+                                                                                <Heart className="h-4 w-4" />
+                                                                            </button>
+                                                                            <button className="w-8 h-8 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-background transition-colors">
+                                                                                <MoreHorizontal className="h-4 w-4" />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Stats Overlay */}
+                                                                    <div className="absolute bottom-3 left-3 right-3 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                                        <div className="flex items-center gap-3 text-white text-sm">
+                                                                            <div className="flex items-center gap-1">
+                                                                                <Eye className="h-4 w-4" />
+                                                                                {nft.views}
+                                                                            </div>
+                                                                            <div className="flex items-center gap-1">
+                                                                                <Heart className="h-4 w-4" />
+                                                                                {nft.likes}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <CardContent className="p-4 space-y-3">
+                                                                    <div>
+                                                                        <h3 className="font-semibold truncate">{nft.title}</h3>
+                                                                        <p className="text-sm text-muted-foreground">by {nft.creator || userProfile.username}</p>
+                                                                    </div>
+
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="font-bold text-primary">{nft.price} PiCO</span>
+                                                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                                            <Heart className="h-4 w-4" />
+                                                                            {nft.likes}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="flex gap-2">
+                                                                        <Link to={`/posts/${nft.id}`} className="flex-1">
+                                                                            <Button variant="outline" className="w-full">
+                                                                                <Eye className="h-4 w-4 mr-2" />
+                                                                                View
+                                                                            </Button>
+                                                                        </Link>
+                                                                        {activeTab === 'created' && (
+                                                                            <Button size="sm" variant="outline">
+                                                                                <Edit3 className="h-4 w-4" />
+                                                                            </Button>
+                                                                        )}
+                                                                        {activeTab === 'wishlist' && nft.isForSale && (
+                                                                            <Button size="sm" className="bg-primary">
+                                                                                Buy
+                                                                            </Button>
+                                                                        )}
+                                                                    </div>
+                                                                </CardContent>
+                                                            </>
+                                                        ) : (
+                                                            // List view
+                                                            <CardContent className="p-4">
+                                                                <div className="flex items-center gap-4">
+                                                                    <img
+                                                                        src={nft.image}
+                                                                        alt={nft.title}
+                                                                        className="w-16 h-16 rounded-lg object-cover"
+                                                                    />
+                                                                    <div className="flex-1">
+                                                                        <h3 className="font-semibold">{nft.title}</h3>
+                                                                        <p className="text-sm text-muted-foreground">by {nft.creator || userProfile.username}</p>
+                                                                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                                                                            <span className="flex items-center gap-1">
+                                                                                <Eye className="h-3 w-3" />
+                                                                                {nft.views}
+                                                                            </span>
+                                                                            <span className="flex items-center gap-1">
+                                                                                <Heart className="h-3 w-3" />
+                                                                                {nft.likes}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <p className="font-bold text-primary">{nft.price} PiCO</p>
+                                                                        {nft.isForSale && (
+                                                                            <Badge variant="outline" className="mt-1">For Sale</Badge>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex gap-2">
+                                                                        <Button size="sm" variant="outline">
+                                                                            <Eye className="h-4 w-4" />
+                                                                        </Button>
+                                                                        {activeTab === 'created' && (
+                                                                            <Button size="sm" variant="outline">
+                                                                                <Edit3 className="h-4 w-4" />
+                                                                            </Button>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </CardContent>
+                                                        )}
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-16">
+                                                <div className="w-20 h-20 bg-gradient-to-br from-muted to-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                                    <tab.icon className="h-10 w-10 text-muted-foreground" />
+                                                </div>
+                                                <h3 className="text-xl font-semibold mb-3">
+                                                    No {tab.label.toLowerCase()} yet
+                                                </h3>
+                                                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                                                    {tab.id === 'created' && "Start your NFT journey by creating your first digital artwork"}
+                                                    {tab.id === 'collected' && "Discover and collect amazing NFTs from talented creators"}
+                                                    {tab.id === 'wishlist' && "Save NFTs you love to your wishlist for later"}
+                                                </p>
+                                                {tab.id === 'created' && (
+                                                    <Link to="/upload">
+                                                        <Button className="bg-gradient-to-r from-primary to-primary/90 shadow-lg">
+                                                            <Upload className="h-4 w-4 mr-2" />
+                                                            Create your first NFT
+                                                        </Button>
+                                                    </Link>
+                                                )}
+                                                {tab.id === 'collected' && (
+                                                    <Link to="/explore">
+                                                        <Button className="bg-gradient-to-r from-primary to-primary/90 shadow-lg">
+                                                            Explore NFTs
+                                                        </Button>
+                                                    </Link>
+                                                )}
+                                            </div>
+                                        )}
+                                    </TabsContent>
+                                ))}
+                            </Tabs>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </div>
