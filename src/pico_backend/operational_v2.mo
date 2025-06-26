@@ -24,7 +24,7 @@ import Text "mo:base/Text";
 actor OperationalV2 {
   
   // Admin principal (for management)
-  private let ADMIN_PRINCIPAL = "igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe";
+  private let ADMIN_PRINCIPAL = "2sl3b-tf63d-g5z2g-44tut-vfgiw-af5tm-j65bi-37h3o-uce26-wvs2v-qqe";
   
   // Transaction counter for unique IDs
   private stable var transactionCounter : Nat = 0;

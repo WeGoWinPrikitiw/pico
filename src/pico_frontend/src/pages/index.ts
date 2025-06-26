@@ -1,8 +1,9 @@
-export { LandingPage } from "./landing";
-export { AppPage } from "./app-page";
-export { OperationalDashboard } from "./operational-dashboard";
-export { ExplorePage } from "./explore";
-export { PostsPage } from "./posts";
-export { PostDetailPage } from "./post-detail";
-export { ProfilePage } from "./profile";
-export { UploadPage } from "./upload";
+export * from "./landing";
+export * from "./explore";
+export * from "./posts";
+export * from "./post-detail";
+export * from "./profile";
+export * from "./upload";
+export * from "./operational-dashboard";
+export * from "./app-page";
+export * from "./forums";

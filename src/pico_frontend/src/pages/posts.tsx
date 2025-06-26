@@ -60,6 +60,7 @@ export function PostsPage() {
 
   useEffect(() => {
     const fetchNfts = async () => {
+      if (!listAllNfts) return;
       setLoading(true);
       try {
         const nfts = await listAllNfts.execute();

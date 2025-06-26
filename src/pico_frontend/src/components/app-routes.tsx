@@ -8,6 +8,7 @@ import {
   ProfilePage,
   UploadPage,
   OperationalDashboard,
+  ForumsPage,
 } from "@/pages";
 import { useAuth } from "@/context/auth-context";
 
@@ -62,6 +63,13 @@ export function AppRoutes() {
           path="/upload"
           element={
             isAuthenticated ? <UploadPage /> : <Navigate to="/" replace />
+          }
+        />
+
+        <Route
+          path="/forums"
+          element={
+            isAuthenticated ? <ForumsPage /> : <Navigate to="/" replace />
           }
         />
 

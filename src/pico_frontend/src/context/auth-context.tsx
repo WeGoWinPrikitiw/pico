@@ -23,11 +23,32 @@ import {
 import {
   pico_backend as nft_canister,
   idlFactory as nftIdlFactory,
+} from "declarations/pico_backend";
+import type {
   _SERVICE as NftService,
   NFTInfo,
   Trait,
   AIImageResult,
-} from "declarations/pico_backend";
+} from "declarations/pico_backend/pico_backend.did";
+import {
+  forums_contract,
+  idlFactory as forumsIdlFactory,
+} from "declarations/forums_contract";
+import type {
+  _SERVICE as ForumsService,
+  Forum,
+  CreateForumInput,
+  Comment,
+} from "declarations/forums_contract/forums_contract.did";
+import {
+  preferences_contract,
+  idlFactory as preferencesIdlFactory,
+} from "declarations/preferences_contract";
+import type {
+  _SERVICE as PreferencesService,
+  UserPreferences,
+  PreferencesInput,
+} from "declarations/preferences_contract/preferences_contract.did";
 import { ActorSubclass } from "@dfinity/agent";
 
 interface TokenInfo {
@@ -91,7 +112,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   authClient: AuthClient | null;
   identity: any;
-  principal: string;
+  principal: string | null;
   agent: HttpAgent | null;
 
   // Contract actors
@@ -99,11 +120,15 @@ interface AuthContextType {
   tokenActor: any;
   ledgerActor: any;
   nftActor: ActorSubclass<NftService> | null;
+  forumsActor: ActorSubclass<ForumsService> | null;
+  preferencesActor: ActorSubclass<PreferencesService> | null;
 
   // UI state - now using useAsync
   loading: boolean;
-  message: string;
-  setMessage: (message: string) => void;
+  message: string | null;
+  error: string | null;
+  setMessage: (message: string | null) => void;
+  setError: (error: string | null) => void;
 
   // Data state
   tokenInfo: TokenInfo | null;
@@ -227,6 +252,38 @@ interface AuthContextType {
     reset: () => void;
   };
 
+  // Forums
+  getAllForums: {
+    execute: () => Promise<Forum[]>;
+    loading: boolean;
+    error: string | null;
+    data: Forum[] | null;
+    reset: () => void;
+  };
+  createForum: {
+    execute: (input: CreateForumInput) => Promise<Forum>;
+    loading: boolean;
+    error: string | null;
+    data: Forum | null;
+    reset: () => void;
+  };
+
+  // Preferences
+  getPreferences: {
+    execute: (principalId: string) => Promise<UserPreferences | null>;
+    loading: boolean;
+    error: string | null;
+    data: UserPreferences | null;
+    reset: () => void;
+  };
+  updatePreferences: {
+    execute: (input: PreferencesInput) => Promise<UserPreferences>;
+    loading: boolean;
+    error: string | null;
+    data: UserPreferences | null;
+    reset: () => void;
+  };
+
   // Utility functions
   copyPrincipalToClipboard: () => Promise<void>;
   validatePrincipal: (principalStr: string) => boolean;
@@ -251,7 +308,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authClient, setAuthClient] = useState<AuthClient | null>(null);
   const [identity, setIdentity] = useState<any>(null);
-  const [principal, setPrincipal] = useState("");
+  const [principal, setPrincipal] = useState<string | null>(null);
   const [agent, setAgent] = useState<HttpAgent | null>(null);
 
   // Contract actors
@@ -261,10 +318,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [nftActor, setNftActor] = useState<ActorSubclass<NftService> | null>(
     null,
   );
+  const [forumsActor, setForumsActor] =
+    useState<ActorSubclass<ForumsService> | null>(null);
+  const [preferencesActor, setPreferencesActor] =
+    useState<ActorSubclass<PreferencesService> | null>(null);
 
   // UI state
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Data state
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
@@ -345,25 +407,61 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // Create authenticated actors with fallback canister IDs
     const operationalCanisterId =
-      (operational_contract as any)?.canisterId ||
+      import.meta.env.CANISTER_ID_OPERATIONAL_CONTRACT ||
       "uxrrr-q7777-77774-qaaaq-cai";
     const tokenCanisterId =
-      (token_contract as any)?.canisterId || "ucwa4-rx777-77774-qaada-cai";
-    const ledgerCanisterId = "u6s2n-gx777-77774-qaaba-cai";
+      import.meta.env.CANISTER_ID_TOKEN_CONTRACT || "ucwa4-rx777-77774-qaada-cai";
+    const ledgerCanisterId =
+      import.meta.env.CANISTER_ID_ICRC1_LEDGER_CANISTER ||
+      "u6s2n-gx777-77774-qaaba-cai";
     const nftCanisterId =
-      (nft_canister as any)?.canisterId || "vizcg-th777-77774-qaaea-cai";
+      import.meta.env.CANISTER_ID_NFT_CONTRACT || "v56tl-sp777-77774-qaahq-cai";
+    const forumsCanisterId =
+      import.meta.env.CANISTER_ID_FORUMS_CONTRACT ||
+      "vpyes-67777-77774-qaaeq-cai";
+    const preferencesCanisterId =
+      import.meta.env.CANISTER_ID_PREFERENCES_CONTRACT ||
+      "vu5yx-eh777-77774-qaaga-cai";
+
+    if (
+      !operationalCanisterId ||
+      !tokenCanisterId ||
+      !ledgerCanisterId ||
+      !nftCanisterId ||
+      !forumsCanisterId ||
+      !preferencesCanisterId
+    ) {
+      const missing = [
+        !operationalCanisterId && "operational_contract",
+        !tokenCanisterId && "token_contract",
+        !ledgerCanisterId && "icrc1_ledger_canister",
+        !nftCanisterId && "nft_contract",
+        !forumsCanisterId && "forums_contract",
+        !preferencesCanisterId && "preferences_contract",
+      ]
+        .filter(Boolean)
+        .join(", ");
+      const errorMsg = `The following canister IDs are missing from your .env file: ${missing}. Make sure you have deployed the canisters.`;
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    }
 
     console.log("Creating actors with canister IDs:");
     console.log("operational_contract:", operationalCanisterId);
     console.log("token_contract:", tokenCanisterId);
     console.log("ledger_canister:", ledgerCanisterId);
     console.log("nft_canister:", nftCanisterId);
+    console.log("forums_canister:", forumsCanisterId);
+    console.log("preferences_canister:", preferencesCanisterId);
 
     // Use directly imported IDL factories as fallback
     const operationalIdl =
       (operational_contract as any)?.idlFactory || operationalIdlFactory;
     const tokenIdl = (token_contract as any)?.idlFactory || tokenIdlFactory;
     const nftIdl = (nft_canister as any)?.idlFactory || nftIdlFactory;
+    const forumsIdl = (forums_contract as any)?.idlFactory || forumsIdlFactory;
+    const preferencesIdl =
+      (preferences_contract as any)?.idlFactory || preferencesIdlFactory;
 
     const operationalActor = Actor.createActor(operationalIdl, {
       agent,
@@ -380,6 +478,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       canisterId: nftCanisterId,
     }) as ActorSubclass<NftService>;
 
+    const forumsActor = Actor.createActor(forumsIdl, {
+      agent,
+      canisterId: forumsCanisterId,
+    }) as ActorSubclass<ForumsService>;
+
+    const preferencesActor = Actor.createActor(preferencesIdl, {
+      agent,
+      canisterId: preferencesCanisterId,
+    }) as ActorSubclass<PreferencesService>;
+
     // Create ICRC ledger actor
     const ledgerActor = IcrcLedgerCanister.create({
       agent,
@@ -392,12 +500,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setTokenActor(tokenActor);
     setLedgerActor(ledgerActor);
     setNftActor(nftActor);
+    setForumsActor(forumsActor);
+    setPreferencesActor(preferencesActor);
 
     return {
       operationalActor,
       tokenActor,
       ledgerActor,
       nftActor,
+      forumsActor,
+      preferencesActor,
       principalStr: principal.toString(),
     };
   };
@@ -504,15 +616,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Initialize on mount
   useEffect(() => {
-    setLoading(true);
-    initAuth()
-      .catch((error) => {
-        console.error("Auth initialization failed:", error);
-        setMessage("Authentication initialization failed");
-      })
-      .finally(() => {
+    const init = async () => {
+      setLoading(true);
+      setError(null);
+      setMessage(null);
+      try {
+        const client = await AuthClient.create();
+        setAuthClient(client);
+
+        if (await client.isAuthenticated()) {
+          const actors = await createAuthenticatedActors(client);
+          await loadUserDataInternal(
+            actors.operationalActor,
+            actors.tokenActor,
+            actors.principalStr,
+          );
+          setMessage("✅ Successfully authenticated and connected to contracts!");
+        }
+      } catch (e: any) {
+        console.error("Auth initialization failed:", e);
+        setError(`Authentication initialization failed: ${e.message}`);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+    init();
   }, []);
 
   // Create async hooks for all operations
@@ -545,14 +673,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           } catch (error) {
             console.error("Error during authentication setup:", error);
             const errorMsg = `❌ Failed to connect to contracts: ${error instanceof Error ? error.message : "Unknown error"}`;
-            setMessage(errorMsg);
+            setError(errorMsg);
             reject(new Error(errorMsg));
           }
         },
         onError: (error) => {
           console.error("Login failed:", error);
-          const errorMsg = "Login failed";
-          setMessage(errorMsg);
+          const errorMsg = `Login failed: ${error}`;
+          setError(errorMsg);
           reject(new Error(errorMsg));
         },
       });
@@ -564,13 +692,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     await authClient.logout();
     setIsAuthenticated(false);
+    setPrincipal(null);
     setIdentity(null);
-    setPrincipal("");
     setAgent(null);
     setOperationalActor(null);
     setTokenActor(null);
     setLedgerActor(null);
     setNftActor(null);
+    setForumsActor(null);
+    setPreferencesActor(null);
     setMessage("Logged out successfully");
   }, [authClient]);
 
@@ -809,7 +939,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const nfts = await Promise.all(nftsPromises);
 
-    return nfts.filter((nft): nft is NFTInfo => nft !== null).map(mapNftToPost);
+    return nfts
+      .filter((nft): nft is NFTInfo => nft !== null)
+      .map(mapNftToPost);
   }, [nftActor]);
 
   const getNftAsync = useAsync(async (id: string) => {
@@ -823,6 +955,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return null;
   }, [nftActor]);
 
+  const getAllForumsAsync = useAsync(async () => {
+    if (!forumsActor) {
+      throw new Error("Forums actor not available");
+    }
+    return await forumsActor.getAllForums();
+  }, [forumsActor]);
+
+  const createForumAsync = useAsync(async (input: CreateForumInput) => {
+    if (!forumsActor) {
+      throw new Error("Forums actor not available");
+    }
+    const result = await forumsActor.createForum(input);
+    if ("err" in result) {
+      throw new Error(result.err);
+    }
+    return result.ok;
+  }, [forumsActor]);
+
+  const getPreferencesAsync = useAsync(async (principalId: string) => {
+    if (!preferencesActor) {
+      throw new Error("Preferences actor not available");
+    }
+    const result = await preferencesActor.getPreferences(principalId);
+    if ("ok" in result) {
+      return result.ok;
+    }
+    // It's okay to not have preferences, so return null, not an error
+    if (result.err.includes("not found")) {
+      return null;
+    }
+    throw new Error(result.err);
+  }, [preferencesActor]);
+
+  const updatePreferencesAsync = useAsync(
+    async (input: PreferencesInput) => {
+      if (!preferencesActor) {
+        throw new Error("Preferences actor not available");
+      }
+      const result = await preferencesActor.updatePreferences(input);
+      if ("err" in result) {
+        throw new Error(result.err);
+      }
+      return result.ok;
+    },
+    [preferencesActor],
+  );
+
   const copyPrincipalToClipboard = async () => {
     if (principal) {
       try {
@@ -830,7 +1009,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setMessage("📋 Principal ID copied to clipboard!");
       } catch (error) {
         console.error("Failed to copy principal:", error);
-        setMessage("❌ Failed to copy principal to clipboard");
+        setError("❌ Failed to copy principal to clipboard");
       }
     }
   };
@@ -848,11 +1027,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     tokenActor,
     ledgerActor,
     nftActor,
+    forumsActor,
+    preferencesActor,
 
     // UI state
     loading,
     message,
+    error,
     setMessage,
+    setError,
 
     // Data state
     tokenInfo,
@@ -881,6 +1064,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     listAllNfts: listAllNftsAsync,
     getNftsForUser: getNftsForUserAsync,
     getNft: getNftAsync,
+
+    // Forums
+    getAllForums: getAllForumsAsync,
+    createForum: createForumAsync,
+
+    // Preferences
+    getPreferences: getPreferencesAsync,
+    updatePreferences: updatePreferencesAsync,
 
     // Utility functions
     copyPrincipalToClipboard,

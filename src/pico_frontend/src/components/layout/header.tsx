@@ -31,6 +31,7 @@ import {
   Home,
   Info,
   Star,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -98,6 +99,11 @@ export function Header() {
                 <NavigationMenuItem>
                   <NavLink to="/upload" icon={Upload}>
                     Upload
+                  </NavLink>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <NavLink to="/forums" icon={MessageSquare}>
+                    Forums
                   </NavLink>
                 </NavigationMenuItem>
               </>
@@ -233,6 +239,9 @@ export function Header() {
                     </NavLink>
                     <NavLink to="/upload" icon={Upload}>
                       Upload
+                    </NavLink>
+                    <NavLink to="/forums" icon={MessageSquare}>
+                      Forums
                     </NavLink>
                     <NavLink to="/profile" icon={User}>
                       Profile

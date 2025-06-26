@@ -18,11 +18,13 @@
     },
     "operational_contract": {
       "main": "src/pico_backend/operational.mo",
-      "type": "motoko"
+      "type": "motoko",
+      "specified_id": "uxrrr-q7777-77774-qaaaq-cai"
     },
     "token_contract": {
       "main": "src/pico_backend/token.mo",
-      "type": "motoko"
+      "type": "motoko",
+      "specified_id": "ucwa4-rx777-77774-qaada-cai"
     },
     "preferences_contract": {
       "main": "src/pico_backend/preferences.mo",

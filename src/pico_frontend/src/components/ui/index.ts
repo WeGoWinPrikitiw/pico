@@ -18,3 +18,4 @@ export {
   NavigationMenuLink,
   NavigationMenuIndicator,
 } from "./navigation-menu";
+export * from "./textarea";

@@ -40,7 +40,10 @@ import {
   MoreHorizontal,
   Filter,
   Search,
+  Check,
 } from "lucide-react";
+import { UserPreferences } from "declarations/preferences_contract/preferences_contract.did";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface UserProfile {
   name: string;
@@ -74,7 +77,14 @@ interface NFTItem {
 }
 
 export function ProfilePage() {
-  const { principal, userBalance, copyPrincipalToClipboard, getNftsForUser } = useAuth();
+  const {
+    principal,
+    userBalance,
+    copyPrincipalToClipboard,
+    getNftsForUser,
+    getPreferences,
+    updatePreferences,
+  } = useAuth();
   const [activeTab, setActiveTab] = useState("created");
   const [isEditing, setIsEditing] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -112,6 +122,10 @@ export function ProfilePage() {
       creator: "visionary_art",
     },
   ]);
+  const [userPreferences, setUserPreferences] = useState<string[]>([]);
+  const [availablePreferences, setAvailablePreferences] = useState([
+    "art", "gaming", "music", "photography", "sports", "technology", "memes", "collectibles"
+  ]);
 
   useEffect(() => {
     const loadUserNfts = async () => {
@@ -143,8 +157,22 @@ export function ProfilePage() {
       }
     };
 
+    const loadUserPreferences = async () => {
+      if (principal) {
+        try {
+          const prefs = await getPreferences.execute(principal);
+          if (prefs) {
+            setUserPreferences(prefs.preferences);
+          }
+        } catch (error) {
+          console.error("Failed to fetch user preferences:", error);
+        }
+      }
+    };
+
     loadUserNfts();
-  }, [principal, getNftsForUser]);
+    loadUserPreferences();
+  }, [principal, getNftsForUser, getPreferences]);
 
   const tabs = [
     {
@@ -164,6 +192,12 @@ export function ProfilePage() {
       label: "Wishlist",
       count: wishlistNFTs.length,
       icon: Heart,
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      count: 0, // or some other indicator
+      icon: Settings,
     },
   ];
 
@@ -187,6 +221,27 @@ export function ProfilePage() {
   const handleSaveProfile = () => {
     // Save profile changes
     setIsEditing(false);
+  };
+
+  const handleTogglePreference = (preference: string) => {
+    setUserPreferences(prev =>
+      prev.includes(preference)
+        ? prev.filter(p => p !== preference)
+        : [...prev, preference]
+    );
+  };
+
+  const handleSaveChanges = async () => {
+    if (!principal) return;
+    try {
+      await updatePreferences.execute({
+        principal_id: principal,
+        preferences: userPreferences,
+      });
+      // maybe show a success message
+    } catch (error) {
+      console.error("Failed to save preferences", error);
+    }
   };
 
   const stats = [
@@ -763,6 +818,37 @@ export function ProfilePage() {
                     )}
                   </TabsContent>
                 ))}
+                <TabsContent value="settings">
+                  <div className="space-y-6">
+                    <h3 className="text-xl font-semibold">Your Interests</h3>
+                    <p className="text-muted-foreground">Select topics you're interested in to personalize your experience.</p>
+
+                    <div className="flex flex-wrap gap-3">
+                      {availablePreferences.map(pref => (
+                        <button
+                          key={pref}
+                          onClick={() => handleTogglePreference(pref)}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-colors ${userPreferences.includes(pref)
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-transparent hover:bg-muted'
+                            }`}
+                        >
+                          {userPreferences.includes(pref) && <Check className="h-4 w-4" />}
+                          <span className="capitalize">{pref}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <Separator />
+
+                    <Button onClick={handleSaveChanges} disabled={updatePreferences.loading}>
+                      {updatePreferences.loading ? (
+                        <LoadingSpinner size="sm" className="mr-2" />
+                      ) : null}
+                      Save Changes
+                    </Button>
+                  </div>
+                </TabsContent>
               </Tabs>
             </CardContent>
           </Card>
