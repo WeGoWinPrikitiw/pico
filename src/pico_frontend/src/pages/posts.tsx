@@ -12,7 +12,7 @@ import {
   AvatarImage,
   AvatarFallback,
 } from "@/components/ui";
-import { useAuth } from "@/context/auth-context";
+import { useAuth, useServices } from "@/context/auth-context";
 import {
   Search,
   Filter,
@@ -51,7 +51,8 @@ interface Post {
 }
 
 export function PostsPage() {
-  const { buyNFT, transactions, principal, listAllNfts } = useAuth();
+  const { principal } = useAuth();
+  const services = useAuth().isAuthenticated ? useServices() : null;
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("trending");
@@ -60,10 +61,10 @@ export function PostsPage() {
 
   useEffect(() => {
     const fetchNfts = async () => {
-      if (!listAllNfts) return;
+      if (!services) return;
       setLoading(true);
       try {
-        const nfts = await listAllNfts.execute();
+        const nfts = await services.nftService.getAllNFTs();
         if (nfts) {
           const formattedPosts: Post[] = nfts.map((nft: any) => ({
             id: nft.nft_id.toString(),
@@ -96,7 +97,7 @@ export function PostsPage() {
     };
 
     fetchNfts();
-  }, [listAllNfts]);
+  }, [services]);
 
   const sortOptions = [
     { value: "trending", label: "Trending", icon: TrendingUp },
@@ -126,7 +127,8 @@ export function PostsPage() {
         return;
       }
 
-      await buyNFT.execute(principal, post.creatorPrincipal, post.id, post.price);
+      if (!services) throw new Error("Services not available");
+      await services.operationalService.buyNFT(principal, post.creatorPrincipal, parseInt(post.id), parseFloat(post.price));
     } catch (error) {
       console.error("Failed to buy NFT:", error);
       alert(`Failed to buy NFT: ${error}`);

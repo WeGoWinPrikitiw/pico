@@ -43,7 +43,7 @@ export function Header() {
     logout,
     principal,
     userBalance,
-    refreshData,
+    refreshBalance,
   } = useAuth();
 
   const isActive = (path: string) => {
@@ -175,7 +175,7 @@ export function Header() {
                           className="text-xs text-muted-foreground max-w-[150px] truncate"
                           title={principal}
                         >
-                          {principal?.length > 20
+                          {principal && principal.length > 20
                             ? `${principal.slice(0, 10)}...${principal.slice(-10)}`
                             : principal}
                         </span>
@@ -198,13 +198,12 @@ export function Header() {
                       <Settings className="h-4 w-4" />
                       Admin Settings
                     </Link>
-                    <Button
-                      onClick={() => logout.execute()}
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-1"
-                    >
-                      <LogOut className="h-4 w-4" />
+                     <Button
+                       onClick={() => logout()}
+                       variant="outline"
+                       size="sm"
+                       className="w-full mt-1"
+                     >                      <LogOut className="h-4 w-4" />
                       Logout
                     </Button>
                   </div>
@@ -212,7 +211,7 @@ export function Header() {
               </Popover>
             </>
           ) : (
-            <Button onClick={() => login.execute()} variant="default">
+            <Button onClick={() => login()} variant="default">
               Connect Wallet
             </Button>
           )}
@@ -252,22 +251,20 @@ export function Header() {
                     >
                       <Wallet className="h-4 w-4" />
                       <span>{userBalance} PiCO</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => refreshData.execute()}
-                        className="h-6 w-6"
-                      >
-                        <Settings className="h-3 w-3" />
+                       <Button
+                         variant="ghost"
+                         size="icon"
+                         onClick={() => refreshBalance()}
+                         className="h-6 w-6"
+                       >                        <Settings className="h-3 w-3" />
                       </Button>
                     </Badge>
-                    <Button
-                      onClick={() => logout.execute()}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2 mt-2"
-                    >
-                      <LogOut className="h-4 w-4" />
+                     <Button
+                       onClick={() => logout()}
+                       variant="outline"
+                       size="sm"
+                       className="flex items-center gap-2 mt-2"
+                     >                      <LogOut className="h-4 w-4" />
                       <span>Logout</span>
                     </Button>
                   </>
@@ -282,8 +279,7 @@ export function Header() {
                     <NavLink to="#about" icon={Info}>
                       About
                     </NavLink>
-                    <Button onClick={() => login.execute()} variant="default" className="mt-2">
-                      Connect Wallet
+                     <Button onClick={() => login()} variant="default" className="mt-2">                      Connect Wallet
                     </Button>
                   </>
                 )}

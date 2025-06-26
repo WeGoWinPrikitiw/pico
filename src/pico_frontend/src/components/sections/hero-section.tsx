@@ -19,7 +19,7 @@ export function HeroSection() {
     } else {
       // Start authentication process
       try {
-        await login.execute();
+        await login();
         // After successful login, navigate to explore
         if (isAuthenticated) {
           navigate("/explore");

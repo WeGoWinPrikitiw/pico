@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     Button,
     Input,
@@ -11,10 +12,11 @@ import {
     Avatar,
     AvatarImage,
     AvatarFallback,
-    Separator,
     Textarea,
 } from "@/components/ui";
-import { useAuth } from "@/context/auth-context";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useAuth, useServices } from "@/context/auth-context";
+import { createQueryKey } from "@/lib/query-client";
 import {
     MessageSquare,
     Heart,
@@ -24,17 +26,12 @@ import {
     Send,
     User,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { Forum } from "declarations/forums_contract/forums_contract.did";
 
 export function ForumsPage() {
-    const {
-        principal,
-        getAllForums,
-        createForum,
-        login,
-        isAuthenticated,
-    } = useAuth();
-    const [forums, setForums] = useState<Forum[]>([]);
+    const { principal, isAuthenticated, login } = useAuth();
+    const queryClient = useQueryClient();
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [newForum, setNewForum] = useState({
         title: "",
@@ -43,34 +40,63 @@ export function ForumsPage() {
         nftName: "",
     });
 
-    useEffect(() => {
-        if (isAuthenticated && getAllForums) {
-            getAllForums.execute().then((data) => {
-                if (data) {
-                    setForums(data);
-                }
-            });
-        }
-    }, [isAuthenticated, getAllForums]);
+    // Get forums service only when authenticated
+    const forumsService = isAuthenticated ? useServices().forumsService : null;
+
+    // Fetch all forums
+    const {
+        data: forums = [],
+        isLoading: isLoadingForums,
+        error: forumsError,
+    } = useQuery({
+        queryKey: createQueryKey.forums(),
+        queryFn: async () => {
+            if (!forumsService) return [];
+            return await forumsService.getAllForums();
+        },
+        enabled: isAuthenticated && !!forumsService,
+        staleTime: 1000 * 60 * 2, // 2 minutes
+    });
+
+    // Create forum mutation
+    const createForumMutation = useMutation({
+        mutationFn: async (forumData: {
+            title: string;
+            description: string;
+            nftId: number;
+            nftName: string;
+            principalId: string;
+        }) => {
+            if (!forumsService) throw new Error("Forums service not available");
+            return await forumsService.createForum(forumData);
+        },
+        onSuccess: (newForum) => {
+            toast.success("Forum created successfully!");
+            setShowCreateForm(false);
+            setNewForum({ title: "", description: "", nftId: "", nftName: "" });
+            
+            // Invalidate forums query to refetch
+            queryClient.invalidateQueries({ queryKey: createQueryKey.forums() });
+        },
+        onError: (error) => {
+            console.error("Failed to create forum:", error);
+            toast.error("Failed to create forum. Please try again.");
+        },
+    });
 
     const handleCreateForum = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!principal) return;
 
-        const input = {
+        const forumData = {
             title: newForum.title,
             description: newForum.description,
-            nft_id: BigInt(newForum.nftId),
-            nft_name: newForum.nftName,
-            principal_id: principal,
+            nftId: parseInt(newForum.nftId),
+            nftName: newForum.nftName,
+            principalId: principal,
         };
 
-        const created = await createForum.execute(input);
-        if (created) {
-            setForums([created, ...forums]);
-            setShowCreateForm(false);
-            setNewForum({ title: "", description: "", nftId: "", nftName: "" });
-        }
+        await createForumMutation.mutateAsync(forumData);
     };
 
     if (!isAuthenticated) {
@@ -80,10 +106,32 @@ export function ForumsPage() {
                 <p className="text-muted-foreground mb-6">
                     You need to be logged in to view and create forums.
                 </p>
-                <Button onClick={() => login.execute()}>
+                <Button onClick={login}>
                     <User className="mr-2 h-4 w-4" />
                     Connect Wallet
                 </Button>
+            </div>
+        );
+    }
+
+    if (isLoadingForums) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <div className="text-center">
+                    <LoadingSpinner size="lg" className="mx-auto mb-4" />
+                    <p className="text-muted-foreground">Loading forums...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (forumsError) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-destructive mb-4">Failed to load forums</p>
+                    <Button onClick={() => window.location.reload()}>Try Again</Button>
+                </div>
             </div>
         );
     }
@@ -155,8 +203,8 @@ export function ForumsPage() {
                                         required
                                     />
                                 </div>
-                                <Button type="submit" disabled={createForum.loading}>
-                                    {createForum.loading ? (
+                                <Button type="submit" disabled={createForumMutation.isPending}>
+                                    {createForumMutation.isPending ? (
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     ) : (
                                         <Send className="mr-2 h-4 w-4" />
@@ -170,7 +218,7 @@ export function ForumsPage() {
 
                 {/* Forums List */}
                 <div className="space-y-6">
-                    {getAllForums.loading ? (
+                    {isLoadingForums ? (
                         <div className="flex justify-center items-center h-64">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>

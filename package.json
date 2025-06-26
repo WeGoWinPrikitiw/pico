@@ -14,5 +14,8 @@
   "type": "module",
   "workspaces": [
     "src/pico_frontend"
+  ],
+  "trustedDependencies": [
+    "@tailwindcss/oxide"
   ]
 }

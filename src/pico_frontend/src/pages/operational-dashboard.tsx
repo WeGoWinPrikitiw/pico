@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { useAuth } from "@/context/auth-context";
+import { useAuth, useServices } from "@/context/auth-context";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createQueryKey } from "@/lib/query-client";
+import { toast } from "sonner";
 import {
   Button,
   Input,
@@ -8,259 +11,209 @@ import {
   CardHeader,
   CardContent,
   Badge,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-  Separator,
 } from "@/components/ui";
 import {
   Wallet,
   CreditCard,
   ShoppingCart,
-  History,
-  Code,
-  Copy,
   DollarSign,
   RefreshCw,
   LogOut,
-  ChevronRight,
-  ArrowUpRight,
-  ArrowDownRight,
-  ArrowRight,
-  Clock,
   CheckCircle2,
-  XCircle,
-  AlertCircle,
   TrendingUp,
-  Users,
   Activity,
+  ArrowRight,
 } from "lucide-react";
-
-interface TokenInfo {
-  name: string;
-  symbol: string;
-  decimals: number;
-  totalSupply: string;
-}
 
 export function OperationalDashboard() {
   const auth = useAuth();
-  const {
-    isAuthenticated,
-    principal,
-    loading,
-    message,
-    setMessage,
-    tokenInfo,
-    userBalance,
-    transactions,
-    login,
-    logout,
-    refreshData,
-    mintTokens,
-    approveContract,
-    buyNFT,
-    checkBalance,
-    selfTopUp,
-    copyPrincipalToClipboard,
-    validatePrincipal,
-  } = auth;
+  const { isAuthenticated, principal, isLoading: authIsLoading, error: authError, login, logout, userBalance, copyPrincipalToClipboard } = auth;
+  
+  // Get services when authenticated
+  const services = isAuthenticated ? useServices() : null;
+  const queryClient = useQueryClient();
 
   // Form inputs
   const [mintAmount, setMintAmount] = useState("");
   const [mintRecipient, setMintRecipient] = useState("");
-  const [approveAmount, setApproveAmount] = useState("");
   const [nftBuyer, setNftBuyer] = useState("");
   const [nftSeller, setNftSeller] = useState("");
   const [nftId, setNftId] = useState("");
   const [nftPrice, setNftPrice] = useState("");
   const [selfTopUpAmount, setSelfTopUpAmount] = useState("");
   const [checkBalancePrincipal, setCheckBalancePrincipal] = useState("");
-  const [activeTab, setActiveTab] = useState("overview");
-  const [approvalStatus, setApprovalStatus] = useState<any>(null);
-  const [showApprovalWarning, setShowApprovalWarning] = useState(false);
 
+  // React Query for token info
+  const {
+    data: tokenInfo,
+  } = useQuery({
+    queryKey: createQueryKey.tokenInfo(),
+    queryFn: async () => {
+      if (!services) throw new Error("Services not available");
+      return await services.operationalService.getTokenInfo();
+    },
+    enabled: !!services,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // React Query for transactions
+  const {
+    data: transactions = [],
+  } = useQuery({
+    queryKey: createQueryKey.userTransactions(principal || ""),
+    queryFn: async () => {
+      if (!services || !principal) throw new Error("Services or principal not available");
+      return await services.operationalService.getUserTransactions(principal);
+    },
+    enabled: !!services && !!principal,
+    staleTime: 1000 * 30,
+  });
+
+  // Mutations
+  const mintTokensMutation = useMutation({
+    mutationFn: async ({ amount, recipient }: { amount: string; recipient: string }) => {
+      if (!services) throw new Error("Services not available");
+      return await services.operationalService.mintToUser(recipient, Number(amount));
+    },
+    onSuccess: (data) => {
+      toast.success(`Tokens minted successfully! Transaction ID: ${data.transactionId}`);
+      queryClient.invalidateQueries({ queryKey: createQueryKey.balance(principal || "") });
+      queryClient.invalidateQueries({ queryKey: createQueryKey.userTransactions(principal || "") });
+    },
+    onError: (error) => {
+      toast.error(`Failed to mint tokens: ${error.message}`);
+    },
+  });
+
+  const selfTopUpMutation = useMutation({
+    mutationFn: async (amount: string) => {
+      if (!services || !principal) throw new Error("Services or principal not available");
+      return await services.operationalService.topUp(principal, Number(amount));
+    },
+    onSuccess: (data) => {
+      toast.success(`Top-up successful! Transaction ID: ${data.transactionId}`);
+      queryClient.invalidateQueries({ queryKey: createQueryKey.balance(principal || "") });
+      queryClient.invalidateQueries({ queryKey: createQueryKey.userTransactions(principal || "") });
+    },
+    onError: (error) => {
+      toast.error(`Failed to top up: ${error.message}`);
+    },
+  });
+
+  const buyNFTMutation = useMutation({
+    mutationFn: async ({ buyer, seller, nftId, price }: { buyer: string; seller: string; nftId: string; price: string }) => {
+      if (!services) throw new Error("Services not available");
+      return await services.operationalService.buyNFT(buyer, seller, Number(nftId), Number(price));
+    },
+    onSuccess: (data) => {
+      toast.success(`NFT purchased successfully! Transaction ID: ${data.transactionId}`);
+      queryClient.invalidateQueries({ queryKey: createQueryKey.balance(principal || "") });
+      queryClient.invalidateQueries({ queryKey: createQueryKey.userTransactions(principal || "") });
+    },
+    onError: (error) => {
+      toast.error(`Failed to buy NFT: ${error.message}`);
+    },
+  });
+
+  const checkBalanceMutation = useMutation({
+    mutationFn: async (principalId: string) => {
+      if (!services) throw new Error("Services not available");
+      return await services.operationalService.getUserBalance(principalId);
+    },
+    onSuccess: (balance) => {
+      toast.success(`Balance: ${balance} PiCO`);
+    },
+    onError: (error) => {
+      toast.error(`Failed to check balance: ${error.message}`);
+    },
+  });
+
+  // Handlers
   const handleMintTokens = async () => {
     if (!mintAmount || !mintRecipient) {
-      setMessage("❌ Please enter both amount and recipient");
+      toast.error("Please enter both amount and recipient");
       return;
     }
-
-    try {
-      await mintTokens.execute(mintAmount, mintRecipient);
-      setMintAmount("");
-      setMintRecipient("");
-    } catch (error) {
-      // Error is already handled by useAsync
-      console.error("Mint tokens failed:", error);
-    }
-  };
-
-  const handleApproveContract = async () => {
-    if (!approveAmount) {
-      setMessage("❌ Please enter approval amount");
-      return;
-    }
-
-    try {
-      await approveContract.execute(approveAmount);
-      setApproveAmount("");
-    } catch (error) {
-      // Error is already handled by useAsync
-      console.error("Approve contract failed:", error);
-    }
-  };
-
-  const handleBuyNFT = async () => {
-    if (!nftBuyer || !nftSeller || !nftId || !nftPrice) {
-      setMessage("❌ Please fill all NFT purchase fields");
-      return;
-    }
-
-    try {
-      // First check if the buyer has sufficient approval
-      try {
-        const approvalCheck = await auth.checkNFTApproval.execute(nftBuyer, nftPrice);
-
-        if (!approvalCheck.has_sufficient_approval) {
-          setApprovalStatus(approvalCheck);
-          setShowApprovalWarning(true);
-          setMessage(approvalCheck.approval_message + " Please approve the required amount first.");
-          return;
-        }
-      } catch (approvalError) {
-        console.warn("Could not check approval, proceeding with purchase:", approvalError);
-        setMessage("⚠️ Could not verify approval status. Proceeding with purchase...");
-      }
-
-      // If approval is sufficient or check failed, proceed with purchase
-      await buyNFT.execute(nftBuyer, nftSeller, nftId, nftPrice);
-      setNftBuyer("");
-      setNftSeller("");
-      setNftId("");
-      setNftPrice("");
-      setApprovalStatus(null);
-      setShowApprovalWarning(false);
-    } catch (error) {
-      // Error is already handled by useAsync
-      console.error("Buy NFT failed:", error);
-    }
-  };
-
-  const handleCheckApproval = async () => {
-    if (!nftBuyer || !nftPrice) {
-      setMessage("❌ Please enter buyer and price to check approval");
-      return;
-    }
-
-    try {
-      const approvalCheck = await auth.checkNFTApproval.execute(nftBuyer, nftPrice);
-      setApprovalStatus(approvalCheck);
-      setMessage(approvalCheck.approval_message);
-
-      // Auto-fill approval amount if insufficient
-      if (!approvalCheck.has_sufficient_approval) {
-        const neededAmount = Math.max(0, approvalCheck.required_amount_pico - approvalCheck.current_allowance_pico);
-        setApproveAmount(neededAmount.toString());
-      }
-    } catch (error) {
-      console.error("Check approval failed:", error);
-      setMessage("❌ Could not check approval status. This might be due to a backend contract update needed.");
-      setApprovalStatus(null);
-    }
+    mintTokensMutation.mutate({ amount: mintAmount, recipient: mintRecipient });
+    setMintAmount("");
+    setMintRecipient("");
   };
 
   const handleSelfTopUp = async () => {
     if (!selfTopUpAmount) {
-      setMessage("❌ Please enter top-up amount");
+      toast.error("Please enter top-up amount");
       return;
     }
+    selfTopUpMutation.mutate(selfTopUpAmount);
+    setSelfTopUpAmount("");
+  };
 
-    try {
-      await selfTopUp.execute(selfTopUpAmount);
-      setSelfTopUpAmount("");
-    } catch (error) {
-      // Error is already handled by useAsync
-      console.error("Self top-up failed:", error);
+  const handleBuyNFT = async () => {
+    if (!nftBuyer || !nftSeller || !nftId || !nftPrice) {
+      toast.error("Please fill all NFT purchase fields");
+      return;
     }
+    buyNFTMutation.mutate({ buyer: nftBuyer, seller: nftSeller, nftId, price: nftPrice });
+    setNftBuyer("");
+    setNftSeller("");
+    setNftId("");
+    setNftPrice("");
   };
 
   const handleCheckBalance = async () => {
     if (!checkBalancePrincipal) {
-      setMessage("❌ Please enter principal ID");
+      toast.error("Please enter principal ID");
       return;
     }
-
-    try {
-      await checkBalance.execute(checkBalancePrincipal);
-      setCheckBalancePrincipal("");
-    } catch (error) {
-      // Error is already handled by useAsync
-      console.error("Check balance failed:", error);
-    }
+    checkBalanceMutation.mutate(checkBalancePrincipal);
+    setCheckBalancePrincipal("");
   };
 
   const handleLogin = async () => {
     try {
-      await login.execute();
+      await login();
     } catch (error) {
-      // Error is already handled by useAsync
       console.error("Login failed:", error);
     }
   };
 
   const handleLogout = async () => {
     try {
-      await logout.execute();
+      await logout();
     } catch (error) {
-      // Error is already handled by useAsync
       console.error("Logout failed:", error);
     }
   };
 
-  const handleRefreshData = async () => {
-    try {
-      await refreshData.execute();
-    } catch (error) {
-      // Error is already handled by useAsync
-      console.error("Refresh data failed:", error);
-    }
+  const handleRefreshData = () => {
+    queryClient.invalidateQueries({ queryKey: createQueryKey.balance(principal || "") });
+    queryClient.invalidateQueries({ queryKey: createQueryKey.userTransactions(principal || "") });
+    queryClient.invalidateQueries({ queryKey: createQueryKey.tokenInfo() });
   };
 
   const stats = [
     {
       title: "Your Balance",
-      value: `${userBalance} PiCO`,
+      value: `${userBalance || 0} PiCO`,
       icon: Wallet,
-      change: "+12.5%",
-      changeType: "positive" as const,
       description: "Current token balance",
     },
     {
-      title: "Total Supply",
-      value: tokenInfo?.totalSupply
-        ? (Number(tokenInfo.totalSupply) / 100000000).toLocaleString()
-        : "0",
+      title: "Token Info",
+      value: tokenInfo ? `${tokenInfo.name} (${tokenInfo.symbol})` : "Loading...",
       icon: TrendingUp,
-      change: "+8.2%",
-      changeType: "positive" as const,
-      description: "Total PiCO tokens in circulation",
+      description: "Token information",
     },
     {
       title: "Transactions",
       value: transactions.length.toString(),
       icon: Activity,
-      change: "-3.1%",
-      changeType: "negative" as const,
       description: "Your transaction count",
     },
     {
       title: "Network Status",
       value: "Online",
       icon: CheckCircle2,
-      change: "100%",
-      changeType: "positive" as const,
       description: "Blockchain network status",
     },
   ];
@@ -268,15 +221,13 @@ export function OperationalDashboard() {
   const recentTransactions = (transactions || []).slice(0, 5);
 
   // Combined loading state from all async operations
-  const isLoading = loading || login.loading || logout.loading || refreshData.loading ||
-    mintTokens.loading || approveContract.loading || buyNFT.loading ||
-    checkBalance.loading || selfTopUp.loading;
+  const isLoading = authIsLoading || mintTokensMutation.isPending || selfTopUpMutation.isPending || 
+    buyNFTMutation.isPending || checkBalanceMutation.isPending;
 
   // Error display helper
   const getErrorMessage = () => {
-    return login.error || logout.error || refreshData.error ||
-      mintTokens.error || approveContract.error || buyNFT.error ||
-      checkBalance.error || selfTopUp.error || null;
+    return authError?.message || mintTokensMutation.error?.message || selfTopUpMutation.error?.message ||
+      buyNFTMutation.error?.message || checkBalanceMutation.error?.message || null;
   };
 
   const currentError = getErrorMessage();
@@ -286,7 +237,6 @@ export function OperationalDashboard() {
       {!isAuthenticated ? (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] px-4">
           <div className="w-full max-w-md space-y-8">
-            {/* Logo Section */}
             <div className="text-center space-y-6">
               <div className="mx-auto w-24 h-24 bg-gradient-to-tr from-primary to-primary/80 rounded-2xl flex items-center justify-center shadow-lg">
                 <Wallet className="h-12 w-12 text-primary-foreground" />
@@ -301,7 +251,6 @@ export function OperationalDashboard() {
               </div>
             </div>
 
-            {/* Login Card */}
             <Card className="border-0 shadow-xl bg-card/50 backdrop-blur-sm">
               <CardContent className="p-8 space-y-6">
                 <div className="space-y-4">
@@ -324,7 +273,7 @@ export function OperationalDashboard() {
                   disabled={isLoading}
                   className="w-full h-12 text-base font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
                 >
-                  {login.loading ? (
+                  {isLoading ? (
                     <>
                       <LoadingSpinner size="sm" className="mr-2" />
                       Connecting...
@@ -337,22 +286,9 @@ export function OperationalDashboard() {
                   )}
                 </Button>
 
-                {(message || currentError) && (
-                  <div className={`p-4 border rounded-lg ${currentError
-                    ? "bg-destructive/10 border-destructive/20 text-destructive"
-                    : "bg-primary/10 border-primary/20 text-primary"
-                    }`}>
-                    <p className="text-sm">{currentError || message}</p>
-                    {currentError && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => login.reset()}
-                        className="mt-2"
-                      >
-                        Dismiss
-                      </Button>
-                    )}
+                {currentError && (
+                  <div className="p-4 border rounded-lg bg-destructive/10 border-destructive/20 text-destructive">
+                    <p className="text-sm">{currentError}</p>
                   </div>
                 )}
               </CardContent>
@@ -382,11 +318,11 @@ export function OperationalDashboard() {
                 </div>
                 <Button
                   onClick={handleLogout}
-                  disabled={logout.loading}
+                  disabled={isLoading}
                   variant="outline"
                   className="border-destructive/20 text-destructive hover:bg-destructive hover:text-destructive-foreground"
                 >
-                  {logout.loading ? (
+                  {isLoading ? (
                     <LoadingSpinner size="sm" className="mr-2" />
                   ) : (
                     <LogOut className="h-4 w-4 mr-2" />
@@ -396,12 +332,12 @@ export function OperationalDashboard() {
               </div>
 
               {/* User Info Cards */}
-              <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card className="border-0 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50">
                   <CardContent className="p-6">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                        <Copy className="h-5 w-5 text-white" />
+                        <Wallet className="h-5 w-5 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium text-blue-900 dark:text-blue-100">
@@ -417,7 +353,7 @@ export function OperationalDashboard() {
                         onClick={copyPrincipalToClipboard}
                         className="border-blue-200 hover:bg-blue-100"
                       >
-                        <Copy className="h-4 w-4" />
+                        Copy
                       </Button>
                     </div>
                   </CardContent>
@@ -427,42 +363,15 @@ export function OperationalDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                        <Wallet className="h-5 w-5 text-white" />
+                        <DollarSign className="h-5 w-5 text-white" />
                       </div>
                       <div>
                         <h3 className="font-medium text-green-900 dark:text-green-100">
                           PiCO Balance
                         </h3>
                         <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                          {userBalance}
+                          {userBalance || 0}
                         </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-0 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50">
-                  <CardContent className="p-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
-                        <Code className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-purple-900 dark:text-purple-100">
-                          Token Info
-                        </h3>
-                        {tokenInfo ? (
-                          <div className="text-sm text-purple-700 dark:text-purple-300 space-y-1">
-                            <p className="font-medium">
-                              {tokenInfo.name} ({tokenInfo.symbol})
-                            </p>
-                            <p>Decimals: {tokenInfo.decimals}</p>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-purple-600 dark:text-purple-400">
-                            Loading...
-                          </p>
-                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -473,783 +382,308 @@ export function OperationalDashboard() {
               <div className="mt-6 flex justify-end">
                 <Button
                   onClick={handleRefreshData}
-                  disabled={refreshData.loading}
                   variant="outline"
                   className="shadow-sm"
                 >
-                  {refreshData.loading ? (
-                    <LoadingSpinner size="sm" className="mr-2" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                  )}
+                  <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh Data
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          {/* Message Display */}
-          {(message || currentError) && (
-            <div className={`mb-6 p-4 border rounded-xl backdrop-blur-sm ${currentError
-              ? "bg-destructive/10 border-destructive/20"
-              : "bg-primary/10 border-primary/20"
-              }`}>
-              <div className="flex items-center justify-between">
-                <p className={`font-medium ${currentError ? "text-destructive" : "text-primary"
-                  }`}>
-                  {currentError || message}
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {stats.map((stat, index) => (
+              <Card
+                key={index}
+                className="border-0 shadow-lg bg-card/50 backdrop-blur-sm hover:shadow-xl transition-all duration-200"
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-3">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                        <stat.icon className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {stat.title}
+                        </p>
+                        <p className="text-2xl font-bold mt-1">
+                          {stat.value}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {stat.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Operations Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            {/* Token Minting */}
+            <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+              <CardHeader>
+                <h3 className="text-xl font-semibold flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  Token Minting
+                </h3>
+                <p className="text-muted-foreground">
+                  Administrative function to mint new tokens
                 </p>
-                {currentError && (
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        login.reset();
-                        logout.reset();
-                        refreshData.reset();
-                        mintTokens.reset();
-                        approveContract.reset();
-                        buyNFT.reset();
-                        checkBalance.reset();
-                        selfTopUp.reset();
-                      }}
-                    >
-                      Clear All Errors
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Enhanced Tabs */}
-          <Tabs
-            defaultValue={activeTab}
-            onValueChange={setActiveTab}
-            className="space-y-6"
-          >
-            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-2 shadow-lg border-0">
-              <TabsList className="w-full justify-start bg-transparent p-0 h-auto space-x-2">
-                <TabsTrigger
-                  value="overview"
-                  className="flex items-center gap-2 px-6 py-3 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-medium"
-                >
-                  <Wallet className="h-4 w-4" />
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger
-                  value="nft"
-                  className="flex items-center gap-2 px-6 py-3 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-medium"
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  NFT Operations
-                </TabsTrigger>
-                <TabsTrigger
-                  value="admin"
-                  className="flex items-center gap-2 px-6 py-3 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-medium"
-                >
-                  <CreditCard className="h-4 w-4" />
-                  Admin Functions
-                </TabsTrigger>
-                <TabsTrigger
-                  value="transactions"
-                  className="flex items-center gap-2 px-6 py-3 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-medium"
-                >
-                  <History className="h-4 w-4" />
-                  Transactions
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="overview" className="space-y-8">
-              {/* Enhanced Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat) => (
-                  <Card
-                    key={stat.title}
-                    className="border-0 shadow-lg bg-card/50 backdrop-blur-sm hover:shadow-xl transition-all duration-200"
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-3">
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                            <stat.icon className="h-6 w-6 text-primary" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">
-                              {stat.title}
-                            </p>
-                            <p className="text-2xl font-bold mt-1">
-                              {stat.value}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {stat.description}
-                            </p>
-                          </div>
-                        </div>
-                        <Badge
-                          variant={
-                            stat.changeType === "positive"
-                              ? "default"
-                              : "destructive"
-                          }
-                          className="font-medium"
-                        >
-                          {stat.change}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Main Content Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Recent Transactions */}
-                <div className="lg:col-span-2">
-                  <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-                    <CardHeader className="pb-4">
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-semibold flex items-center gap-2">
-                          <History className="h-5 w-5 text-primary" />
-                          Recent Transactions
-                        </h2>
-                        <Button variant="ghost" size="sm">
-                          View All
-                          <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {recentTransactions.map((tx) => (
-                        <div
-                          key={tx.transaction_id}
-                          className="flex items-center justify-between p-4 rounded-xl border bg-card/30 hover:bg-accent/50 transition-colors"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                              <ArrowRight className="h-5 w-5 text-white" />
-                            </div>
-                            <div>
-                              <p className="font-medium">Token Transfer</p>
-                              <p className="text-sm text-muted-foreground">
-                                {new Date(
-                                  Number(tx.created_at) / 1000000,
-                                ).toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">
-                              {(tx.price_token / 100000000).toFixed(2)} PiCO
-                            </p>
-                            <Badge variant="outline" className="text-xs">
-                              {tx.nft_id ? `NFT #${tx.nft_id}` : "Transfer"}
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
-
-                      {recentTransactions.length === 0 && (
-                        <div className="text-center py-12">
-                          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                            <History className="h-8 w-8 text-muted-foreground" />
-                          </div>
-                          <h3 className="font-medium text-muted-foreground mb-2">
-                            No transactions yet
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            Your transaction history will appear here
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Sidebar */}
-                <div className="space-y-6">
-                  {/* Quick Actions */}
-                  <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-                    <CardHeader>
-                      <h2 className="text-lg font-semibold flex items-center gap-2">
-                        <Activity className="h-5 w-5 text-primary" />
-                        Quick Actions
-                      </h2>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <Button
-                        variant="outline"
-                        className="w-full justify-between group hover:bg-primary hover:text-primary-foreground transition-colors"
-                      >
-                        <div className="flex items-center">
-                          <CreditCard className="h-4 w-4 mr-2" />
-                          Buy PiCO Tokens
-                        </div>
-                        <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-between group hover:bg-primary hover:text-primary-foreground transition-colors"
-                      >
-                        <div className="flex items-center">
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          NFT Marketplace
-                        </div>
-                        <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-between group hover:bg-primary hover:text-primary-foreground transition-colors"
-                      >
-                        <div className="flex items-center">
-                          <History className="h-4 w-4 mr-2" />
-                          Transaction History
-                        </div>
-                        <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-
-                  {/* System Status */}
-                  <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-                    <CardHeader>
-                      <h2 className="text-lg font-semibold flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                        System Status
-                      </h2>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                          <span className="text-sm font-medium">
-                            Backend Services
-                          </span>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className="text-green-600 border-green-200"
-                        >
-                          Operational
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                          <span className="text-sm font-medium">
-                            Token Contract
-                          </span>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className="text-green-600 border-green-200"
-                        >
-                          Operational
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                          <span className="text-sm font-medium">
-                            NFT Contract
-                          </span>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className="text-yellow-600 border-yellow-200"
-                        >
-                          Maintenance
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="nft" className="space-y-6">
-              <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-                <CardHeader>
-                  <h3 className="text-xl font-semibold flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5 text-primary" />
-                    NFT Purchase
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Execute NFT transactions on the marketplace (requires ICRC-2 approval)
-                  </p>
-                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-950/20 dark:border-blue-800/50">
-                    <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
-                      📋 How to purchase NFTs:
-                    </p>
-                    <ol className="text-sm text-blue-700 dark:text-blue-300 space-y-1 list-decimal list-inside">
-                      <li>Fill in the NFT details below</li>
-                      <li>Click "Check Approval" to verify the buyer has sufficient approval</li>
-                      <li>If insufficient, go to <strong>Admin tab → Approve Contract</strong> and approve the required amount</li>
-                      <li>Return here and click "Purchase NFT"</li>
-                    </ol>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Buyer Principal ID
-                      </label>
-                      <Input
-                        placeholder="Enter buyer's principal ID"
-                        value={nftBuyer}
-                        onChange={(e) => setNftBuyer(e.target.value)}
-                        className="bg-background/50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Seller Principal ID
-                      </label>
-                      <Input
-                        placeholder="Enter seller's principal ID"
-                        value={nftSeller}
-                        onChange={(e) => setNftSeller(e.target.value)}
-                        className="bg-background/50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">NFT ID</label>
-                      <Input
-                        type="number"
-                        placeholder="Enter NFT ID"
-                        value={nftId}
-                        onChange={(e) => setNftId(e.target.value)}
-                        className="bg-background/50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Price (PiCO)
-                      </label>
-                      <Input
-                        type="number"
-                        placeholder="Enter price in PiCO"
-                        value={nftPrice}
-                        onChange={(e) => setNftPrice(e.target.value)}
-                        className="bg-background/50"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Approval Status Display */}
-                  {approvalStatus && (
-                    <div className={`p-4 rounded-lg border ${approvalStatus.has_sufficient_approval
-                      ? "bg-green-50 border-green-200 dark:bg-green-950/50 dark:border-green-800"
-                      : "bg-yellow-50 border-yellow-200 dark:bg-yellow-950/50 dark:border-yellow-800"
-                      }`}>
-                      <div className="flex items-start gap-3">
-                        {approvalStatus.has_sufficient_approval ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
-                        ) : (
-                          <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                        )}
-                        <div className="flex-1">
-                          <p className={`font-medium ${approvalStatus.has_sufficient_approval
-                            ? "text-green-800 dark:text-green-200"
-                            : "text-yellow-800 dark:text-yellow-200"
-                            }`}>
-                            {approvalStatus.approval_message}
-                          </p>
-                          <div className={`text-sm mt-2 ${approvalStatus.has_sufficient_approval
-                            ? "text-green-700 dark:text-green-300"
-                            : "text-yellow-700 dark:text-yellow-300"
-                            }`}>
-                            <p>Current Allowance: {approvalStatus.current_allowance_pico} PiCO</p>
-                            <p>Required Amount: {approvalStatus.required_amount_pico} PiCO</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Error Display */}
-                  {buyNFT.error && (
-                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                      <p className="text-destructive text-sm">{buyNFT.error}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => buyNFT.reset()}
-                        className="mt-1"
-                      >
-                        Dismiss
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-4">
-                    <Button
-                      onClick={handleCheckApproval}
-                      disabled={auth.checkNFTApproval.loading}
-                      variant="outline"
-                      className="flex-1 h-12 border-primary/20 hover:bg-primary hover:text-primary-foreground"
-                    >
-                      {auth.checkNFTApproval.loading ? (
-                        <LoadingSpinner size="sm" className="mr-2" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4 mr-2" />
-                      )}
-                      Check Approval
-                    </Button>
-
-                    <Button
-                      onClick={handleBuyNFT}
-                      disabled={buyNFT.loading || (approvalStatus && !approvalStatus.has_sufficient_approval)}
-                      className="flex-1 h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
-                    >
-                      {buyNFT.loading ? (
-                        <LoadingSpinner size="sm" className="mr-2" />
-                      ) : (
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                      )}
-                      Purchase NFT
-                    </Button>
-                  </div>
-
-                  {/* Approval Warning */}
-                  {showApprovalWarning && (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-950/50 dark:border-blue-800">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-                        <div>
-                          <p className="font-medium text-blue-800 dark:text-blue-200">
-                            Approval Required
-                          </p>
-                          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                            Before purchasing this NFT, the buyer must approve the contract to spend {nftPrice} PiCO tokens.
-                            Go to the Admin tab and use the "Approve Contract" function.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="admin" className="space-y-6">
-              <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-                <CardHeader>
-                  <h3 className="text-xl font-semibold flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-primary" />
-                    Token Minting
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Administrative function to mint new tokens
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Amount to Mint
-                      </label>
-                      <Input
-                        type="number"
-                        placeholder="Enter amount"
-                        value={mintAmount}
-                        onChange={(e) => setMintAmount(e.target.value)}
-                        className="bg-background/50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Recipient Principal ID
-                      </label>
-                      <Input
-                        placeholder="Enter recipient's principal ID"
-                        value={mintRecipient}
-                        onChange={(e) => setMintRecipient(e.target.value)}
-                        className="bg-background/50"
-                      />
-                    </div>
-                  </div>
-
-                  {mintTokens.error && (
-                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                      <p className="text-destructive text-sm">{mintTokens.error}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => mintTokens.reset()}
-                        className="mt-1"
-                      >
-                        Dismiss
-                      </Button>
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={handleMintTokens}
-                    disabled={mintTokens.loading}
-                    className="w-full h-12 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-600 text-white shadow-lg"
-                  >
-                    {mintTokens.loading ? (
-                      <LoadingSpinner size="sm" className="mr-2" />
-                    ) : (
-                      <DollarSign className="h-4 w-4 mr-2" />
-                    )}
-                    Mint Tokens
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-                <CardHeader>
-                  <h3 className="text-xl font-semibold flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                    Approve Contract
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Approve the operational contract to spend your tokens for NFT purchases
-                  </p>
-                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg dark:bg-green-950/20 dark:border-green-800/50">
-                    <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-2">
-                      💡 About Token Approval:
-                    </p>
-                    <p className="text-sm text-green-700 dark:text-green-300">
-                      ICRC-2 tokens require explicit approval before contracts can spend them on your behalf.
-                      This is a security feature. Once approved, the contract can transfer the approved amount
-                      from your wallet for NFT purchases.
-                    </p>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Approval Amount (PiCO)</label>
+                    <label className="text-sm font-medium">
+                      Amount to Mint
+                    </label>
                     <Input
                       type="number"
-                      placeholder="Enter amount to approve for spending"
-                      value={approveAmount}
-                      onChange={(e) => setApproveAmount(e.target.value)}
+                      placeholder="Enter amount"
+                      value={mintAmount}
+                      onChange={(e) => setMintAmount(e.target.value)}
                       className="bg-background/50"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      This approves the operational contract to spend your tokens for NFT purchases
-                    </p>
-                    {auth.allowance > 0 && (
-                      <p className="text-xs text-blue-600 dark:text-blue-400">
-                        Current allowance: {auth.allowance} PiCO
-                      </p>
-                    )}
                   </div>
-
-                  {approveContract.error && (
-                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                      <p className="text-destructive text-sm">{approveContract.error}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => approveContract.reset()}
-                        className="mt-1"
-                      >
-                        Dismiss
-                      </Button>
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={handleApproveContract}
-                    disabled={approveContract.loading}
-                    className="w-full h-12 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-600 text-white shadow-lg"
-                  >
-                    {approveContract.loading ? (
-                      <LoadingSpinner size="sm" className="mr-2" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                    )}
-                    Approve Contract
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-                <CardHeader>
-                  <h3 className="text-xl font-semibold flex items-center gap-2">
-                    <Wallet className="h-5 w-5 text-primary" />
-                    Self Top-Up
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Add tokens to your own account
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Top-Up Amount</label>
+                    <label className="text-sm font-medium">
+                      Recipient Principal ID
+                    </label>
                     <Input
-                      type="number"
-                      placeholder="Enter amount to add"
-                      value={selfTopUpAmount}
-                      onChange={(e) => setSelfTopUpAmount(e.target.value)}
+                      placeholder="Enter recipient's principal ID"
+                      value={mintRecipient}
+                      onChange={(e) => setMintRecipient(e.target.value)}
                       className="bg-background/50"
                     />
                   </div>
+                </div>
 
-                  {selfTopUp.error && (
-                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                      <p className="text-destructive text-sm">{selfTopUp.error}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => selfTopUp.reset()}
-                        className="mt-1"
-                      >
-                        Dismiss
-                      </Button>
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={handleSelfTopUp}
-                    disabled={selfTopUp.loading}
-                    className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white shadow-lg"
-                  >
-                    {selfTopUp.loading ? (
-                      <LoadingSpinner size="sm" className="mr-2" />
-                    ) : (
-                      <ArrowUpRight className="h-4 w-4 mr-2" />
-                    )}
-                    Top Up Account
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-                <CardHeader>
-                  <h3 className="text-xl font-semibold flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-primary" />
-                    Balance Check
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Check the token balance of any principal
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Principal ID</label>
-                    <Input
-                      placeholder="Enter principal ID to check"
-                      value={checkBalancePrincipal}
-                      onChange={(e) => setCheckBalancePrincipal(e.target.value)}
-                      className="bg-background/50"
-                    />
-                  </div>
-
-                  {checkBalance.error && (
-                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                      <p className="text-destructive text-sm">{checkBalance.error}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => checkBalance.reset()}
-                        className="mt-1"
-                      >
-                        Dismiss
-                      </Button>
-                    </div>
-                  )}
-
-                  {checkBalance.data && (
-                    <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
-                      <p className="text-primary text-sm">{checkBalance.data}</p>
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={handleCheckBalance}
-                    disabled={checkBalance.loading}
-                    variant="outline"
-                    className="w-full h-12 border-primary/20 hover:bg-primary hover:text-primary-foreground"
-                  >
-                    {checkBalance.loading ? (
-                      <LoadingSpinner size="sm" className="mr-2" />
-                    ) : (
-                      <Activity className="h-4 w-4 mr-2" />
-                    )}
-                    Check Balance
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="transactions">
-              <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-                <CardHeader>
-                  <h3 className="text-xl font-semibold flex items-center gap-2">
-                    <History className="h-5 w-5 text-primary" />
-                    Transaction History
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Complete history of your transactions
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  {transactions.length > 0 ? (
-                    <div className="space-y-4">
-                      {transactions.map((tx) => (
-                        <div
-                          key={tx.transaction_id}
-                          className="flex items-center justify-between p-4 rounded-xl border bg-card/30 hover:bg-accent/50 transition-colors"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                              <ArrowRight className="h-5 w-5 text-white" />
-                            </div>
-                            <div>
-                              <p className="font-medium">
-                                {tx.nft_id ? "NFT Purchase" : "Token Transfer"}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                Transaction #{tx.transaction_id}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(
-                                  Number(tx.created_at) / 1000000,
-                                ).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">{tx.price_token} PiCO</p>
-                            <Badge variant="outline" className="capitalize">
-                              {Object.keys(tx.status)[0]}
-                            </Badge>
-                            {tx.nft_id && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                NFT #{tx.nft_id}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                <Button
+                  onClick={handleMintTokens}
+                  disabled={mintTokensMutation.isPending}
+                  className="w-full h-12 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-600 text-white shadow-lg"
+                >
+                  {mintTokensMutation.isPending ? (
+                    <LoadingSpinner size="sm" className="mr-2" />
                   ) : (
-                    <div className="text-center py-12">
-                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                        <History className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                      <h3 className="font-medium text-muted-foreground mb-2">
-                        No transactions found
-                      </h3>
+                    <DollarSign className="h-4 w-4 mr-2" />
+                  )}
+                  Mint Tokens
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Self Top-Up */}
+            <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+              <CardHeader>
+                <h3 className="text-xl font-semibold flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-primary" />
+                  Self Top-Up
+                </h3>
+                <p className="text-muted-foreground">
+                  Add tokens to your own account
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Top-Up Amount</label>
+                  <Input
+                    type="number"
+                    placeholder="Enter amount to add"
+                    value={selfTopUpAmount}
+                    onChange={(e) => setSelfTopUpAmount(e.target.value)}
+                    className="bg-background/50"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleSelfTopUp}
+                  disabled={selfTopUpMutation.isPending}
+                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white shadow-lg"
+                >
+                  {selfTopUpMutation.isPending ? (
+                    <LoadingSpinner size="sm" className="mr-2" />
+                  ) : (
+                    <Wallet className="h-4 w-4 mr-2" />
+                  )}
+                  Top Up Account
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Balance Check */}
+            <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+              <CardHeader>
+                <h3 className="text-xl font-semibold flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-primary" />
+                  Balance Check
+                </h3>
+                <p className="text-muted-foreground">
+                  Check the token balance of any principal
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Principal ID</label>
+                  <Input
+                    placeholder="Enter principal ID to check"
+                    value={checkBalancePrincipal}
+                    onChange={(e) => setCheckBalancePrincipal(e.target.value)}
+                    className="bg-background/50"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleCheckBalance}
+                  disabled={checkBalanceMutation.isPending}
+                  variant="outline"
+                  className="w-full h-12 border-primary/20 hover:bg-primary hover:text-primary-foreground"
+                >
+                  {checkBalanceMutation.isPending ? (
+                    <LoadingSpinner size="sm" className="mr-2" />
+                  ) : (
+                    <Activity className="h-4 w-4 mr-2" />
+                  )}
+                  Check Balance
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* NFT Purchase */}
+            <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+              <CardHeader>
+                <h3 className="text-xl font-semibold flex items-center gap-2">
+                  <ShoppingCart className="h-5 w-5 text-primary" />
+                  NFT Purchase
+                </h3>
+                <p className="text-muted-foreground">
+                  Execute NFT transactions on the marketplace
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Buyer Principal ID
+                    </label>
+                    <Input
+                      placeholder="Enter buyer's principal ID"
+                      value={nftBuyer}
+                      onChange={(e) => setNftBuyer(e.target.value)}
+                      className="bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Seller Principal ID
+                    </label>
+                    <Input
+                      placeholder="Enter seller's principal ID"
+                      value={nftSeller}
+                      onChange={(e) => setNftSeller(e.target.value)}
+                      className="bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">NFT ID</label>
+                    <Input
+                      type="number"
+                      placeholder="Enter NFT ID"
+                      value={nftId}
+                      onChange={(e) => setNftId(e.target.value)}
+                      className="bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Price (PiCO)
+                    </label>
+                    <Input
+                      type="number"
+                      placeholder="Enter price in PiCO"
+                      value={nftPrice}
+                      onChange={(e) => setNftPrice(e.target.value)}
+                      className="bg-background/50"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleBuyNFT}
+                  disabled={buyNFTMutation.isPending}
+                  className="w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
+                >
+                  {buyNFTMutation.isPending ? (
+                    <LoadingSpinner size="sm" className="mr-2" />
+                  ) : (
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                  )}
+                  Purchase NFT
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Transactions */}
+          <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-primary" />
+                  Recent Transactions
+                </h2>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {recentTransactions.map((tx, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-4 rounded-xl border bg-card/30 hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                      <ArrowRight className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Token Transfer</p>
                       <p className="text-sm text-muted-foreground">
-                        Your transaction history will appear here once you start
-                        making transactions
+                        {new Date(
+                          Number(tx.created_at) / 1000000,
+                        ).toLocaleString()}
                       </p>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">
+                      {Number(tx.price_token) / 100000000} PiCO
+                    </p>
+                    <Badge variant="outline" className="text-xs">
+                      Transfer
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+
+              {recentTransactions.length === 0 && (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Activity className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-medium text-muted-foreground mb-2">
+                    No transactions yet
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Your transaction history will appear here
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

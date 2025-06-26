@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { pico_backend } from "declarations/pico_backend";
+// Remove unused import
 import {
   Button,
   Card,
@@ -8,13 +8,16 @@ import {
   Input,
   Separator,
 } from "@/components/ui";
-import { useAsync } from "@/hooks";
+import { useAsync } from "../hooks";
 import { Send, ArrowLeft } from "lucide-react";
 
 export function AppPage() {
   const [name, setName] = useState("");
 
-  const greetAsync = useAsync((name: string) => pico_backend.greet(name));
+  const greetAsync = useAsync(async (name: string) => {
+    // Placeholder for backend greeting functionality
+    return `Hello, ${name}! Welcome to PiCO.`;
+  });
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -80,7 +83,7 @@ export function AppPage() {
 
             {greetAsync.error && (
               <div className="mt-4 p-4 bg-destructive/10 text-destructive rounded-lg">
-                <p className="text-sm">Error: {greetAsync.error.toString()}</p>
+                <p className="text-sm">Error: {String(greetAsync.error)}</p>
               </div>
             )}
 

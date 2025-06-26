@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   Button,
   Card,
@@ -12,6 +13,9 @@ import {
   Input,
   Separator,
 } from "@/components/ui";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useAuth, useServices } from "@/context/auth-context";
+import { createQueryKey } from "@/lib/query-client";
 import {
   Search,
   Filter,
@@ -26,46 +30,89 @@ import {
   DollarSign,
   ChevronDown,
   Sliders,
+  Sparkles,
 } from "lucide-react";
-
-interface NFTCard {
-  id: string;
-  title: string;
-  image: string;
-  price: string;
-  likes: number;
-  views: number;
-  creator: {
-    name: string;
-    avatar: string;
-    verified: boolean;
-  };
-  isLiked: boolean;
-}
+import type { FrontendNFTInfo } from "@/types";
 
 export function ExplorePage() {
+  const { isAuthenticated, isServicesReady } = useAuth();
+  const { nftService } = useServices();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("trending");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [filteredNFTs, setFilteredNFTs] = useState<FrontendNFTInfo[]>([]);
 
-  const mockNFTs: NFTCard[] = [
-    {
-      id: "1",
-      title: "Abstract Waves",
-      image: "/landing/landing-hero.png",
-      price: "25.5",
-      likes: 342,
-      views: 1250,
-      creator: {
-        name: "ArtMaster99",
-        avatar: "/brand/pico-logo.svg",
-        verified: true,
-      },
-      isLiked: false,
+  // Fetch all NFTs
+  const {
+    data: allNFTs = [],
+    isLoading: isLoadingNFTs,
+    error: nftError,
+  } = useQuery({
+    queryKey: createQueryKey.nfts(),
+    queryFn: async () => {
+      if (!isServicesReady || !nftService) return [];
+      return await nftService.getAllNFTs();
     },
-    // Add more mock NFTs here
-  ];
+    enabled: isServicesReady && !!nftService,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Filter and sort NFTs
+  useEffect(() => {
+    let filtered = [...allNFTs];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (nft) =>
+          nft.name.toLowerCase().includes(query) ||
+          nft.description.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply sorting
+    switch (sortBy) {
+      case "newest":
+        filtered.sort((a, b) => b.created_at - a.created_at);
+        break;
+      case "price-high":
+        filtered.sort((a, b) => b.price - a.price);
+        break;
+      case "price-low":
+        filtered.sort((a, b) => a.price - b.price);
+        break;
+      case "trending":
+      default:
+        // Keep original order for trending
+        break;
+    }
+
+    setFilteredNFTs(filtered);
+  }, [allNFTs, searchQuery, sortBy]);
+
+  if (isLoadingNFTs) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="lg" className="mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading NFTs...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (nftError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-destructive mb-4">Failed to load NFTs</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -190,76 +237,93 @@ export function ExplorePage() {
               : "space-y-6"
           }
         >
-          {mockNFTs.map((nft) => (
-            <Link key={nft.id} to={`/nft/${nft.id}`}>
-              <Card className="group hover:shadow-lg transition-shadow">
-                <CardContent className="p-0">
-                  {/* Image */}
-                  <div className="relative aspect-square">
-                    <img
-                      src={nft.image}
-                      alt={nft.title}
-                      className="w-full h-full object-cover rounded-t-lg"
-                    />
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="bg-background/80 backdrop-blur-sm"
-                        >
-                          <Heart className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="bg-background/80 backdrop-blur-sm"
-                        >
-                          <Share2 className="h-4 w-4" />
-                        </Button>
+          {filteredNFTs.length > 0 ? (
+            filteredNFTs.map((nft) => (
+              <Link key={nft.nft_id} to={`/nft/${nft.nft_id}`}>
+                <Card className="group hover:shadow-lg transition-shadow">
+                  <CardContent className="p-0">
+                    {/* Image */}
+                    <div className="relative aspect-square">
+                      <img
+                        src={nft.image_url || "/placeholder-nft.png"}
+                        alt={nft.name}
+                        className="w-full h-full object-cover rounded-t-lg"
+                      />
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="bg-background/80 backdrop-blur-sm"
+                          >
+                            <Heart className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="bg-background/80 backdrop-blur-sm"
+                          >
+                            <Share2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Info */}
-                  <div className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={nft.creator.avatar} />
-                        <AvatarFallback>{nft.creator.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm text-muted-foreground">
-                        {nft.creator.name}
-                      </span>
+                      {nft.is_ai_generated && (
+                        <div className="absolute top-2 left-2">
+                          <Badge variant="secondary" className="bg-primary/90 text-primary-foreground">
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            AI Generated
+                          </Badge>
+                        </div>
+                      )}
                     </div>
 
-                    <h3 className="font-semibold mb-2">{nft.title}</h3>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Current Price
-                        </p>
-                        <p className="font-semibold text-primary">
-                          {nft.price} PiCO
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Heart className="h-4 w-4" />
-                          {nft.likes}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MessageCircle className="h-4 w-4" />
-                          {nft.views}
+                    {/* Info */}
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={`https://avatar.vercel.sh/${nft.owner}.png`} />
+                          <AvatarFallback>{String(nft.owner).slice(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm text-muted-foreground">
+                          {String(nft.owner).slice(0, 8)}...
                         </span>
                       </div>
+
+                      <h3 className="font-semibold mb-2">{nft.name}</h3>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Current Price
+                          </p>
+                          <p className="font-semibold text-primary">
+                            {nft.price} PiCO
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Heart className="h-4 w-4" />
+                            0
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MessageCircle className="h-4 w-4" />
+                            0
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                  </CardContent>
+                </Card>
+              </Link>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <h3 className="text-lg font-semibold mb-2">No NFTs found</h3>
+              <p className="text-muted-foreground">
+                {searchQuery ? "Try adjusting your search terms" : "No NFTs have been created yet"}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

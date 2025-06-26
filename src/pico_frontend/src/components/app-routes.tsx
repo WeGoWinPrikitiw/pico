@@ -11,6 +11,8 @@ import {
   ForumsPage,
 } from "@/pages";
 import { useAuth } from "@/context/auth-context";
+import { ContractDemoComponent } from "./ContractDemoComponent";
+import { ContractProvider } from "@/context/contract-context";
 
 export function AppRoutes() {
   const { isAuthenticated } = useAuth();

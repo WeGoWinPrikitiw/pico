@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/context/auth-context";
+import { useAuth, useServices } from "@/context/auth-context";
 import {
   ArrowLeft,
   Heart,
@@ -108,7 +108,8 @@ interface PostDetail {
 
 export function PostDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { buyNFT, principal, getNft } = useAuth();
+  const { principal } = useAuth();
+  const services = useAuth().isAuthenticated ? useServices() : null;
   const [post, setPost] = useState<PostDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -145,13 +146,12 @@ export function PostDetailPage() {
 
   useEffect(() => {
     const loadNftData = async () => {
-      if (!id) {
-        setLoading(false);
+      if (!id || !services) {
         return;
       }
       setLoading(true);
       try {
-        const nft = await getNft.execute(id);
+        const nft = await services.nftService.getNFT(parseInt(id));
         if (nft) {
           const formattedPost: PostDetail = {
             id: nft.nft_id.toString(),
@@ -159,14 +159,14 @@ export function PostDetailPage() {
             description: nft.description,
             image: nft.image_url,
             creator: {
-              id: nft.owner.toText(),
-              name: `${nft.owner.toText().slice(0, 8)}...`,
-              avatar: `https://avatar.vercel.sh/${nft.owner.toText()}.png`,
+              id: nft.owner,
+              name: nft.owner,
+              avatar: "/brand/pico-logo.svg",
               verified: false,
               followers: 0,
-              username: "",
-              nfts: 0,
-              sales: 0,
+              username: nft.owner,
+              nfts: 1,
+              sales: 0
             },
             price: (Number(nft.price) / 100000000).toFixed(2),
             views: 0,
@@ -203,7 +203,7 @@ export function PostDetailPage() {
     };
 
     loadNftData();
-  }, [id, getNft]);
+  }, [id, services]);
 
   const handleLike = () => {
     if (!post) return;
@@ -275,7 +275,8 @@ export function PostDetailPage() {
     }
 
     try {
-      await buyNFT.execute(principal, post.creator.id, post.id, post.price);
+      if (!services) throw new Error("Services not available");
+      await services.operationalService.buyNFT(principal, post.creator.id, parseInt(post.id), parseFloat(post.price));
     } catch (error) {
       console.error("Failed to buy NFT:", error);
       alert(`Failed to buy NFT: ${error}`);

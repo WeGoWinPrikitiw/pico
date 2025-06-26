@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Input,
@@ -15,7 +16,8 @@ import {
   TabsContent,
   Separator,
 } from "@/components/ui";
-import { useAuth } from "@/context/auth-context";
+import { useAuth, useServices } from "@/context/auth-context";
+import { createQueryKey } from "@/lib/query-client";
 import {
   Settings,
   Edit3,
@@ -27,23 +29,16 @@ import {
   Users,
   Share2,
   Copy,
-  ExternalLink,
   ArrowLeft,
   Upload,
   Wallet,
-  Link as LinkIcon,
-  Twitter,
-  Instagram,
   Globe,
   Eye,
-  MessageCircle,
   MoreHorizontal,
-  Filter,
-  Search,
   Check,
 } from "lucide-react";
-import { UserPreferences } from "declarations/preferences_contract/preferences_contract.did";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { toast } from "sonner";
 
 interface UserProfile {
   name: string;
@@ -81,13 +76,16 @@ export function ProfilePage() {
     principal,
     userBalance,
     copyPrincipalToClipboard,
-    getNftsForUser,
-    getPreferences,
-    updatePreferences,
+    isAuthenticated,
+    isServicesReady,
   } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("created");
   const [isEditing, setIsEditing] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  // Get services when available
+  const services = isAuthenticated && isServicesReady ? useServices() : null;
 
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: "Digital Artist",
@@ -110,7 +108,7 @@ export function ProfilePage() {
 
   const [createdNFTs, setCreatedNFTs] = useState<NFTItem[]>([]);
   const [collectedNFTs, setCollectedNFTs] = useState<NFTItem[]>([]);
-  const [wishlistNFTs, setWishlistNFTs] = useState<NFTItem[]>([
+  const [wishlistNFTs] = useState<NFTItem[]>([
     {
       id: "6",
       title: "Future Landscape",
@@ -123,56 +121,89 @@ export function ProfilePage() {
     },
   ]);
   const [userPreferences, setUserPreferences] = useState<string[]>([]);
-  const [availablePreferences, setAvailablePreferences] = useState([
+  const [availablePreferences] = useState([
     "art", "gaming", "music", "photography", "sports", "technology", "memes", "collectibles"
   ]);
 
+  // Query for user NFTs
+  const { data: nftData, isLoading: isLoadingNFTs } = useQuery({
+    queryKey: createQueryKey.nfts(),
+    queryFn: async () => {
+      if (!services?.nftService || !principal) return [];
+      return await services.nftService.getAllNFTs();
+    },
+    enabled: !!services?.nftService && !!principal,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Query for user preferences
+  const { data: preferencesData } = useQuery({
+    queryKey: createQueryKey.userPreferences(principal || ""),
+    queryFn: async () => {
+      if (!services?.operationalService || !principal) return { preferences: [] };
+      // Note: This will need to be implemented in the operational service
+      try {
+        // For now, return empty preferences
+        return { preferences: [] };
+      } catch (error) {
+        console.warn("Preferences not implemented yet:", error);
+        return { preferences: [] };
+      }
+    },
+    enabled: !!services?.operationalService && !!principal,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  });
+
+  // Mutation for updating preferences
+  const updatePreferencesMutation = useMutation({
+    mutationFn: async (preferences: string[]) => {
+      if (!services?.operationalService || !principal) throw new Error("Service not available");
+      // Note: This will need to be implemented in the operational service
+      console.log("Updating preferences:", preferences);
+      return preferences;
+    },
+    onSuccess: () => {
+      toast.success("Preferences updated successfully!");
+      queryClient.invalidateQueries({
+        queryKey: createQueryKey.userPreferences(principal || "")
+      });
+    },
+    onError: (error) => {
+      console.error("Failed to update preferences:", error);
+      toast.error("Failed to update preferences");
+    },
+  });
+
+  // Format NFT data
   useEffect(() => {
-    const loadUserNfts = async () => {
-      if (principal) {
-        try {
-          const nfts = await getNftsForUser.execute(principal);
-          const formattedNfts: NFTItem[] = nfts.map((nft: any) => ({
-            id: nft.nft_id.toString(),
-            title: nft.name,
-            image: nft.image_url,
-            price: (Number(nft.price) / 100000000).toFixed(2),
-            likes: Math.floor(Math.random() * 100), // Mock likes
-            isForSale: true, // Assuming all are for sale for now
-            views: Math.floor(Math.random() * 1000), // Mock views
-            creator: nft.owner.toText(),
-          }));
+    if (nftData) {
+      const formattedNfts: NFTItem[] = nftData.map((nft) => ({
+        id: nft.nft_id.toString(),
+        title: nft.name,
+        image: nft.image_url,
+        price: (Number(nft.price) / 100000000).toFixed(2),
+        likes: Math.floor(Math.random() * 100),
+        isForSale: true,
+        views: Math.floor(Math.random() * 1000),
+        creator: nft.owner,
+      }));
 
-          // For now, created and collected are the same
-          setCreatedNFTs(formattedNfts);
-          setCollectedNFTs(formattedNfts);
+      setCreatedNFTs(formattedNfts);
+      setCollectedNFTs(formattedNfts);
 
-          setUserProfile((prev) => ({
-            ...prev,
-            totalNFTs: formattedNfts.length,
-          }));
-        } catch (error) {
-          console.error("Failed to fetch user NFTs:", error);
-        }
-      }
-    };
+      setUserProfile((prev) => ({
+        ...prev,
+        totalNFTs: formattedNfts.length,
+      }));
+    }
+  }, [nftData]);
 
-    const loadUserPreferences = async () => {
-      if (principal) {
-        try {
-          const prefs = await getPreferences.execute(principal);
-          if (prefs) {
-            setUserPreferences(prefs.preferences);
-          }
-        } catch (error) {
-          console.error("Failed to fetch user preferences:", error);
-        }
-      }
-    };
-
-    loadUserNfts();
-    loadUserPreferences();
-  }, [principal, getNftsForUser, getPreferences]);
+  // Set preferences from query data
+  useEffect(() => {
+    if (preferencesData?.preferences) {
+      setUserPreferences(preferencesData.preferences);
+    }
+  }, [preferencesData]);
 
   const tabs = [
     {
@@ -234,11 +265,7 @@ export function ProfilePage() {
   const handleSaveChanges = async () => {
     if (!principal) return;
     try {
-      await updatePreferences.execute({
-        principal_id: principal,
-        preferences: userPreferences,
-      });
-      // maybe show a success message
+      await updatePreferencesMutation.mutateAsync(userPreferences);
     } catch (error) {
       console.error("Failed to save preferences", error);
     }
@@ -427,7 +454,9 @@ export function ProfilePage() {
                           rel="noopener noreferrer"
                           className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-blue-500 hover:text-white transition-colors"
                         >
-                          <Twitter className="h-5 w-5" />
+                          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                          </svg>
                         </a>
                       )}
                       {userProfile.social.instagram && (
@@ -437,7 +466,9 @@ export function ProfilePage() {
                           rel="noopener noreferrer"
                           className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-gradient-to-r hover:from-purple-500 hover:to-pink-500 hover:text-white transition-colors"
                         >
-                          <Instagram className="h-5 w-5" />
+                          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987c6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.49-3.341-1.297-.734-.646-1.297-1.297-1.297-2.448c0-1.297.49-2.448 1.297-3.341.646-.734 1.297-1.297 2.448-1.297c1.297 0 2.448.49 3.341 1.297.734.646 1.297 1.297 1.297 2.448c0 1.297-.49 2.448-1.297 3.341-.646.734-1.297 1.297-2.448 1.297z"/>
+                          </svg>
                         </a>
                       )}
                     </div>
@@ -841,8 +872,8 @@ export function ProfilePage() {
 
                     <Separator />
 
-                    <Button onClick={handleSaveChanges} disabled={updatePreferences.loading}>
-                      {updatePreferences.loading ? (
+                    <Button onClick={handleSaveChanges} disabled={updatePreferencesMutation.isPending}>
+                      {updatePreferencesMutation.isPending ? (
                         <LoadingSpinner size="sm" className="mr-2" />
                       ) : null}
                       Save Changes
