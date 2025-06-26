@@ -6,6 +6,7 @@ import tailwindcss from "@tailwindcss/vite"
 import { defineConfig } from 'vite';
 import environment from 'vite-plugin-environment';
 import dotenv from 'dotenv';
+import checker from 'vite-plugin-checker';
 
 dotenv.config({ path: '../../.env' });
 
@@ -45,6 +46,9 @@ export default defineConfig({
     tailwindcss(),
     environment("all", { prefix: "CANISTER_" }),
     environment("all", { prefix: "DFX_" }),
+    checker({
+      typescript: true,
+    }),
   ],
   test: {
     environment: 'jsdom',
