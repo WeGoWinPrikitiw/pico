@@ -24,10 +24,9 @@ export function AppPage() {
     const formData = new FormData(event.currentTarget);
     const nameValue = formData.get("name") as string;
 
-    if (nameValue.trim()) {
-      greetAsync.execute(nameValue);
-    }
-  }
+      if (nameValue.trim()) {
+        greetAsync.mutate([nameValue]);
+      }  }
 
   return (
     <div className="min-h-screen bg-background py-8">
@@ -64,9 +63,9 @@ export function AppPage() {
               <div className="flex justify-end">
                 <Button
                   type="submit"
-                  disabled={!name.trim() || greetAsync.loading}
+                  disabled={!name.trim() || greetAsync.isPending}
                 >
-                  {greetAsync.loading ? (
+                  {greetAsync.isPending ? (
                     <>
                       <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
                       Sending...

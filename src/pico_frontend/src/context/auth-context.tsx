@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, ReactNode } from "react";
+import { createContext, useContext, useEffect, ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { serviceFactory } from "@/services";
 import { createQueryKey, invalidateQueries } from "@/lib/query-client";
@@ -46,18 +46,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
   } = useQuery({
     queryKey: createQueryKey.auth(),
     queryFn: async () => {
-      await serviceFactory.initialize();
-      const isAuthenticated = await serviceFactory.isAuthenticated();
-      const principal = serviceFactory.getPrincipal();
+      try {
+        await serviceFactory.initialize();
+        const isAuthenticated = await serviceFactory.isAuthenticated();
+        const principal = serviceFactory.getPrincipal();
 
-      return {
-        isAuthenticated,
-        principal,
-        servicesReady: isAuthenticated,
-      };
+        return {
+          isAuthenticated,
+          principal,
+          servicesReady: isAuthenticated,
+        };
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+        return {
+          isAuthenticated: false,
+          principal: undefined,
+          servicesReady: false,
+        };
+      }
     },
     staleTime: 1000 * 60 * 2, // 2 minutes
-    retry: 1,
+    retry: (failureCount, error) => {
+      // Only retry once for initialization errors
+      return failureCount < 1;
+    },
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
   });
 
   const isAuthenticated = authData?.isAuthenticated ?? false;
@@ -77,8 +91,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const operationalService = serviceFactory.getOperationalService();
         return await operationalService.getUserBalance(principal);
-      } catch (error) {
-        console.warn("Failed to get user balance:", error);
+      } catch (err) {
+        console.warn("Failed to get user balance:", err);
         return 0;
       }
     },
@@ -102,7 +116,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Fetch user balance after login
       if (data.principal) {
         queryClient.invalidateQueries({
-          queryKey: createQueryKey.balance(data.principal)
+          queryKey: createQueryKey.balance(data.principal),
         });
       }
     },
@@ -141,19 +155,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const interval = setInterval(async () => {
-      try {
-        const stillAuthenticated = await serviceFactory.isAuthenticated();
-        if (!stillAuthenticated) {
-          // User session expired
-          toast.error("Your session has expired. Please log in again.");
-          queryClient.clear();
-          refreshAuth();
+    const interval = setInterval(
+      async () => {
+        try {
+          const stillAuthenticated = await serviceFactory.isAuthenticated();
+          if (!stillAuthenticated) {
+            // User session expired
+            toast.error("Your session has expired. Please log in again.");
+            queryClient.clear();
+            refreshAuth();
+          }
+        } catch (error) {
+          console.warn("Failed to check auth status:", error);
         }
-      } catch (error) {
-        console.warn("Failed to check auth status:", error);
-      }
-    }, 1000 * 60 * 5); // Check every 5 minutes
+      },
+      1000 * 60 * 5,
+    ); // Check every 5 minutes
 
     return () => clearInterval(interval);
   }, [isAuthenticated, queryClient, refreshAuth]);
@@ -162,7 +179,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Auth state
     isAuthenticated,
     principal,
-    isLoading: isCheckingAuth || loginMutation.isPending || logoutMutation.isPending,
+    isLoading:
+      isCheckingAuth || loginMutation.isPending || logoutMutation.isPending,
     error: authError || loginMutation.error || logoutMutation.error,
 
     // Auth actions
@@ -198,9 +216,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 }
 

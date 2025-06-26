@@ -1,17 +1,14 @@
 import { useState } from "react";
 import { useAuth, useServices } from "@/context/auth-context";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createQueryKey } from "@/lib/query-client";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  Button,
-  Input,
-  LoadingSpinner,
-  Card,
-  CardHeader,
-  CardContent,
-  Badge,
-} from "@/components/ui";
+  useTokenInfo,
+  useUserTransactions,
+  useTopUp,
+  useBuyNFT,
+} from "@/hooks/useOperational";
+import { createQueryKey } from "@/lib/query-client";
 import {
   Wallet,
   CreditCard,
@@ -24,11 +21,29 @@ import {
   Activity,
   ArrowRight,
 } from "lucide-react";
+import {
+  Button,
+  Input,
+  LoadingSpinner,
+  Card,
+  CardHeader,
+  CardContent,
+  Badge,
+} from "@/components/ui";
 
 export function OperationalDashboard() {
   const auth = useAuth();
-  const { isAuthenticated, principal, isLoading: authIsLoading, error: authError, login, logout, userBalance, copyPrincipalToClipboard } = auth;
-  
+  const {
+    isAuthenticated,
+    principal,
+    isLoading: authIsLoading,
+    error: authError,
+    login,
+    logout,
+    userBalance,
+    copyPrincipalToClipboard,
+  } = auth;
+
   // Get services when authenticated
   const services = isAuthenticated ? useServices() : null;
   const queryClient = useQueryClient();
@@ -44,86 +59,52 @@ export function OperationalDashboard() {
   const [checkBalancePrincipal, setCheckBalancePrincipal] = useState("");
 
   // React Query for token info
-  const {
-    data: tokenInfo,
-  } = useQuery({
-    queryKey: createQueryKey.tokenInfo(),
-    queryFn: async () => {
-      if (!services) throw new Error("Services not available");
-      return await services.operationalService.getTokenInfo();
-    },
-    enabled: !!services,
-    staleTime: 1000 * 60 * 5,
-  });
-
-  // React Query for transactions
-  const {
-    data: transactions = [],
-  } = useQuery({
-    queryKey: createQueryKey.userTransactions(principal || ""),
-    queryFn: async () => {
-      if (!services || !principal) throw new Error("Services or principal not available");
-      return await services.operationalService.getUserTransactions(principal);
-    },
-    enabled: !!services && !!principal,
-    staleTime: 1000 * 30,
-  });
+  const { data: tokenInfo } = useTokenInfo();
+  const { data: transactions = [] } = useUserTransactions(principal);
 
   // Mutations
   const mintTokensMutation = useMutation({
-    mutationFn: async ({ amount, recipient }: { amount: string; recipient: string }) => {
+    mutationFn: async ({
+      amount,
+      recipient,
+    }: {
+      amount: string;
+      recipient: string;
+    }) => {
       if (!services) throw new Error("Services not available");
-      return await services.operationalService.mintToUser(recipient, Number(amount));
+      return await services.operationalService.mintToUser(
+        recipient,
+        Number(amount),
+      );
     },
-    onSuccess: (data) => {
-      toast.success(`Tokens minted successfully! Transaction ID: ${data.transactionId}`);
-      queryClient.invalidateQueries({ queryKey: createQueryKey.balance(principal || "") });
-      queryClient.invalidateQueries({ queryKey: createQueryKey.userTransactions(principal || "") });
+    onSuccess: (data: any) => {
+      toast.success(
+        `Tokens minted successfully! Transaction ID: ${data.transactionId}`,
+      );
+      queryClient.invalidateQueries({
+        queryKey: createQueryKey.balance(principal || ""),
+      });
+      queryClient.invalidateQueries({
+        queryKey: createQueryKey.userTransactions(principal || ""),
+      });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Failed to mint tokens: ${error.message}`);
     },
   });
 
-  const selfTopUpMutation = useMutation({
-    mutationFn: async (amount: string) => {
-      if (!services || !principal) throw new Error("Services or principal not available");
-      return await services.operationalService.topUp(principal, Number(amount));
-    },
-    onSuccess: (data) => {
-      toast.success(`Top-up successful! Transaction ID: ${data.transactionId}`);
-      queryClient.invalidateQueries({ queryKey: createQueryKey.balance(principal || "") });
-      queryClient.invalidateQueries({ queryKey: createQueryKey.userTransactions(principal || "") });
-    },
-    onError: (error) => {
-      toast.error(`Failed to top up: ${error.message}`);
-    },
-  });
-
-  const buyNFTMutation = useMutation({
-    mutationFn: async ({ buyer, seller, nftId, price }: { buyer: string; seller: string; nftId: string; price: string }) => {
-      if (!services) throw new Error("Services not available");
-      return await services.operationalService.buyNFT(buyer, seller, Number(nftId), Number(price));
-    },
-    onSuccess: (data) => {
-      toast.success(`NFT purchased successfully! Transaction ID: ${data.transactionId}`);
-      queryClient.invalidateQueries({ queryKey: createQueryKey.balance(principal || "") });
-      queryClient.invalidateQueries({ queryKey: createQueryKey.userTransactions(principal || "") });
-    },
-    onError: (error) => {
-      toast.error(`Failed to buy NFT: ${error.message}`);
-    },
-  });
+  const selfTopUpMutation = useTopUp();
+  const buyNFTMutation = useBuyNFT();
 
   const checkBalanceMutation = useMutation({
     mutationFn: async (principalId: string) => {
       if (!services) throw new Error("Services not available");
       return await services.operationalService.getUserBalance(principalId);
     },
-    onSuccess: (balance) => {
+    onSuccess: (balance: any) => {
       toast.success(`Balance: ${balance} PiCO`);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Failed to check balance: ${error.message}`);
     },
   });
@@ -144,7 +125,10 @@ export function OperationalDashboard() {
       toast.error("Please enter top-up amount");
       return;
     }
-    selfTopUpMutation.mutate(selfTopUpAmount);
+    selfTopUpMutation.mutate({
+      userPrincipal: principal || "",
+      amount: Number(selfTopUpAmount),
+    });
     setSelfTopUpAmount("");
   };
 
@@ -153,7 +137,12 @@ export function OperationalDashboard() {
       toast.error("Please fill all NFT purchase fields");
       return;
     }
-    buyNFTMutation.mutate({ buyer: nftBuyer, seller: nftSeller, nftId, price: nftPrice });
+    buyNFTMutation.mutate({
+      buyer: nftBuyer,
+      seller: nftSeller,
+      nftId: Number(nftId),
+      price: Number(nftPrice),
+    });
     setNftBuyer("");
     setNftSeller("");
     setNftId("");
@@ -186,8 +175,12 @@ export function OperationalDashboard() {
   };
 
   const handleRefreshData = () => {
-    queryClient.invalidateQueries({ queryKey: createQueryKey.balance(principal || "") });
-    queryClient.invalidateQueries({ queryKey: createQueryKey.userTransactions(principal || "") });
+    queryClient.invalidateQueries({
+      queryKey: createQueryKey.balance(principal || ""),
+    });
+    queryClient.invalidateQueries({
+      queryKey: createQueryKey.userTransactions(principal || ""),
+    });
     queryClient.invalidateQueries({ queryKey: createQueryKey.tokenInfo() });
   };
 
@@ -200,7 +193,9 @@ export function OperationalDashboard() {
     },
     {
       title: "Token Info",
-      value: tokenInfo ? `${tokenInfo.name} (${tokenInfo.symbol})` : "Loading...",
+      value: tokenInfo
+        ? `${tokenInfo.name} (${tokenInfo.symbol})`
+        : "Loading...",
       icon: TrendingUp,
       description: "Token information",
     },
@@ -221,13 +216,23 @@ export function OperationalDashboard() {
   const recentTransactions = (transactions || []).slice(0, 5);
 
   // Combined loading state from all async operations
-  const isLoading = authIsLoading || mintTokensMutation.isPending || selfTopUpMutation.isPending || 
-    buyNFTMutation.isPending || checkBalanceMutation.isPending;
+  const isLoading =
+    authIsLoading ||
+    mintTokensMutation.isPending ||
+    selfTopUpMutation.isPending ||
+    buyNFTMutation.isPending ||
+    checkBalanceMutation.isPending;
 
   // Error display helper
   const getErrorMessage = () => {
-    return authError?.message || mintTokensMutation.error?.message || selfTopUpMutation.error?.message ||
-      buyNFTMutation.error?.message || checkBalanceMutation.error?.message || null;
+    return (
+      authError?.message ||
+      mintTokensMutation.error?.message ||
+      selfTopUpMutation.error?.message ||
+      buyNFTMutation.error?.message ||
+      checkBalanceMutation.error?.message ||
+      null
+    );
   };
 
   const currentError = getErrorMessage();
@@ -409,9 +414,7 @@ export function OperationalDashboard() {
                         <p className="text-sm font-medium text-muted-foreground">
                           {stat.title}
                         </p>
-                        <p className="text-2xl font-bold mt-1">
-                          {stat.value}
-                        </p>
+                        <p className="text-2xl font-bold mt-1">{stat.value}</p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {stat.description}
                         </p>
@@ -600,9 +603,7 @@ export function OperationalDashboard() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">
-                      Price (PiCO)
-                    </label>
+                    <label className="text-sm font-medium">Price (PiCO)</label>
                     <Input
                       type="number"
                       placeholder="Enter price in PiCO"

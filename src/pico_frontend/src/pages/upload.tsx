@@ -1,14 +1,13 @@
 import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMintNFT, useGenerateAIImage } from "@/hooks/useNFT";
 import {
   Button,
   Card,
   CardContent,
   CardHeader,
   Input,
-  Badge,
-  Separator,
+  Badge
 } from "@/components/ui";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAuth, useServices } from "@/context/auth-context";
@@ -22,14 +21,7 @@ import {
   Eye,
   DollarSign,
   Tag,
-  FileText,
-  Camera,
-  Palette,
-  Info,
-  Clock,
-  Percent,
-  Check,
-  AlertCircle,
+  FileText
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -74,51 +66,8 @@ export function UploadPage() {
   });
 
   // Mutations for NFT operations
-  const mintNftMutation = useMutation({
-    mutationFn: async (nftData: NFTMetadata) => {
-      if (!services?.nftService || !principal) throw new Error("Service not available");
-      
-      return await services.nftService.mintNFT(
-        principal,
-        nftData.title,
-        nftData.description,
-        parseFloat(nftData.price) * 100000000, // Convert to smallest unit
-        nftData.previewUrl || "", // This would need to be uploaded first
-        nftData.isAiGenerated,
-        nftData.traits || []
-      );
-    },
-    onSuccess: () => {
-      toast.success("NFT minted successfully!");
-      navigate("/profile");
-    },
-    onError: (error) => {
-      console.error("Failed to mint NFT:", error);
-      toast.error("Failed to mint NFT");
-    },
-  });
-
-  const generateAiImageMutation = useMutation({
-    mutationFn: async (prompt: string) => {
-      if (!services?.nftService) throw new Error("NFT service not available");
-      return await services.nftService.generateAIImage(prompt);
-    },
-    onSuccess: (data) => {
-      setNftData(prev => ({
-        ...prev,
-        previewUrl: data.image_url,
-        isAiGenerated: true,
-        // Add auto-generated title and description if not already set
-        title: prev.title || `AI Generated: ${aiPrompt.prompt.slice(0, 30)}...`,
-        description: prev.description || `Generated with AI using prompt: ${aiPrompt.prompt}`,
-      }));
-      toast.success("AI image generated successfully!");
-    },
-    onError: (error) => {
-      console.error("Failed to generate AI image:", error);
-      toast.error("Failed to generate AI image");
-    },
-  });
+  const mintNftMutation = useMintNFT();
+  const generateAiImageMutation = useGenerateAIImage();
 
   const [aiPrompt, setAiPrompt] = useState({
     prompt: "",
@@ -238,15 +187,22 @@ export function UploadPage() {
     }
 
     try {
-      await mintNftMutation.mutateAsync(nftData);
+      await mintNftMutation.mutateAsync({
+        to: principal,
+        name: nftData.title,
+        description: nftData.description,
+        price: Number(nftData.price),
+        imageUrl: nftData.previewUrl || "",
+        isAiGenerated: nftData.isAiGenerated,
+        traits: nftData.traits,
+      });
     } catch (error) {
       console.error("Minting failed:", error);
     }
   };
 
-
-
-  const isFormValid = nftData.title.trim() &&
+  const isFormValid =
+    nftData.title.trim() &&
     nftData.description.trim() &&
     nftData.price.trim() &&
     nftData.previewUrl;
@@ -267,29 +223,50 @@ export function UploadPage() {
               <div className="h-6 w-px bg-border" />
               <div>
                 <h1 className="text-lg font-semibold">Create NFT</h1>
-                <p className="text-sm text-muted-foreground">Upload and mint your digital artwork</p>
+                <p className="text-sm text-muted-foreground">
+                  Upload and mint your digital artwork
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Button
                 size="lg"
-                onClick={handleMintNft}
-                disabled={!isFormValid || mintNftMutation.isPending || generateAiImageMutation.isPending}
-                className="bg-gradient-to-r from-primary to-primary/90 shadow-lg"
+                onClick={() => {
+                  setNftData({
+                    title: "",
+                    description: "",
+                    price: "",
+                    category: "art",
+                    tags: [],
+                    royalty: "10",
+                    isForSale: true,
+                    isAiGenerated: false,
+                    traits: [],
+                    previewUrl: undefined,
+                    file: undefined,
+                  });
+                }}
+                variant="outline"
               >
                 Reset
               </Button>
               <Button
                 size="lg"
                 onClick={handleMintNft}
-                disabled={!isFormValid || mintNftMutation.isPending || generateAiImageMutation.isPending}
+                disabled={
+                  !isFormValid ||
+                  mintNftMutation.isPending ||
+                  generateAiImageMutation.isPending
+                }
                 className="bg-gradient-to-r from-primary to-primary/90 shadow-lg"
               >
-                {mintNftMutation.isPending || generateAiImageMutation.isPending ? (
+                {mintNftMutation.isPending ||
+                  generateAiImageMutation.isPending ? (
                   <LoadingSpinner size="sm" className="mr-2" />
                 ) : (
                   <span className="mr-2">
-                    {mintNftMutation.isPending ? "Minting..." : "Mint NFT"}</span>
+                    {mintNftMutation.isPending ? "Minting..." : "Mint NFT"}
+                  </span>
                 )}
               </Button>
             </div>
@@ -422,7 +399,16 @@ export function UploadPage() {
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           <Badge variant="secondary" className="text-xs">
-                            {categories.find(c => c.value === nftData.category)?.icon} {categories.find(c => c.value === nftData.category)?.label}
+                            {
+                              categories.find(
+                                (c) => c.value === nftData.category,
+                              )?.icon
+                            }{" "}
+                            {
+                              categories.find(
+                                (c) => c.value === nftData.category,
+                              )?.label
+                            }
                           </Badge>
                           {nftData.price && (
                             <span className="text-sm font-semibold">

@@ -4,19 +4,15 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "sonner";
 import { queryClient } from "./lib/query-client";
 import { AuthProvider } from "./context/auth-context";
-import { AppRoutes } from "./components/app-routes";
+import { AppInitializer } from "./AppInitializer";
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
-          <Toaster 
-            position="top-center"
-            richColors
-            theme="dark"
-          />
+          <AppInitializer />
+          <Toaster position="top-center" richColors theme="dark" />
         </AuthProvider>
       </BrowserRouter>
       <ReactQueryDevtools initialIsOpen={false} />

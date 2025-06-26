@@ -1,38 +1,29 @@
-import React, { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Button,
   Card,
   CardContent,
-  CardHeader,
   Badge,
   Avatar,
   AvatarImage,
   AvatarFallback,
   Input,
-  Separator,
 } from "@/components/ui";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAuth, useServices } from "@/context/auth-context";
 import { createQueryKey } from "@/lib/query-client";
 import {
   Search,
-  Filter,
   Grid3X3,
   List,
   Heart,
   MessageCircle,
   Share2,
-  ArrowLeft,
-  TrendingUp,
-  Clock,
-  DollarSign,
-  ChevronDown,
   Sliders,
   Sparkles,
 } from "lucide-react";
-import type { FrontendNFTInfo } from "@/types";
 
 export function ExplorePage() {
   const { isAuthenticated, isServicesReady } = useAuth();
@@ -41,9 +32,6 @@ export function ExplorePage() {
   const [sortBy, setSortBy] = useState("trending");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [filteredNFTs, setFilteredNFTs] = useState<FrontendNFTInfo[]>([]);
-
-  // Fetch all NFTs
   const {
     data: allNFTs = [],
     isLoading: isLoadingNFTs,
@@ -58,8 +46,7 @@ export function ExplorePage() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Filter and sort NFTs
-  useEffect(() => {
+  const filteredNFTs = useMemo(() => {
     let filtered = [...allNFTs];
 
     // Apply search filter
@@ -68,7 +55,7 @@ export function ExplorePage() {
       filtered = filtered.filter(
         (nft) =>
           nft.name.toLowerCase().includes(query) ||
-          nft.description.toLowerCase().includes(query)
+          nft.description.toLowerCase().includes(query),
       );
     }
 
@@ -89,7 +76,7 @@ export function ExplorePage() {
         break;
     }
 
-    setFilteredNFTs(filtered);
+    return filtered;
   }, [allNFTs, searchQuery, sortBy]);
 
   if (isLoadingNFTs) {
@@ -269,7 +256,10 @@ export function ExplorePage() {
                       </div>
                       {nft.is_ai_generated && (
                         <div className="absolute top-2 left-2">
-                          <Badge variant="secondary" className="bg-primary/90 text-primary-foreground">
+                          <Badge
+                            variant="secondary"
+                            className="bg-primary/90 text-primary-foreground"
+                          >
                             <Sparkles className="h-3 w-3 mr-1" />
                             AI Generated
                           </Badge>
@@ -281,8 +271,12 @@ export function ExplorePage() {
                     <div className="p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <Avatar className="h-6 w-6">
-                          <AvatarImage src={`https://avatar.vercel.sh/${nft.owner}.png`} />
-                          <AvatarFallback>{String(nft.owner).slice(0, 2).toUpperCase()}</AvatarFallback>
+                          <AvatarImage
+                            src={`https://avatar.vercel.sh/${nft.owner}.png`}
+                          />
+                          <AvatarFallback>
+                            {String(nft.owner).slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
                         </Avatar>
                         <span className="text-sm text-muted-foreground">
                           {String(nft.owner).slice(0, 8)}...
@@ -302,12 +296,10 @@ export function ExplorePage() {
                         </div>
                         <div className="flex items-center gap-3 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
-                            <Heart className="h-4 w-4" />
-                            0
+                            <Heart className="h-4 w-4" />0
                           </span>
                           <span className="flex items-center gap-1">
-                            <MessageCircle className="h-4 w-4" />
-                            0
+                            <MessageCircle className="h-4 w-4" />0
                           </span>
                         </div>
                       </div>
@@ -320,7 +312,9 @@ export function ExplorePage() {
             <div className="col-span-full text-center py-12">
               <h3 className="text-lg font-semibold mb-2">No NFTs found</h3>
               <p className="text-muted-foreground">
-                {searchQuery ? "Try adjusting your search terms" : "No NFTs have been created yet"}
+                {searchQuery
+                  ? "Try adjusting your search terms"
+                  : "No NFTs have been created yet"}
               </p>
             </div>
           )}

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNFTs } from "@/hooks/useNFT";
+import { usePreferences, useUpdatePreferences } from "@/hooks/usePreferences";
 import {
   Button,
   Input,
@@ -17,7 +19,6 @@ import {
   Separator,
 } from "@/components/ui";
 import { useAuth, useServices } from "@/context/auth-context";
-import { createQueryKey } from "@/lib/query-client";
 import {
   Settings,
   Edit3,
@@ -122,57 +123,20 @@ export function ProfilePage() {
   ]);
   const [userPreferences, setUserPreferences] = useState<string[]>([]);
   const [availablePreferences] = useState([
-    "art", "gaming", "music", "photography", "sports", "technology", "memes", "collectibles"
+    "art",
+    "gaming",
+    "music",
+    "photography",
+    "sports",
+    "technology",
+    "memes",
+    "collectibles",
   ]);
 
   // Query for user NFTs
-  const { data: nftData, isLoading: isLoadingNFTs } = useQuery({
-    queryKey: createQueryKey.nfts(),
-    queryFn: async () => {
-      if (!services?.nftService || !principal) return [];
-      return await services.nftService.getAllNFTs();
-    },
-    enabled: !!services?.nftService && !!principal,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-
-  // Query for user preferences
-  const { data: preferencesData } = useQuery({
-    queryKey: createQueryKey.userPreferences(principal || ""),
-    queryFn: async () => {
-      if (!services?.operationalService || !principal) return { preferences: [] };
-      // Note: This will need to be implemented in the operational service
-      try {
-        // For now, return empty preferences
-        return { preferences: [] };
-      } catch (error) {
-        console.warn("Preferences not implemented yet:", error);
-        return { preferences: [] };
-      }
-    },
-    enabled: !!services?.operationalService && !!principal,
-    staleTime: 1000 * 60 * 10, // 10 minutes
-  });
-
-  // Mutation for updating preferences
-  const updatePreferencesMutation = useMutation({
-    mutationFn: async (preferences: string[]) => {
-      if (!services?.operationalService || !principal) throw new Error("Service not available");
-      // Note: This will need to be implemented in the operational service
-      console.log("Updating preferences:", preferences);
-      return preferences;
-    },
-    onSuccess: () => {
-      toast.success("Preferences updated successfully!");
-      queryClient.invalidateQueries({
-        queryKey: createQueryKey.userPreferences(principal || "")
-      });
-    },
-    onError: (error) => {
-      console.error("Failed to update preferences:", error);
-      toast.error("Failed to update preferences");
-    },
-  });
+  const { data: nftData } = useNFTs();
+  const { data: preferencesData } = usePreferences(principal || "");
+  const updatePreferencesMutation = useUpdatePreferences();
 
   // Format NFT data
   useEffect(() => {
@@ -255,17 +219,20 @@ export function ProfilePage() {
   };
 
   const handleTogglePreference = (preference: string) => {
-    setUserPreferences(prev =>
+    setUserPreferences((prev) =>
       prev.includes(preference)
-        ? prev.filter(p => p !== preference)
-        : [...prev, preference]
+        ? prev.filter((p) => p !== preference)
+        : [...prev, preference],
     );
   };
 
   const handleSaveChanges = async () => {
     if (!principal) return;
     try {
-      await updatePreferencesMutation.mutateAsync(userPreferences);
+      await updatePreferencesMutation.mutateAsync({
+        principal_id: principal,
+        preferences: userPreferences,
+      });
     } catch (error) {
       console.error("Failed to save preferences", error);
     }
@@ -454,8 +421,12 @@ export function ProfilePage() {
                           rel="noopener noreferrer"
                           className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-blue-500 hover:text-white transition-colors"
                         >
-                          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                          <svg
+                            className="h-5 w-5"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
                           </svg>
                         </a>
                       )}
@@ -466,8 +437,12 @@ export function ProfilePage() {
                           rel="noopener noreferrer"
                           className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-gradient-to-r hover:from-purple-500 hover:to-pink-500 hover:text-white transition-colors"
                         >
-                          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987c6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.49-3.341-1.297-.734-.646-1.297-1.297-1.297-2.448c0-1.297.49-2.448 1.297-3.341.646-.734 1.297-1.297 2.448-1.297c1.297 0 2.448.49 3.341 1.297.734.646 1.297 1.297 1.297 2.448c0 1.297-.49 2.448-1.297 3.341-.646.734-1.297 1.297-2.448 1.297z"/>
+                          <svg
+                            className="h-5 w-5"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987c6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.49-3.341-1.297-.734-.646-1.297-1.297-1.297-2.448c0-1.297.49-2.448 1.297-3.341.646-.734 1.297-1.297 2.448-1.297c1.297 0 2.448.49 3.341 1.297.734.646 1.297 1.297 1.297 2.448c0 1.297-.49 2.448-1.297 3.341-.646.734-1.297 1.297-2.448 1.297z" />
                           </svg>
                         </a>
                       )}
@@ -656,7 +631,45 @@ export function ProfilePage() {
                     value={tab.id}
                     className="space-y-6"
                   >
-                    {getCurrentNFTs().length > 0 ? (
+                    {tab.id === "settings" ? (
+                      <div className="space-y-6">
+                        <h3 className="text-xl font-semibold">Your Interests</h3>
+                        <p className="text-muted-foreground">
+                          Select topics you're interested in to personalize your
+                          experience.
+                        </p>
+
+                        <div className="flex flex-wrap gap-3">
+                          {availablePreferences.map((pref) => (
+                            <button
+                              key={pref}
+                              onClick={() => handleTogglePreference(pref)}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-colors ${userPreferences.includes(pref)
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-transparent hover:bg-muted"
+                                }`}
+                            >
+                              {userPreferences.includes(pref) && (
+                                <Check className="h-4 w-4" />
+                              )}
+                              <span className="capitalize">{pref}</span>
+                            </button>
+                          ))}
+                        </div>
+
+                        <Separator />
+
+                        <Button
+                          onClick={handleSaveChanges}
+                          disabled={updatePreferencesMutation.isPending}
+                        >
+                          {updatePreferencesMutation.isPending ? (
+                            <LoadingSpinner size="sm" className="mr-2" />
+                          ) : null}
+                          Save Changes
+                        </Button>
+                      </div>
+                    ) : getCurrentNFTs().length > 0 ? (
                       <div
                         className={
                           viewMode === "grid"
@@ -849,37 +862,6 @@ export function ProfilePage() {
                     )}
                   </TabsContent>
                 ))}
-                <TabsContent value="settings">
-                  <div className="space-y-6">
-                    <h3 className="text-xl font-semibold">Your Interests</h3>
-                    <p className="text-muted-foreground">Select topics you're interested in to personalize your experience.</p>
-
-                    <div className="flex flex-wrap gap-3">
-                      {availablePreferences.map(pref => (
-                        <button
-                          key={pref}
-                          onClick={() => handleTogglePreference(pref)}
-                          className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-colors ${userPreferences.includes(pref)
-                              ? 'bg-primary text-primary-foreground border-primary'
-                              : 'bg-transparent hover:bg-muted'
-                            }`}
-                        >
-                          {userPreferences.includes(pref) && <Check className="h-4 w-4" />}
-                          <span className="capitalize">{pref}</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    <Separator />
-
-                    <Button onClick={handleSaveChanges} disabled={updatePreferencesMutation.isPending}>
-                      {updatePreferencesMutation.isPending ? (
-                        <LoadingSpinner size="sm" className="mr-2" />
-                      ) : null}
-                      Save Changes
-                    </Button>
-                  </div>
-                </TabsContent>
               </Tabs>
             </CardContent>
           </Card>

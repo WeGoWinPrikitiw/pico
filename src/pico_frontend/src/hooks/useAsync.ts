@@ -1,49 +1,15 @@
-import { useState, useCallback } from "react";
+import { useMutation, type UseMutationResult } from "@tanstack/react-query";
 
-export interface UseAsyncState<T> {
-  data: T | null;
-  loading: boolean;
-  error: string | null;
-  execute: (...args: any[]) => Promise<T>;
-  reset: () => void;
-}
+export type UseAsyncState<T, E = Error> = UseMutationResult<T, E, any[], unknown>;
 
-export function useAsync<T>(
+export function useAsync<T, E = Error>(
   asyncFunction: (...args: any[]) => Promise<T>,
-  dependencies: any[] = [],
-): UseAsyncState<T> {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+): UseAsyncState<T, E> {
+  const mutation = useMutation<T, E, any[]>({
+    mutationFn: async (args: any[]) => {
+      return asyncFunction(...args);
+    },
+  });
 
-  const execute = useCallback(async (...args: any[]): Promise<T> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await asyncFunction(...args);
-      setData(result);
-      return result;
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "An error occurred";
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, dependencies);
-
-  const reset = useCallback(() => {
-    setData(null);
-    setError(null);
-    setLoading(false);
-  }, []);
-
-  return {
-    data,
-    loading,
-    error,
-    execute,
-    reset,
-  };
+  return mutation;
 }

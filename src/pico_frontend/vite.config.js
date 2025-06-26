@@ -44,6 +44,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    environment("all", { prefix: "VITE_" }),
     environment("all", { prefix: "CANISTER_" }),
     environment("all", { prefix: "DFX_" }),
     checker({

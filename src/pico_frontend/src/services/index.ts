@@ -19,97 +19,101 @@ import { ICRC1Service } from "./icrc1.service";
 
 // Service factory for creating service instances with shared agent
 export class ServiceFactory {
-    private authService: AuthService;
-    private nftService?: NFTService;
-    private operationalService?: OperationalService;
-    private forumsService?: ForumsService;
-    private preferencesService?: PreferencesService;
-    private icrc1Service?: ICRC1Service;
+  private authService: AuthService;
+  private nftService?: NFTService;
+  private operationalService?: OperationalService;
+  private forumsService?: ForumsService;
+  private preferencesService?: PreferencesService;
+  private icrc1Service?: ICRC1Service;
 
-    constructor() {
-        this.authService = new AuthService();
+  constructor() {
+    this.authService = new AuthService();
+  }
+
+  async initialize() {
+    await this.authService.initialize();
+    this.updateServices();
+  }
+
+  private updateServices() {
+    const agent = this.authService.getAgent();
+    const identity = this.authService.getIdentity();
+
+    if (agent && identity) {
+      this.nftService = new NFTService(agent, identity);
+      this.operationalService = new OperationalService(agent, identity);
+      this.forumsService = new ForumsService(agent, identity);
+      this.preferencesService = new PreferencesService(agent, identity);
+      this.icrc1Service = new ICRC1Service(agent, identity);
     }
+  }
 
-    async initialize() {
-        await this.authService.initialize();
-        this.updateServices();
+  getAuthService(): AuthService {
+    return this.authService;
+  }
+
+  getNFTService(): NFTService {
+    if (!this.nftService) {
+      throw new Error("NFT service not initialized. Please login first.");
     }
+    return this.nftService;
+  }
 
-    private updateServices() {
-        const agent = this.authService.getAgent();
-        const identity = this.authService.getIdentity();
-
-        if (agent && identity) {
-            this.nftService = new NFTService(agent, identity);
-            this.operationalService = new OperationalService(agent, identity);
-            this.forumsService = new ForumsService(agent, identity);
-            this.preferencesService = new PreferencesService(agent, identity);
-            this.icrc1Service = new ICRC1Service(agent, identity);
-        }
+  getOperationalService(): OperationalService {
+    if (!this.operationalService) {
+      throw new Error(
+        "Operational service not initialized. Please login first.",
+      );
     }
+    return this.operationalService;
+  }
 
-    getAuthService(): AuthService {
-        return this.authService;
+  getForumsService(): ForumsService {
+    if (!this.forumsService) {
+      throw new Error("Forums service not initialized. Please login first.");
     }
+    return this.forumsService;
+  }
 
-    getNFTService(): NFTService {
-        if (!this.nftService) {
-            throw new Error("NFT service not initialized. Please login first.");
-        }
-        return this.nftService;
+  getPreferencesService(): PreferencesService {
+    if (!this.preferencesService) {
+      throw new Error(
+        "Preferences service not initialized. Please login first.",
+      );
     }
+    return this.preferencesService;
+  }
 
-    getOperationalService(): OperationalService {
-        if (!this.operationalService) {
-            throw new Error("Operational service not initialized. Please login first.");
-        }
-        return this.operationalService;
+  getICRC1Service(): ICRC1Service {
+    if (!this.icrc1Service) {
+      throw new Error("ICRC1 service not initialized. Please login first.");
     }
+    return this.icrc1Service;
+  }
 
-    getForumsService(): ForumsService {
-        if (!this.forumsService) {
-            throw new Error("Forums service not initialized. Please login first.");
-        }
-        return this.forumsService;
-    }
+  async login() {
+    const result = await this.authService.login();
+    this.updateServices();
+    return result;
+  }
 
-    getPreferencesService(): PreferencesService {
-        if (!this.preferencesService) {
-            throw new Error("Preferences service not initialized. Please login first.");
-        }
-        return this.preferencesService;
-    }
+  async logout() {
+    await this.authService.logout();
+    this.nftService = undefined;
+    this.operationalService = undefined;
+    this.forumsService = undefined;
+    this.preferencesService = undefined;
+    this.icrc1Service = undefined;
+  }
 
-    getICRC1Service(): ICRC1Service {
-        if (!this.icrc1Service) {
-            throw new Error("ICRC1 service not initialized. Please login first.");
-        }
-        return this.icrc1Service;
-    }
+  isAuthenticated(): Promise<boolean> {
+    return this.authService.isAuthenticated();
+  }
 
-    async login() {
-        const result = await this.authService.login();
-        this.updateServices();
-        return result;
-    }
-
-    async logout() {
-        await this.authService.logout();
-        this.nftService = undefined;
-        this.operationalService = undefined;
-        this.forumsService = undefined;
-        this.preferencesService = undefined;
-        this.icrc1Service = undefined;
-    }
-
-    isAuthenticated(): Promise<boolean> {
-        return this.authService.isAuthenticated();
-    }
-
-    getPrincipal(): string | undefined {
-        return this.authService.getPrincipal();
-    }
+  getPrincipal(): string | undefined {
+    return this.authService.getPrincipal();
+  }
 }
 
 // Global service factory instance
-export const serviceFactory = new ServiceFactory(); 
+export const serviceFactory = new ServiceFactory();
