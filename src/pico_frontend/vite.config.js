@@ -12,8 +12,20 @@ dotenv.config({ path: '../../.env' });
 export default defineConfig({
   build: {
     emptyOutDir: true,
+    rollupOptions: {
+      external: [],
+    },
   },
   optimizeDeps: {
+    include: [
+      '@dfinity/agent',
+      '@dfinity/auth-client',
+      '@dfinity/identity',
+      '@dfinity/principal',
+      '@dfinity/candid',
+      '@dfinity/ledger-icrc',
+      '@dfinity/utils'
+    ],
     esbuildOptions: {
       define: {
         global: "globalThis",
@@ -51,7 +63,7 @@ export default defineConfig({
         replacement: path.resolve(__dirname, "./src"),
       },
     ],
-    dedupe: ['@dfinity/agent'],
+    dedupe: ['@dfinity/agent', '@dfinity/auth-client', '@dfinity/identity'],
     
   },
 });
