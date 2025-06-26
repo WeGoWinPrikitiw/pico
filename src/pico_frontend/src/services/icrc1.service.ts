@@ -14,6 +14,7 @@ import type {
   MetadataValue,
 } from "@/types";
 import { Principal } from "@dfinity/principal";
+import { getICRC1CanisterId } from "@/config/canisters";
 
 export class ICRC1Service extends BaseService {
   private actor?: ICRC1Contract;
@@ -26,13 +27,13 @@ export class ICRC1Service extends BaseService {
   private initializeActor() {
     if (!this.agent) return;
 
-        const canisterId = "u6s2n-gx777-77774-qaaba-cai";
-    if (!canisterId) {
-      console.warn("ICRC1 ledger canister ID not found");
+    try {
+      const canisterId = getICRC1CanisterId();
+      this.actor = this.createActor<ICRC1Contract>(canisterId, idlFactory);
+    } catch (error) {
+      console.warn("ICRC1 ledger canister ID not found:", error);
       return;
     }
-
-    this.actor = this.createActor<ICRC1Contract>(canisterId, idlFactory);
   }
 
   public updateAgent(agent: HttpAgent, identity?: Identity) {

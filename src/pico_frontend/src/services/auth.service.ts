@@ -1,6 +1,7 @@
 import { AuthClient } from "@dfinity/auth-client";
 import { HttpAgent, Identity } from "@dfinity/agent";
 import { BaseService } from "./base.service";
+import { getInternetIdentityUrl, getICHostUrl } from "@/config/canisters";
 
 export class AuthService extends BaseService {
   private authClient?: AuthClient;
@@ -10,9 +11,7 @@ export class AuthService extends BaseService {
       this.authClient = await AuthClient.create();
 
       // Always create an agent, even if not authenticated
-      const host = import.meta.env.DFX_NETWORK === "ic"
-        ? "https://ic0.app"
-        : "http://localhost:4943";
+      const host = getICHostUrl();
 
       if (await this.authClient.isAuthenticated()) {
         const identity = this.authClient.getIdentity();
@@ -44,19 +43,14 @@ export class AuthService extends BaseService {
 
       return new Promise((resolve, reject) => {
         this.authClient!.login({
-          identityProvider:
-            import.meta.env.DFX_NETWORK === "ic"
-              ? "https://identity.ic0.app"
-              : "http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:4943",
+          identityProvider: getInternetIdentityUrl(),
           onSuccess: async () => {
             try {
               const identity = this.authClient!.getIdentity();
               this.identity = identity;
 
               // Use correct host based on environment
-              const host = import.meta.env.DFX_NETWORK === "ic"
-                ? "https://ic0.app"
-                : "http://localhost:4943";
+              const host = getICHostUrl();
 
               this.agent = HttpAgent.createSync({
                 identity,
