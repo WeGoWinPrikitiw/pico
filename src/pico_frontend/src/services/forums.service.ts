@@ -87,20 +87,20 @@ export class ForumsService extends BaseService {
     }
   }
 
-  async getTrendingForums(limit?: bigint[]): Promise<Forum[]> {
+  async getTrendingForums(limit?: bigint): Promise<Forum[]> {
     try {
       const actor = this.getActor();
-      return await actor.getTrendingForums(limit ? [limit[0]] : []);
+      return await actor.getTrendingForums(limit ? [limit] : []);
     } catch (error) {
       console.error("Failed to get trending forums:", error);
       throw new ApiError("Failed to fetch trending forums", "FETCH_ERROR", error);
     }
   }
 
-  async getLatestForums(limit?: bigint[]): Promise<Forum[]> {
+  async getLatestForums(limit?: bigint): Promise<Forum[]> {
     try {
       const actor = this.getActor();
-      return await actor.getLatestForums(limit ? [limit[0]] : []);
+      return await actor.getLatestForums(limit ? [limit] : []);
     } catch (error) {
       console.error("Failed to get latest forums:", error);
       throw new ApiError("Failed to fetch latest forums", "FETCH_ERROR", error);

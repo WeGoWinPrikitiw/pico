@@ -248,8 +248,10 @@ export function useServices() {
   }
 
   return {
-    nftService: serviceFactory.getNFTService(),
+    nftService: serviceFactory.getNFTServiceSafe(),
     operationalService: serviceFactory.getOperationalService(),
     forumsService: serviceFactory.getForumsService(),
+    preferencesService: serviceFactory.getPreferencesService(),
+    icrc1Service: serviceFactory.getICRC1Service(),
   };
 }

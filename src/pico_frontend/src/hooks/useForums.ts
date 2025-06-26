@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServices } from "@/context/auth-context";
-import { createQueryKey, invalidateQueries } from "@/types";
+import { createQueryKey, invalidateQueries } from "@/lib/query-client";
 import { toast } from "sonner";
 import type {
     Forum,
@@ -35,7 +35,7 @@ export function useForum(forumId: number | bigint) {
     const { forumsService } = useServices();
 
     return useQuery({
-        queryKey: createQueryKey.forum(forumId),
+        queryKey: createQueryKey.forum(Number(forumId)),
         queryFn: async () => {
             const result = await forumsService.getForum(BigInt(forumId));
             return handleForumResult(result);
@@ -76,8 +76,7 @@ export function useTrendingForums(limit?: number) {
     return useQuery({
         queryKey: createQueryKey.trendingForums(),
         queryFn: async () => {
-            const limitArray = limit ? [BigInt(limit)] : [];
-            return await forumsService.getTrendingForums(limitArray);
+            return await forumsService.getTrendingForums(limit ? BigInt(limit) : undefined);
         },
         staleTime: 1000 * 60 * 3, // 3 minutes
     });
@@ -89,8 +88,7 @@ export function useLatestForums(limit?: number) {
     return useQuery({
         queryKey: createQueryKey.latestForums(),
         queryFn: async () => {
-            const limitArray = limit ? [BigInt(limit)] : [];
-            return await forumsService.getLatestForums(limitArray);
+            return await forumsService.getLatestForums(limit ? BigInt(limit) : undefined);
         },
         staleTime: 1000 * 60 * 2, // 2 minutes
     });
@@ -100,7 +98,7 @@ export function useNFTForums(nftId: number | bigint) {
     const { forumsService } = useServices();
 
     return useQuery({
-        queryKey: createQueryKey.nftForums(nftId),
+        queryKey: createQueryKey.nftForums(Number(nftId)),
         queryFn: async () => {
             return await forumsService.getForumsByNFT(BigInt(nftId));
         },
@@ -150,10 +148,10 @@ export function useCreateForum() {
             toast.success("Forum created successfully!");
 
             // Invalidate relevant queries
-            queryClient.invalidateQueries(invalidateQueries.forums());
-            queryClient.invalidateQueries(invalidateQueries.userForums(variables.principalId));
-            queryClient.invalidateQueries(invalidateQueries.nftForums(variables.nftId));
-            queryClient.invalidateQueries(invalidateQueries.forumStats());
+            queryClient.invalidateQueries({ queryKey: createQueryKey.forums() });
+            queryClient.invalidateQueries({ queryKey: createQueryKey.userForums(variables.principalId) });
+            queryClient.invalidateQueries({ queryKey: createQueryKey.nftForums(variables.nftId) });
+            queryClient.invalidateQueries({ queryKey: createQueryKey.forumStats() });
         },
         onError: (error: Error) => {
             console.error("Failed to create forum:", error);
@@ -168,22 +166,58 @@ export function useLikeForum() {
 
     return useMutation({
         mutationFn: async (params: { forumId: number | bigint; userId: string }) => {
-            const result = await forumsService.likeForum(
+            const result = await forumsService.toggleLikeForum(
                 BigInt(params.forumId),
                 params.userId
             );
-            return handleForumResult(result);
+            if ('ok' in result) {
+                return result.ok;
+            }
+            throw new Error(result.err);
         },
-        onSuccess: (updatedForum, variables) => {
-            toast.success("Forum liked!");
+        onSuccess: (result, variables) => {
+            const action = result.action;
+            toast.success(action === "liked" ? "Forum liked!" : "Forum unliked!");
 
             // Invalidate relevant queries
-            queryClient.invalidateQueries(invalidateQueries.forum(variables.forumId));
-            queryClient.invalidateQueries(invalidateQueries.forums());
+            queryClient.invalidateQueries({ queryKey: createQueryKey.forum(Number(variables.forumId)) });
+            queryClient.invalidateQueries({ queryKey: createQueryKey.forums() });
+            queryClient.invalidateQueries({ queryKey: createQueryKey.trendingForums() });
         },
         onError: (error: Error) => {
-            console.error("Failed to like forum:", error);
-            toast.error("Failed to like forum. Please try again.");
+            console.error("Failed to toggle like forum:", error);
+            toast.error("Failed to update like. Please try again.");
+        },
+    });
+}
+
+export function useToggleLikeForum() {
+    const { forumsService } = useServices();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (params: { forumId: number | bigint; userId: string }) => {
+            const result = await forumsService.toggleLikeForum(
+                BigInt(params.forumId),
+                params.userId
+            );
+            if ('ok' in result) {
+                return result.ok;
+            }
+            throw new Error(result.err);
+        },
+        onSuccess: (result, variables) => {
+            const action = result.action;
+            toast.success(action === "liked" ? "Forum liked!" : "Forum unliked!");
+
+            // Invalidate relevant queries
+            queryClient.invalidateQueries({ queryKey: createQueryKey.forum(Number(variables.forumId)) });
+            queryClient.invalidateQueries({ queryKey: createQueryKey.forums() });
+            queryClient.invalidateQueries({ queryKey: createQueryKey.trendingForums() });
+        },
+        onError: (error: Error) => {
+            console.error("Failed to toggle like forum:", error);
+            toast.error("Failed to update like. Please try again.");
         },
     });
 }
@@ -209,8 +243,8 @@ export function useCommentForum() {
             toast.success("Comment added!");
 
             // Invalidate relevant queries
-            queryClient.invalidateQueries(invalidateQueries.forum(variables.forumId));
-            queryClient.invalidateQueries(invalidateQueries.forums());
+            queryClient.invalidateQueries({ queryKey: createQueryKey.forum(Number(variables.forumId)) });
+            queryClient.invalidateQueries({ queryKey: createQueryKey.forums() });
         },
         onError: (error: Error) => {
             console.error("Failed to add comment:", error);
@@ -246,8 +280,8 @@ export function useUpdateForum() {
             toast.success("Forum updated successfully!");
 
             // Invalidate relevant queries
-            queryClient.invalidateQueries(invalidateQueries.forum(variables.forumId));
-            queryClient.invalidateQueries(invalidateQueries.forums());
+            queryClient.invalidateQueries({ queryKey: createQueryKey.forum(Number(variables.forumId)) });
+            queryClient.invalidateQueries({ queryKey: createQueryKey.forums() });
         },
         onError: (error: Error) => {
             console.error("Failed to update forum:", error);
@@ -272,8 +306,8 @@ export function useDeleteForum() {
             toast.success("Forum deleted successfully!");
 
             // Remove from cache and invalidate related queries
-            queryClient.removeQueries(invalidateQueries.forum(forumId));
-            queryClient.invalidateQueries(invalidateQueries.forums());
+            queryClient.removeQueries({ queryKey: createQueryKey.forum(Number(forumId)) });
+            queryClient.invalidateQueries({ queryKey: createQueryKey.forums() });
         },
         onError: (error: Error) => {
             console.error("Failed to delete forum:", error);
