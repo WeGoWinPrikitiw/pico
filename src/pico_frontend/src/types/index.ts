@@ -36,6 +36,10 @@ export type {
   CreateForumInput,
   UpdateForumInput,
   SearchCriteria,
+  Result as ForumResult,
+  Result_1 as ForumResult_1,
+  Result_2 as ForumResult_2,
+  Result_3 as ForumResult_3,
   _SERVICE as ForumsService,
 } from "../../../declarations/forums_contract/forums_contract.did";
 
@@ -58,11 +62,11 @@ export type {
 // Generic Result type for contract interactions
 export type ContractResult<T> =
   | {
-      ok: T;
-    }
+    ok: T;
+  }
   | {
-      err: string;
-    };
+    err: string;
+  };
 
 // Core domain types
 export interface User {
@@ -191,14 +195,56 @@ export interface UIState {
   lastUpdated?: Date;
 }
 
-// Contract interaction results
-// export type ContractResult<T> = {
-//     ok: T;
-// } | {
-//     err: string;
-// };
+// Update the createQueryKey object in types.ts
+export const createQueryKey = {
+  // Auth
+  auth: () => ["auth"] as const,
+  userBalance: (principal: string) => ["user", "balance", principal] as const,
 
-// Common query keys for TanStack Query
+  // NFT  
+  nfts: () => ["nfts"] as const,
+  nft: (id: string | number | bigint) => ["nft", id.toString()] as const,
+  nftStats: () => ["nft", "stats"] as const,
+  aiNfts: () => ["nfts", "ai"] as const,
+  traitTypes: () => ["nfts", "traits", "types"] as const,
+  traitValues: (type: string) => ["nfts", "traits", "values", type] as const,
+  nftsByTrait: (type: string, value: string) =>
+    ["nfts", "trait", type, value] as const,
+  nftsByRarity: (rarity: string) => ["nfts", "rarity", rarity] as const,
+
+  // Operational
+  transactions: () => ["transactions"] as const,
+  userTransactions: (principal: string) =>
+    ["transactions", "user", principal] as const,
+  nftTransactions: (nftId: number | bigint) =>
+    ["transactions", "nft", nftId.toString()] as const,
+  tokenInfo: () => ["token", "info"] as const,
+  allowance: (principal: string) => ["allowance", principal] as const,
+  balance: (principal: string) => ["balance", principal] as const,
+
+  // Forums - Fixed to handle bigint IDs
+  forums: () => ["forums"] as const,
+  forum: (id: string | number | bigint) => ["forum", id.toString()] as const,
+  forumStats: () => ["forums", "stats"] as const,
+  userForums: (principal: string) => ["forums", "user", principal] as const,
+  nftForums: (nftId: number | bigint) =>
+    ["forums", "nft", nftId.toString()] as const,
+  trendingForums: () => ["forums", "trending"] as const,
+  latestForums: () => ["forums", "latest"] as const,
+
+  // Preferences
+  preferences: () => ["preferences"] as const,
+  userPreferences: (principal: string) =>
+    ["preferences", "user", principal] as const,
+  preferencesStats: () => ["preferences", "stats"] as const,
+
+  // Token
+  tokenHolders: () => ["token", "holders"] as const,
+  tokenSummary: () => ["token", "summary"] as const,
+  balanceInfo: (principal: string) => ["balance", "info", principal] as const,
+} as const;
+
+// Legacy QueryKeys for backward compatibility
 export const QueryKeys = {
   // Auth
   AUTH: ["auth"] as const,
@@ -242,6 +288,20 @@ export const QueryKeys = {
   TOKEN_SUMMARY: ["token", "summary"] as const,
   BALANCE_INFO: (principal: string) => ["balance", "info", principal] as const,
 } as const;
+
+// Query client helper to invalidate queries
+export const invalidateQueries = {
+  forums: () => ({ queryKey: createQueryKey.forums() }),
+  forum: (id: string | number | bigint) => ({ queryKey: createQueryKey.forum(id) }),
+  userForums: (principal: string) => ({ queryKey: createQueryKey.userForums(principal) }),
+  nftForums: (nftId: number | bigint) => ({ queryKey: createQueryKey.nftForums(nftId) }),
+  forumStats: () => ({ queryKey: createQueryKey.forumStats() }),
+  trendingForums: () => ({ queryKey: createQueryKey.trendingForums() }),
+  latestForums: () => ({ queryKey: createQueryKey.latestForums() }),
+  auth: () => ({ queryKey: createQueryKey.auth() }),
+  all: () => ({ queryKey: ["all"] }),
+};
+
 
 // Mutation keys
 export const MutationKeys = {
@@ -311,4 +371,13 @@ export interface FrontendOperationalTransaction {
   forum_id?: number;
   to_principal_id: string;
   from_principal_id: string;
+}
+
+// Forum stats interface to match candid
+export interface ForumStats {
+  total_likes: bigint;
+  sold_forums: bigint;
+  total_comments: bigint;
+  total_forums: bigint;
+  active_forums: bigint;
 }

@@ -31,16 +31,21 @@ export * from "./usePreferences";
 // ICRC1 Token hooks
 export * from "./useICRC1";
 
-// Forums hooks (to be implemented)
-// export {
-//     useForums,
-//     useForum,
-//     useUserForums,
-//     useTrendingForums,
-//     useLatestForums,
-//     useCreateForum,
-//     useUpdateForum,
-//     useDeleteForum,
-//     useLikeForum,
-//     useCommentForum,
-// } from './useForums';
+// Forums hooks
+export {
+  useForums,
+  useForum,
+  useUserForums,
+  useForumsStats,
+  useTrendingForums,
+  useLatestForums,
+  useNFTForums,
+  useForumsHealthCheck,
+  useCreateForum,
+  useLikeForum,
+  useCommentForum,
+  useUpdateForum,
+  useDeleteForum,
+  useForumFilters,
+  useForumOperations,
+} from "./useForums";

@@ -9,15 +9,27 @@ export class AuthService extends BaseService {
     try {
       this.authClient = await AuthClient.create();
 
+      // Always create an agent, even if not authenticated
+      const host = import.meta.env.DFX_NETWORK === "ic"
+        ? "https://ic0.app"
+        : "http://localhost:4943";
+
       if (await this.authClient.isAuthenticated()) {
         const identity = this.authClient.getIdentity();
         this.identity = identity;
-        this.agent = HttpAgent.createSync({ identity });
 
-        // Only fetch root key in development
-        if (import.meta.env.DFX_NETWORK !== "ic") {
-          await this.agent.fetchRootKey();
-        }
+        this.agent = HttpAgent.createSync({
+          identity,
+          host
+        });
+      } else {
+        // Create anonymous agent for public queries
+        this.agent = HttpAgent.createSync({ host });
+      }
+
+      // Only fetch root key in development
+      if (import.meta.env.DFX_NETWORK !== "ic") {
+        await this.agent.fetchRootKey();
       }
     } catch (error) {
       this.handleError(error);
@@ -40,7 +52,16 @@ export class AuthService extends BaseService {
             try {
               const identity = this.authClient!.getIdentity();
               this.identity = identity;
-              this.agent = HttpAgent.createSync({ identity });
+
+              // Use correct host based on environment
+              const host = import.meta.env.DFX_NETWORK === "ic"
+                ? "https://ic0.app"
+                : "http://localhost:4943";
+
+              this.agent = HttpAgent.createSync({
+                identity,
+                host
+              });
 
               // Only fetch root key in development
               if (import.meta.env.DFX_NETWORK !== "ic") {

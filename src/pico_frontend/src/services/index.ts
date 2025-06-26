@@ -39,8 +39,13 @@ export class ServiceFactory {
     const agent = this.authService.getAgent();
     const identity = this.authService.getIdentity();
 
-    if (agent && identity) {
+    // Always create NFT service since it supports anonymous queries
+    if (agent) {
       this.nftService = new NFTService(agent, identity);
+    }
+
+    // Other services require authentication
+    if (agent && identity) {
       this.operationalService = new OperationalService(agent, identity);
       this.forumsService = new ForumsService(agent, identity);
       this.preferencesService = new PreferencesService(agent, identity);
@@ -56,6 +61,11 @@ export class ServiceFactory {
     if (!this.nftService) {
       throw new Error("NFT service not initialized. Please login first.");
     }
+    return this.nftService;
+  }
+
+  // Safe accessor that returns undefined if not available
+  getNFTServiceSafe(): NFTService | undefined {
     return this.nftService;
   }
 

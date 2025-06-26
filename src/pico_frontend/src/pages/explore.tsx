@@ -12,8 +12,9 @@ import {
   Input,
 } from "@/components/ui";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useAuth, useServices } from "@/context/auth-context";
-import { createQueryKey } from "@/lib/query-client";
+import { useAuth } from "@/context/auth-context";
+import { createQueryKey } from "@/types";
+import { serviceFactory } from "@/services";
 import {
   Search,
   Grid3X3,
@@ -23,26 +24,34 @@ import {
   Share2,
   Sliders,
   Sparkles,
+  User,
 } from "lucide-react";
 
 export function ExplorePage() {
-  const { isAuthenticated, isServicesReady } = useAuth();
-  const { nftService } = useServices();
+  const { isAuthenticated, isServicesReady, login } = useAuth();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("trending");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+
   const {
     data: allNFTs = [],
     isLoading: isLoadingNFTs,
     error: nftError,
+    refetch: refetchNFTs,
   } = useQuery({
     queryKey: createQueryKey.nfts(),
     queryFn: async () => {
-      if (!isServicesReady || !nftService) return [];
+      // Ensure services are initialized
+      await serviceFactory.initialize();
+      const nftService = serviceFactory.getNFTServiceSafe();
+      if (!nftService) {
+        console.warn("NFT service not available");
+        return [];
+      }
       return await nftService.getAllNFTs();
     },
-    enabled: isServicesReady && !!nftService,
+    enabled: true, // Enable even without authentication for public queries
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
@@ -95,7 +104,7 @@ export function ExplorePage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-destructive mb-4">Failed to load NFTs</p>
-          <Button onClick={() => window.location.reload()}>Try Again</Button>
+          <Button onClick={() => refetchNFTs()}>Try Again</Button>
         </div>
       </div>
     );
@@ -120,6 +129,17 @@ export function ExplorePage() {
 
             {/* Actions */}
             <div className="flex items-center gap-2">
+              {!isAuthenticated && (
+                <Button
+                  onClick={login}
+                  size="sm"
+                  className="bg-primary"
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Connect Wallet
+                </Button>
+              )}
+
               <Button
                 variant="outline"
                 size="sm"
@@ -310,12 +330,21 @@ export function ExplorePage() {
             ))
           ) : (
             <div className="col-span-full text-center py-12">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="h-8 w-8 text-muted-foreground" />
+              </div>
               <h3 className="text-lg font-semibold mb-2">No NFTs found</h3>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground mb-4">
                 {searchQuery
                   ? "Try adjusting your search terms"
                   : "No NFTs have been created yet"}
               </p>
+              {!isAuthenticated && (
+                <Button onClick={login} className="mt-4">
+                  <User className="mr-2 h-4 w-4" />
+                  Connect Wallet to Create NFTs
+                </Button>
+              )}
             </div>
           )}
         </div>

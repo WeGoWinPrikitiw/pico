@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Input,
@@ -13,10 +12,23 @@ import {
   AvatarImage,
   AvatarFallback,
   Textarea,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
 } from "@/components/ui";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useAuth, useServices } from "@/context/auth-context";
-import { createQueryKey } from "@/lib/query-client";
+import { useAuth } from "@/context/auth-context";
+import {
+  useForums,
+  useCreateForum,
+  useLikeForum,
+  useCommentForum,
+  useForumFilters,
+  useTrendingForums,
+  useLatestForums,
+  useUserForums,
+} from "@/hooks";
 import {
   MessageSquare,
   Heart,
@@ -25,14 +37,20 @@ import {
   Loader2,
   Send,
   User,
+  Search,
+  TrendingUp,
+  Clock,
+  Filter,
 } from "lucide-react";
-import { toast } from "sonner";
-import type { Forum } from "declarations/forums_contract/forums_contract.did";
 
 export function ForumsPage() {
   const { principal, isAuthenticated, login } = useAuth();
-  const queryClient = useQueryClient();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"newest" | "popular" | "mostComments">(
+    "newest",
+  );
   const [newForum, setNewForum] = useState({
     title: "",
     description: "",
@@ -40,63 +58,124 @@ export function ForumsPage() {
     nftName: "",
   });
 
-  // Get forums service only when authenticated
-  const forumsService = isAuthenticated ? useServices().forumsService : null;
-
-  // Fetch all forums
+  // Hooks for different forum queries
   const {
-    data: forums = [],
-    isLoading: isLoadingForums,
-    error: forumsError,
-  } = useQuery({
-    queryKey: createQueryKey.forums(),
-    queryFn: async () => {
-      if (!forumsService) return [];
-      return await forumsService.getAllForums();
-    },
-    enabled: isAuthenticated && !!forumsService,
-    staleTime: 1000 * 60 * 2, // 2 minutes
-  });
+    data: allForums = [],
+    isLoading: isLoadingAll,
+    error: allForumsError,
+    refetch: refetchAllForums,
+  } = useForums();
 
-  // Create forum mutation
-  const createForumMutation = useMutation({
-    mutationFn: async (forumData: {
-      title: string;
-      description: string;
-      nftId: number;
-      nftName: string;
-      principalId: string;
-    }) => {
-      if (!forumsService) throw new Error("Forums service not available");
-      return await forumsService.createForum(forumData);
-    },
-    onSuccess: (newForum) => {
-      toast.success("Forum created successfully!");
-      setShowCreateForm(false);
-      setNewForum({ title: "", description: "", nftId: "", nftName: "" });
+  const {
+    data: trendingForums = [],
+    isLoading: isLoadingTrending,
+    error: trendingError,
+  } = useTrendingForums();
 
-      // Invalidate forums query to refetch
-      queryClient.invalidateQueries({ queryKey: createQueryKey.forums() });
-    },
-    onError: (error) => {
-      console.error("Failed to create forum:", error);
-      toast.error("Failed to create forum. Please try again.");
-    },
-  });
+  const {
+    data: latestForums = [],
+    isLoading: isLoadingLatest,
+    error: latestError,
+  } = useLatestForums();
+
+  const {
+    data: userForums = [],
+    isLoading: isLoadingUserForums,
+    error: userForumsError,
+  } = useUserForums(principal);
+
+  // Mutations
+  const createForumMutation = useCreateForum();
+  const likeMutation = useLikeForum();
+  const commentMutation = useCommentForum();
+
+  // Helper hooks
+  const { filterForums } = useForumFilters();
+
+  // Get current forums based on active tab
+  const getCurrentForums = () => {
+    switch (activeTab) {
+      case "trending":
+        return trendingForums;
+      case "latest":
+        return latestForums;
+      case "following":
+        return userForums;
+      case "all":
+      default:
+        return allForums;
+    }
+  };
+
+  const getCurrentLoading = () => {
+    switch (activeTab) {
+      case "trending":
+        return isLoadingTrending;
+      case "latest":
+        return isLoadingLatest;
+      case "following":
+        return isLoadingUserForums;
+      case "all":
+      default:
+        return isLoadingAll;
+    }
+  };
+
+  const getCurrentError = () => {
+    switch (activeTab) {
+      case "trending":
+        return trendingError;
+      case "latest":
+        return latestError;
+      case "following":
+        return userForumsError;
+      case "all":
+      default:
+        return allForumsError;
+    }
+  };
+
+  // Apply filters and sorting
+  const filteredForums = useMemo(() => {
+    const currentForums = getCurrentForums();
+    return filterForums(currentForums, {
+      searchQuery,
+      sortBy,
+    });
+  }, [getCurrentForums(), searchQuery, sortBy, filterForums]);
 
   const handleCreateForum = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!principal) return;
 
-    const forumData = {
-      title: newForum.title,
-      description: newForum.description,
-      nftId: parseInt(newForum.nftId),
-      nftName: newForum.nftName,
-      principalId: principal,
-    };
+    try {
+      await createForumMutation.mutateAsync({
+        title: newForum.title,
+        description: newForum.description,
+        nftId: parseInt(newForum.nftId),
+        nftName: newForum.nftName,
+        principalId: principal,
+      });
 
-    await createForumMutation.mutateAsync(forumData);
+      // Reset form
+      setShowCreateForm(false);
+      setNewForum({ title: "", description: "", nftId: "", nftName: "" });
+    } catch (error) {
+      // Error is handled by the mutation
+    }
+  };
+
+  const handleLikeForum = async (forumId: number) => {
+    if (!principal) return;
+
+    try {
+      await likeMutation.mutateAsync({
+        forumId,
+        userId: principal,
+      });
+    } catch (error) {
+      // Error is handled by the mutation
+    }
   };
 
   if (!isAuthenticated) {
@@ -114,23 +193,15 @@ export function ForumsPage() {
     );
   }
 
-  if (isLoadingForums) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <LoadingSpinner size="lg" className="mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading forums...</p>
-        </div>
-      </div>
-    );
-  }
+  const isLoading = getCurrentLoading();
+  const error = getCurrentError();
 
-  if (forumsError) {
+  if (error) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-destructive mb-4">Failed to load forums</p>
-          <Button onClick={() => window.location.reload()}>Try Again</Button>
+          <Button onClick={() => refetchAllForums()}>Try Again</Button>
         </div>
       </div>
     );
@@ -138,28 +209,58 @@ export function ForumsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Link to="/explore">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold">Forums</h1>
-              <p className="text-muted-foreground">
-                Discussions around NFTs and more.
-              </p>
+      {/* Header */}
+      <div className="sticky top-14 z-40 bg-background/80 backdrop-blur-lg border-b">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div className="flex items-center gap-4">
+              <Link to="/explore">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-2xl font-bold">Forums</h1>
+                <p className="text-muted-foreground text-sm">
+                  Discussions around NFTs and more
+                </p>
+              </div>
             </div>
-          </div>
-          <Button onClick={() => setShowCreateForm(!showCreateForm)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            {showCreateForm ? "Cancel" : "Create Forum"}
-          </Button>
-        </div>
 
+            <div className="flex flex-1 items-center gap-3 max-w-md">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search forums..."
+                  className="pl-9"
+                />
+              </div>
+
+              <select
+                value={sortBy}
+                onChange={(e) =>
+                  setSortBy(e.target.value as "newest" | "popular" | "mostComments")
+                }
+                className="h-9 rounded-md border bg-background px-3 py-1 text-sm shadow-sm transition-colors hover:bg-accent"
+              >
+                <option value="newest">Newest</option>
+                <option value="popular">Most Popular</option>
+                <option value="mostComments">Most Comments</option>
+              </select>
+            </div>
+
+            <Button onClick={() => setShowCreateForm(!showCreateForm)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              {showCreateForm ? "Cancel" : "Create Forum"}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Create Forum Form */}
         {showCreateForm && (
           <Card className="mb-8">
@@ -184,7 +285,7 @@ export function ForumsPage() {
                   }
                   required
                 />
-                <div className="flex gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     placeholder="Associated NFT ID"
                     type="number"
@@ -216,82 +317,118 @@ export function ForumsPage() {
           </Card>
         )}
 
-        {/* Forums List */}
-        <div className="space-y-6">
-          {isLoadingForums ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : forums.length > 0 ? (
-            forums.map((forum) => (
-              <Card
-                key={forum.forum_id.toString()}
-                className="hover:shadow-lg transition-shadow"
-              >
-                <CardContent className="p-6">
-                  <div className="flex gap-6">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage
-                        src={`https://avatar.vercel.sh/${forum.principal_id}.png`}
-                      />
-                      <AvatarFallback>
-                        {forum.principal_id.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h2 className="text-xl font-semibold">
-                            {forum.title}
-                          </h2>
-                          <p className="text-sm text-muted-foreground">
-                            Started by{" "}
-                            <span className="font-medium text-primary">
-                              {forum.principal_id.slice(0, 10)}...
-                            </span>{" "}
-                            about "{forum.nft_name}"
+        {/* Forum Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="all" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              All Forums
+            </TabsTrigger>
+            <TabsTrigger value="trending" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Trending
+            </TabsTrigger>
+            <TabsTrigger value="latest" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Latest
+            </TabsTrigger>
+            <TabsTrigger value="following" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              My Forums
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value={activeTab} className="space-y-6">
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <LoadingSpinner size="lg" />
+              </div>
+            ) : filteredForums.length > 0 ? (
+              <div className="space-y-6">
+                {filteredForums.map((forum) => (
+                  <Card
+                    key={forum.forum_id.toString()}
+                    className="hover:shadow-lg transition-shadow"
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex gap-6">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage
+                            src={`https://avatar.vercel.sh/${forum.principal_id}.png`}
+                          />
+                          <AvatarFallback>
+                            {forum.principal_id.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <h2 className="text-xl font-semibold">
+                                {forum.title}
+                              </h2>
+                              <p className="text-sm text-muted-foreground">
+                                Started by{" "}
+                                <span className="font-medium text-primary">
+                                  {forum.principal_id.slice(0, 10)}...
+                                </span>{" "}
+                                about "{forum.nft_name}"
+                              </p>
+                            </div>
+                            <Badge variant="secondary">
+                              NFT ID: {forum.nft_id.toString()}
+                            </Badge>
+                          </div>
+                          <p className="text-card-foreground mb-4">
+                            {forum.description}
                           </p>
                         </div>
-                        <Badge variant="secondary">
-                          NFT ID: {forum.nft_id.toString()}
-                        </Badge>
                       </div>
-                      <p className="mt-4 text-card-foreground">
-                        {forum.description}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="bg-muted/50 px-6 py-3">
-                  <div className="flex justify-between items-center w-full text-sm text-muted-foreground">
-                    <div className="flex gap-6">
-                      <button className="flex items-center gap-2 hover:text-primary transition-colors">
-                        <Heart className="h-4 w-4" />
-                        <span>{forum.likes.toString()} Likes</span>
-                      </button>
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4" />
-                        <span>{forum.comments.length} Comments</span>
+                    </CardContent>
+                    <CardFooter className="bg-muted/50 px-6 py-3">
+                      <div className="flex justify-between items-center w-full text-sm text-muted-foreground">
+                        <div className="flex gap-6">
+                          <button
+                            onClick={() =>
+                              handleLikeForum(Number(forum.forum_id))
+                            }
+                            disabled={likeMutation.isPending}
+                            className="flex items-center gap-2 hover:text-primary transition-colors disabled:opacity-50"
+                          >
+                            <Heart className="h-4 w-4" />
+                            <span>{forum.likes.toString()} Likes</span>
+                          </button>
+                          <div className="flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4" />
+                            <span>{forum.comments.length} Comments</span>
+                          </div>
+                        </div>
+                        <p>
+                          {new Date(
+                            Number(forum.created_at / 1000000n),
+                          ).toLocaleString()}
+                        </p>
                       </div>
-                    </div>
-                    <p>
-                      {new Date(
-                        Number(forum.created_at / 1000000n),
-                      ).toLocaleString()}
-                    </p>
-                  </div>
-                </CardFooter>
-              </Card>
-            ))
-          ) : (
-            <div className="text-center py-16">
-              <h3 className="text-lg font-semibold mb-2">No forums yet</h3>
-              <p className="text-muted-foreground">
-                Be the first one to start a discussion!
-              </p>
-            </div>
-          )}
-        </div>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">
+                  {searchQuery ? "No matching forums" : "No forums yet"}
+                </h3>
+                <p className="text-muted-foreground">
+                  {searchQuery
+                    ? "Try adjusting your search terms"
+                    : "Be the first one to start a discussion!"}
+                </p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
