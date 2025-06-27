@@ -5,128 +5,168 @@ interface TrendingItem {
   title: string;
   description: string;
   imageUrl: string;
-  profileImage: string;
+  isAI: boolean;
   likes: number;
   comments: number;
   shares: number;
-  width: number; // Add width property
 }
 
-const mockTrendingData: TrendingItem[] = [
+const trendingData: TrendingItem[] = [
   {
-    id: "1",
-    title: "Title",
+    id: "4",
+    title: "Portrait of a Sophisticated Frog",
     description:
-      "Please add your content here. Keep it short and simple. And smile :)",
-    imageUrl:
-      "https://images.unsplash.com/photo-1634973357973-f2ed2657db3c?w=300&h=400&fit=crop",
-    profileImage:
-      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=40&h=40&fit=crop&crop=face",
-    likes: 42,
-    comments: 8,
-    shares: 5,
-    width: 300,
+      "Surreal classical portrait of an anthropomorphic frog with a sleek bob haircut rendered in Renaissance painting style",
+    imageUrl: "/landing/trending/ai-generated3.png",
+    isAI: true,
+    likes: 324,
+    comments: 67,
+    shares: 41,
+  },
+  {
+    id: "12",
+    title: "Baby Yoda in Nature",
+    description:
+      "Adorable Grogu (Baby Yoda) sitting peacefully in a natural outdoor setting with soft sunlight filtering through trees",
+    imageUrl: "/landing/trending/natural1.png",
+    isAI: false,
+    likes: 523,
+    comments: 95,
+    shares: 67,
+  },
+  {
+    id: "8",
+    title: "Shadow Warrior in Mist",
+    description:
+      "Silhouetted armored figure holding a sword in a mysterious foggy forest with dramatic lighting",
+    imageUrl: "/landing/trending/natural5.png",
+    isAI: false,
+    likes: 312,
+    comments: 52,
+    shares: 28,
   },
   {
     id: "2",
-    title: "Title",
+    title: "Feline Camping Adventure",
     description:
-      "Please add your content here. Keep it short and simple. And smile :)",
-    imageUrl:
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=350&h=400&fit=crop",
-    profileImage:
-      "https://images.unsplash.com/photo-1494790108755-2616b612b789?w=40&h=40&fit=crop&crop=face",
-    likes: 67,
-    comments: 12,
-    shares: 9,
-    width: 350,
+      "Adorable cats enjoying a camping trip with tent, campfire, and scattered camping supplies in a scenic mountain landscape",
+    imageUrl: "/landing/trending/ai-generated5.png",
+    isAI: true,
+    likes: 267,
+    comments: 45,
+    shares: 32,
   },
   {
-    id: "3",
-    title: "Title",
+    id: "10",
+    title: "Tokyo Ghoul Winter Scene",
     description:
-      "Please add your content here. Keep it short and simple. And smile :)",
-    imageUrl:
-      "https://images.unsplash.com/photo-1634973357973-f2ed2657db3c?w=280&h=400&fit=crop",
-    profileImage:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face",
-    likes: 89,
-    comments: 23,
-    shares: 15,
-    width: 280,
-  },
-  {
-    id: "4",
-    title: "Title",
-    description:
-      "Please add your content here. Keep it short and simple. And smile :)",
-    imageUrl:
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=320&h=400&fit=crop",
-    profileImage:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face",
-    likes: 34,
-    comments: 6,
-    shares: 3,
-    width: 320,
-  },
-  {
-    id: "5",
-    title: "Title",
-    description:
-      "Please add your content here. Keep it short and simple. And smile :)",
-    imageUrl:
-      "https://images.unsplash.com/photo-1634973357973-f2ed2657db3c?w=400&h=400&fit=crop",
-    profileImage:
-      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face",
-    likes: 156,
-    comments: 34,
-    shares: 28,
-    width: 400,
+      "Dark atmospheric artwork of Kaneki Ken from Tokyo Ghoul in a snowy urban setting with his characteristic mask and kagune",
+    imageUrl: "/landing/trending/natural3.png",
+    isAI: false,
+    likes: 367,
+    comments: 74,
+    shares: 45,
   },
   {
     id: "6",
-    title: "Title",
+    title: "Hypnotic Eyeball",
     description:
-      "Please add your content here. Keep it short and simple. And smile :)",
-    imageUrl:
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=270&h=400&fit=crop",
-    profileImage:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=40&h=40&fit=crop&crop=face",
-    likes: 78,
-    comments: 16,
+      "Realistic rendering of a large eyeball with striking blue iris and red blood vessels against a neutral background",
+    imageUrl: "/landing/trending/ai-generated1.png",
+    isAI: true,
+    likes: 156,
+    comments: 19,
     shares: 11,
-    width: 270,
+  },
+  {
+    id: "1",
+    title: "Gothic Anime Rebel",
+    description:
+      "Stylized anime character with long black hair wearing a red leather jacket, spiked collar, and cross earring in a rebellious gothic punk aesthetic",
+    imageUrl: "/landing/trending/ai-generated6.png",
+    isAI: true,
+    likes: 142,
+    comments: 28,
+    shares: 15,
+  },
+  {
+    id: "11",
+    title: "Energetic Anime Schoolgirl",
+    description:
+      "Vibrant anime character with blonde hair in school uniform striking a cheerful pose under red neon lighting",
+    imageUrl: "/landing/trending/natural2.png",
+    isAI: false,
+    likes: 234,
+    comments: 38,
+    shares: 19,
+  },
+  {
+    id: "7",
+    title: "Majestic Gundam Mecha",
+    description:
+      "Imposing white and blue Gundam robot viewed from below against a cloudy blue sky, showcasing its detailed mechanical design",
+    imageUrl: "/landing/trending/natural6.png",
+    isAI: false,
+    likes: 445,
+    comments: 89,
+    shares: 56,
+  },
+  {
+    id: "3",
+    title: "Ethereal Dark Skull",
+    description:
+      "Haunting metallic skull with glowing blue highlights and wisps of smoke against a black background",
+    imageUrl: "/landing/trending/ai-generated4.png",
+    isAI: true,
+    likes: 89,
+    comments: 12,
+    shares: 8,
+  },
+  {
+    id: "5",
+    title: "Urban Chase Adventure",
+    description:
+      "Dynamic scene of a young character running from a police officer along train tracks, collecting golden coins in a Subway Surfers-style setting",
+    imageUrl: "/landing/trending/ai-generated2.png",
+    isAI: true,
+    likes: 198,
+    comments: 34,
+    shares: 22,
+  },
+  {
+    id: "9",
+    title: "Chibi Itachi Figure",
+    description:
+      "Cute miniature figure of Itachi Uchiha from Naruto in Akatsuki robes with selective focus photography",
+    imageUrl: "/landing/trending/natural4.png",
+    isAI: false,
+    likes: 278,
+    comments: 43,
+    shares: 31,
   },
 ];
 
 function TrendingCard({ item }: { item: TrendingItem }) {
   return (
-    <div
-      className="bg-gray-900/60 rounded-xl overflow-hidden backdrop-blur-sm border border-gray-800/50 hover:border-purple-500/50 transition-all duration-300 hover:scale-105"
-      style={{ width: `${item.width}px` }}
-    >
+    <div className="bg-gray-900/60 rounded-xl overflow-hidden backdrop-blur-sm border border-gray-800/50 hover:border-purple-500/50 transition-all duration-300 hover:scale-105 min-w-[250px] max-w-[400px]">
       {/* Image Container */}
-      <div
-        className="relative overflow-hidden"
-        style={{
-          width: `${item.width}px`,
-          height: "250px", // Fixed height for all images
-        }}
-      >
+      <div className="relative overflow-hidden">
         <img
           src={item.imageUrl}
           alt={item.title}
-          className="w-full h-full object-cover"
+          className="w-full h-[250px] object-cover"
         />
 
-        {/* Profile Picture Overlay */}
+        {/* AI Label Overlay */}
         <div className="absolute top-3 left-3">
-          <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/50 backdrop-blur-sm">
-            <img
-              src={item.profileImage}
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+          <div className="flex flex-col items-center p-2 rounded-full backdrop-blur-sm border border-white/30 bg-black/40">
+            <span
+              className={`text-xs font-semibold ${
+                item.isAI ? "text-purple-400" : "text-green-400"
+              }`}
+            >
+              {item.isAI ? "AI" : "HUMAN"}
+            </span>
           </div>
         </div>
 
@@ -156,12 +196,12 @@ function TrendingCard({ item }: { item: TrendingItem }) {
 }
 
 export function TrendingSection() {
-  // Split data into two rows
-  const topRowData = mockTrendingData.slice(0, 3);
-  const bottomRowData = mockTrendingData.slice(3, 6);
+  // Split data into two rows - 6 items each
+  const topRowData = trendingData.slice(0, 6);
+  const bottomRowData = trendingData.slice(6, 12);
 
   return (
-    <section className="bg-[#0C031A] py-16 sm:py-20 md:py-24 lg:py-28">
+    <section className="bg-[#0C031A] py-16 sm:py-20 md:py-24 lg:py-28 overflow-hidden">
       {/* Section Header */}
       <div className=" mx-auto px-4 sm:px-6 md:px-8 mb-12 sm:mb-16">
         <div className="text-center">
@@ -173,7 +213,7 @@ export function TrendingSection() {
       </div>
 
       {/* Scrolling Container - Full Width */}
-      <div className="relative w-full">
+      <div className="relative w-full overflow-hidden">
         {/* Left Gradient */}
         <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-[#0C031A] to-transparent z-10 pointer-events-none"></div>
 
@@ -197,7 +237,7 @@ export function TrendingSection() {
                 >
                   <TrendingCard item={item} />
                 </div>
-              ),
+              )
             )}
           </div>
         </div>
@@ -219,7 +259,7 @@ export function TrendingSection() {
                 >
                   <TrendingCard item={item} />
                 </div>
-              ),
+              )
             )}
           </div>
         </div>
