@@ -64,7 +64,7 @@ actor OperationalV2 {
   
   // Initialize admin with initial balance
   private func initializeAdmin() {
-    userBalances.put(ADMIN_PRINCIPAL, 1_000_000); // 1M PiCO initial supply
+    userBalances.put(ADMIN_PRINCIPAL, Config.INITIAL_ADMIN_SUPPLY);
     tokenHolders.put(ADMIN_PRINCIPAL, true);
   };
   

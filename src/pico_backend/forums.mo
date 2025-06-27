@@ -14,7 +14,6 @@ import Array "mo:base/Array";
 import Iter "mo:base/Iter";
 import Text "mo:base/Text";
 import Int "mo:base/Int";
-import Config "config";
 
 actor Forums {
   

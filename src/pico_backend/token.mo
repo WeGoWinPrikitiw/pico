@@ -5,17 +5,18 @@
  * It integrates with the ICRC-1 ledger and operational contract.
  * 
  * Architecture:
- * - ICRC-1 Ledger (uxrrr-q7777-77774-qaaaq-cai) handles token storage/transfers
- * - Operational Contract (u6s2n-gx777-77774-qaaba-cai) is the MINTER
+ * - ICRC-1 Ledger handles token storage/transfers
+ * - Operational Contract is the MINTER
  * - This contract provides enhanced querying and analytics
  */
 
 import Principal "mo:base/Principal";
 import Array "mo:base/Array";
+import Config "config";
 
 actor Token {
-  // Reference to the ICRC-1 ledger canister
-  let ledger = actor("u6s2n-gx777-77774-qaaba-cai") : actor {
+  // Reference to the ICRC-1 ledger canister using centralized config
+  let ledger = actor(Config.ICRC1_LEDGER_CANISTER) : actor {
     icrc1_name : () -> async Text;
     icrc1_symbol : () -> async Text;
     icrc1_decimals : () -> async Nat8;
@@ -25,8 +26,8 @@ actor Token {
     icrc1_balance_of : (Account) -> async Nat;
   };
   
-  // Reference to the operational contract
-  let operational = actor("uxrrr-q7777-77774-qaaaq-cai") : actor {
+  // Reference to the operational contract using centralized config
+  let operational = actor(Config.OPERATIONAL_CONTRACT_CANISTER) : actor {
     getAllTokenHolders : () -> async [Text];
     getTokenHoldersCount : () -> async Nat;
     isTokenHolder : (Text) -> async Bool;
@@ -59,9 +60,9 @@ actor Token {
   };
 
 
-  // Convert smallest units to PiCO (8 decimals)
+  // Convert smallest units to PiCO using centralized function
   private func unitsToPico(units : Nat) : Nat {
-    units / 100_000_000 // 8 decimals
+    Config.unitsToPico(units)
   };
 
   // Check all registered token holders from operational contract

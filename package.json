@@ -14,8 +14,8 @@
     "update:backend-config": "node scripts/update-backend-config.js",
     "sync:canisters": "npm run generate:canister-ids && npm run update:backend-config",
     "postgenerate": "npm run update:backend-config",
-    "deploy:local": "dfx deploy && npm run sync:canisters",
-    "deploy:ic": "dfx deploy --network ic && npm run sync:canisters"
+    "deploy:local": "npm run sync:canisters && dfx deploy",
+    "deploy:ic": "npm run sync:canisters && dfx deploy --network ic"
   },
   "type": "module",
   "workspaces": [

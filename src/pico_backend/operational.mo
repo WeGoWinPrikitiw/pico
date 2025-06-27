@@ -5,17 +5,16 @@
  * It can mint tokens directly to users and handles operational transactions.
  * 
  * Architecture:
- * - This contract (u6s2n-gx777-77774-qaaba-cai) is the MINTER
- * - ICRC-1 Ledger (uxrrr-q7777-77774-qaaaq-cai) handles token storage/transfers
- * - Admin (igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe) receives initial supply
- * - ICRC-2 Ledger (uxrrr-q7777-77774-qaaaq-cai) handles approval for transfers
+ * - This contract is the MINTER for PiCO tokens
+ * - ICRC-1 Ledger handles token storage/transfers
+ * - Admin receives initial supply via deployment
+ * - ICRC-2 Ledger handles approval for transfers
  */
 
 import Principal "mo:base/Principal";
 import Result "mo:base/Result";
 import Time "mo:base/Time";
 import Nat "mo:base/Nat";
-import Nat32 "mo:base/Nat32";
 import Error "mo:base/Error";
 import HashMap "mo:base/HashMap";
 import Array "mo:base/Array";
@@ -87,11 +86,9 @@ actor Operational {
   };
   
   // Storage for operational transactions
-  private var transactions = HashMap.HashMap<Nat, OperationalTransaction>(10, Nat.equal, func(n: Nat) : Nat32 { 
-    Nat32.fromNat(n % 4294967295) 
-  });
+  private var transactions = HashMap.HashMap<Nat, OperationalTransaction>(Config.DEFAULT_HASH_MAP_SIZE, Nat.equal, Config.natHash);
   
-  private var tokenHolders = HashMap.HashMap<Text, Bool>(10, Text.equal, Text.hash);
+  private var tokenHolders = HashMap.HashMap<Text, Bool>(Config.DEFAULT_HASH_MAP_SIZE, Text.equal, Text.hash);
   
   private func initializeAdmin() {
     tokenHolders.put(ADMIN_PRINCIPAL, true);
@@ -372,7 +369,7 @@ const result = await ledger.approve({
       };
       
       let allowanceResponse = await ledger.icrc2_allowance(allowanceArgs);
-      #ok(allowanceResponse.allowance / 100_000_000)
+      #ok(unitsToPico(allowanceResponse.allowance))
     } catch (e) {
       #err("❌ Error checking allowance: " # Error.message(e))
     }
@@ -413,8 +410,8 @@ const result = await ledger.approve({
       let sellerAccount = { owner = sellerPrincipalObj; subaccount = null : ?[Nat8] };
       let contractAccount = { owner = contractPrincipalObj; subaccount = null : ?[Nat8] };
       
-      // Convert price to units (PiCO has 8 decimals)
-      let amountInUnits = price * 100_000_000;
+      // Convert price to units using centralized function
+      let amountInUnits = picoToUnits(price);
       
       // STEP 1: Check if buyer has approved this contract to spend the required amount
       let allowanceArgs = {
@@ -487,8 +484,8 @@ const result = await ledger.approve({
           transactions.put(transactionId, failedTransaction);
           
           let errorMsg = switch (error) {
-            case (#InsufficientFunds({ balance })) { "❌ Insufficient funds. Balance: " # Nat.toText(balance / 100_000_000) # " PiCO" };
-            case (#InsufficientAllowance({ allowance })) { "❌ Insufficient allowance. Approved: " # Nat.toText(allowance / 100_000_000) # " PiCO. Please approve more tokens." };
+            case (#InsufficientFunds({ balance })) { "❌ Insufficient funds. Balance: " # Nat.toText(unitsToPico(balance)) # " PiCO" };
+            case (#InsufficientAllowance({ allowance })) { "❌ Insufficient allowance. Approved: " # Nat.toText(unitsToPico(allowance)) # " PiCO. Please approve more tokens." };
             case (#BadFee({ expected_fee })) { "❌ Bad fee. Expected: " # Nat.toText(expected_fee) };
             case (#GenericError({ error_code; message })) { "❌ Error " # Nat.toText(error_code) # ": " # message };
             case (_) { "❌ Transfer failed" };
@@ -726,7 +723,7 @@ const result = await ledger.approve({
         let holderPrincipalObj = Principal.fromText(holder);
         let holderAccount = { owner = holderPrincipalObj; subaccount = null : ?[Nat8] };
         let balance = await ledger.icrc1_balance_of(holderAccount);
-        let balanceInPico = balance / 100_000_000; // Convert to PiCO
+        let balanceInPico = unitsToPico(balance); // Use centralized conversion
         holdersWithBalances := Array.append(holdersWithBalances, [(holder, balanceInPico)]);
       };
       
@@ -748,7 +745,7 @@ const result = await ledger.approve({
       
       #ok({
         holders_count = holdersCount;
-        minter_balance = minterBalance / 100_000_000; // Convert to PiCO
+        minter_balance = unitsToPico(minterBalance); // Use centralized conversion
       })
     } catch (e) {
       #err("❌ Error getting supply info: " # Error.message(e))

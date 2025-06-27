@@ -9,6 +9,7 @@ import Nat8 "mo:base/Nat8";
 import Nat64 "mo:base/Nat64";
 import Text "mo:base/Text";
 import Result "mo:base/Result";
+import Config "config";
 
 module {
     // Types for HTTP outcalls
@@ -139,18 +140,18 @@ module {
             { name = "User-Agent"; value = "PiCO-NFT/1.0" }
         ];
 
-        // Prepare HTTP request
+        // Prepare HTTP request with centralized configuration
         let httpRequest : HttpRequestArgs = {
             url = "https://api.openai.com/v1/images/generations";
-            max_response_bytes = ?20480; // 20KB max response (increased for full response)
+            max_response_bytes = ?Nat64.fromNat(Config.HTTP_MAX_RESPONSE_BYTES);
             headers = headers;
             body = ?requestBodyBytes;
             method = #post;
             transform = null; // Simplified for now - no transform function
         };
 
-        // Add cycles for HTTP outcall (approximately 400M cycles for external calls)
-        Cycles.add<system>(400_000_000);
+        // Add cycles for HTTP outcall using centralized configuration
+        Cycles.add<system>(Config.HTTP_OUTCALL_CYCLES);
 
         try {
             // Make the HTTP outcall
@@ -187,8 +188,6 @@ module {
             #err("HTTP request failed: " # Error.message(error))
         }
     };
-
-
 
     // Simplified image generation for testing (without HTTP outcalls)
     public func generateImageMock(prompt: Text) : async Text {

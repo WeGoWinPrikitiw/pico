@@ -12,7 +12,7 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <AppInitializer />
-          <Toaster position="top-center" richColors theme="dark" />
+          <Toaster position="bottom-right" richColors theme="dark" />
         </AuthProvider>
       </BrowserRouter>
       <ReactQueryDevtools initialIsOpen={false} />
