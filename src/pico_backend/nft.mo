@@ -11,6 +11,7 @@ import Hash "mo:base/Hash";
 import Error "mo:base/Error";
 import Blob "mo:base/Blob";
 import OpenAI "openai";
+import Config "config";
 
 actor class NFT() = {
 
@@ -219,7 +220,7 @@ actor class NFT() = {
             ("icrc7:description", #Text("AI-powered NFT collection with dynamic traits")),
             ("icrc7:logo", #Text("https://example.com/logo.png")),
             ("icrc7:total_supply", #Nat(nextTokenId - 1)),
-            ("icrc7:supply_cap", #Nat(1000000)),
+            ("icrc7:supply_cap", #Nat(Config.NFT_COLLECTION_SUPPLY_CAP)),
         ]
     };
 
@@ -240,7 +241,7 @@ actor class NFT() = {
 
     // icrc7_supply_cap
     public query func icrc7_supply_cap(): async ?Nat {
-        ?1000000
+        ?Config.NFT_COLLECTION_SUPPLY_CAP
     };
 
     // icrc7_metadata

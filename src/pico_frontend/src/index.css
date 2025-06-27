@@ -1,0 +1,212 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Import Google Fonts */
+@import "@fontsource/lexend-deca/400.css";
+@import "@fontsource/lexend-deca/500.css";
+@import "@fontsource/lexend-deca/600.css";
+@import "@fontsource/lexend-deca/700.css";
+@import "@fontsource/montserrat/400.css";
+@import "@fontsource/montserrat/500.css";
+@import "@fontsource/montserrat/600.css";
+@import "@fontsource/montserrat/700.css";
+
+@custom-variant dark (&:is(.dark *));
+
+body {
+  font-family: "Montserrat", sans-serif;
+  font-size: 1.5rem;
+}
+
+@theme inline {
+  --font-lexend: "Lexend Deca", sans-serif;
+  --font-montserrat: "Montserrat", sans-serif;
+  --font-sans: "Montserrat", sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  /* radius */
+  --radius: 0.625rem;
+
+  /* gray scale */
+  --h-grey: 0;
+  --c-grey: 0;
+  --l-bg: 1; /* white */
+  --l-fg: 0.145; /* dark text */
+  --l-border: 0.922;
+  --l-input: var(--l-border);
+  --l-ring: 0.708;
+
+  /* backgrounds & text */
+  --background: oklch(var(--l-bg) var(--c-grey) var(--h-grey));
+  --foreground: oklch(var(--l-fg) var(--c-grey) var(--h-grey));
+  --card: var(--background);
+  --card-foreground: var(--foreground);
+  --popover: var(--background);
+  --popover-foreground: var(--foreground);
+
+  /* brand purple base from #0C031A */
+  --hue: 300.2;
+  --chroma: 0.052;
+
+  /* primary */
+  --l-primary: 0.205;
+  --primary: oklch(var(--l-primary) var(--chroma) var(--hue));
+  --primary-foreground: var(--background);
+
+  /* secondary / muted / accent */
+  --secondary: var(--background);
+  --secondary-foreground: var(--primary);
+  --l-muted: 0.4; /* adjust for how light you want it */
+  --c-muted: var(--chroma); /* or use a smaller chroma if you want grayer */
+  --muted: oklch(var(--l-muted) var(--c-muted) var(--hue));
+  --muted-foreground: oklch(0.556 var(--c-grey) var(--h-grey));
+  --accent: var(--background);
+  --accent-foreground: var(--primary);
+
+  /* destructive (red) */
+  --l-destructive: 0.577;
+  --c-destructive: 0.245;
+  --h-destructive: 27.325;
+  --destructive: oklch(
+    var(--l-destructive) var(--c-destructive) var(--h-destructive)
+  );
+
+  /* borders / inputs / rings */
+  --border: oklch(var(--l-border) var(--c-grey) var(--h-grey));
+  --input: oklch(var(--l-input) var(--c-grey) var(--h-grey));
+  --ring: oklch(var(--l-ring) var(--c-grey) var(--h-grey));
+
+  /* chart palette */
+  --l-chart-1: 0.646;
+  --c-chart-1: 0.222;
+  --h-chart-1: 41.116;
+  --l-chart-2: 0.6;
+  --c-chart-2: 0.118;
+  --h-chart-2: 184.704;
+  --l-chart-3: 0.398;
+  --c-chart-3: 0.07;
+  --h-chart-3: 227.392;
+  --l-chart-4: 0.828;
+  --c-chart-4: 0.189;
+  --h-chart-4: 84.429;
+  --l-chart-5: 0.769;
+  --c-chart-5: 0.188;
+  --h-chart-5: 70.08;
+
+  --chart-1: oklch(var(--l-chart-1) var(--c-chart-1) var(--h-chart-1));
+  --chart-2: oklch(var(--l-chart-2) var(--c-chart-2) var(--h-chart-2));
+  --chart-3: oklch(var(--l-chart-3) var(--c-chart-3) var(--h-chart-3));
+  --chart-4: oklch(var(--l-chart-4) var(--c-chart-4) var(--h-chart-4));
+  --chart-5: oklch(var(--l-chart-5) var(--c-chart-5) var(--h-chart-5));
+
+  /* sidebar */
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+.dark {
+  /* 1) Extracted from #0C031A → oklch(0.136 0.052 300.2) */
+  --hue: 300.2;
+  --chroma: 0.052;
+  --base-l: 0.136;
+
+  /* 2) Core “base” and a lighter variant */
+  --base: oklch(var(--base-l) var(--chroma) var(--hue));
+  --base-light: oklch(calc(var(--base-l) + 0.05) var(--chroma) var(--hue));
+
+  /* 3) Backgrounds & foregrounds */
+  --background: var(--base);
+  --foreground: oklch(0.985 0 0); /* pure white */
+  --card: var(--base-light);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--card-foreground);
+
+  /* 4) Primary / secondary / muted / accent */
+  --primary: oklch(0.75 var(--chroma) var(--hue));
+  --primary-foreground: var(--base);
+  --secondary: oklch(0.5 var(--chroma) var(--hue));
+  --secondary-foreground: var(--foreground);
+  --l-muted: 0.4; /* adjust for how light you want it */
+  --c-muted: var(--chroma); /* or use a smaller chroma if you want grayer */
+  --muted: oklch(var(--l-muted) var(--c-muted) var(--hue)); /* gray-ish */
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: var(--secondary);
+  --accent-foreground: var(--secondary-foreground);
+
+  /* 5) Destructive stays red */
+  --destructive: oklch(0.704 0.191 22.216);
+
+  /* 6) Borders, inputs, rings */
+  --border: oklch(1 0 0 / 0.1);
+  --input: oklch(1 0 0 / 0.15);
+  --ring: oklch(0.556 var(--chroma) var(--hue));
+
+  /* 7) Charts as monotone purple‐scale */
+  --chart-1: oklch(0.6 var(--chroma) var(--hue));
+  --chart-2: oklch(0.7 var(--chroma) var(--hue));
+  --chart-3: oklch(0.8 var(--chroma) var(--hue));
+  --chart-4: oklch(0.9 var(--chroma) var(--hue));
+  --chart-5: oklch(1 var(--chroma) var(--hue));
+
+  /* 8) Sidebar uses same system */
+  --sidebar: var(--base);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--chart-1);
+  --sidebar-primary-foreground: var(--foreground);
+  --sidebar-accent: var(--chart-2);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

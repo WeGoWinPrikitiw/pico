@@ -2,11 +2,11 @@ import LLM "mo:llm";
 import Result "mo:base/Result";
 import Array "mo:base/Array";
 import Text "mo:base/Text";
-import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
 import Iter "mo:base/Iter";
 import Nat32 "mo:base/Nat32";
 import Char "mo:base/Char";
+import Config "config";
 
 actor RecommendationSystem {
   // Types for inter-canister calls

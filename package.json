@@ -9,10 +9,19 @@
     "prebuild": "npm run prebuild --workspaces --if-present",
     "pretest": "npm run prebuild --workspaces --if-present",
     "start": "npm start --workspaces --if-present",
-    "test": "npm test --workspaces --if-present"
+    "test": "npm test --workspaces --if-present",
+    "generate:canister-ids": "node scripts/generate-canister-ids.js",
+    "update:backend-config": "node scripts/update-backend-config.js",
+    "sync:canisters": "npm run generate:canister-ids && npm run update:backend-config",
+    "postgenerate": "npm run update:backend-config",
+    "deploy:local": "npm run sync:canisters && dfx deploy",
+    "deploy:ic": "npm run sync:canisters && dfx deploy --network ic"
   },
   "type": "module",
   "workspaces": [
     "src/pico_frontend"
+  ],
+  "trustedDependencies": [
+    "@tailwindcss/oxide"
   ]
 }
