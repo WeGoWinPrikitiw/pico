@@ -38,10 +38,6 @@
       "main": "src/pico_backend/ai.mo",
       "type": "motoko"
     },
-    "ai_contract": {
-      "main": "src/pico_backend/ai.mo",
-      "type": "motoko"
-    },
     "pico_frontend": {
       "dependencies": [
         "nft_contract",

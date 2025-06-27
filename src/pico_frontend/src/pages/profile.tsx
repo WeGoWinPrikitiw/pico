@@ -409,7 +409,7 @@ export function ProfilePage() {
                           href={userProfile.website}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                          className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
                         >
                           <Globe className="h-5 w-5" />
                         </a>
@@ -419,7 +419,7 @@ export function ProfilePage() {
                           href={`https://twitter.com/${userProfile.social.twitter}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-blue-500 hover:text-white transition-colors"
+                          className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-blue-500 hover:text-white transition-colors"
                         >
                           <svg
                             className="h-5 w-5"
@@ -435,7 +435,7 @@ export function ProfilePage() {
                           href={`https://instagram.com/${userProfile.social.instagram}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-gradient-to-r hover:from-purple-500 hover:to-pink-500 hover:text-white transition-colors"
+                          className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-gradient-to-r hover:from-purple-500 hover:to-pink-500 hover:text-white transition-colors"
                         >
                           <svg
                             className="h-5 w-5"

@@ -1,6 +1,5 @@
 import _Debug "mo:base/Debug";
 import Blob "mo:base/Blob";
-import Cycles "mo:base/ExperimentalCycles";
 import Error "mo:base/Error";
 import _Array "mo:base/Array";
 import Iter "mo:base/Iter";
