@@ -3,7 +3,7 @@ import type { OperationalTransaction } from "@/types";
 import {
   idlFactory as operationalIdlFactory
 } from "../../../declarations/operational_contract";
-import { getOperationalCanisterId } from "@/config/canisters";
+import { getCanisterId } from "@/config/canisters";
 
 export interface OperationalActor {
   top_up: (
@@ -74,7 +74,7 @@ export interface OperationalActor {
 export class OperationalService extends BaseService {
   private get operationalActor(): OperationalActor {
     return this.createActor<OperationalActor>(
-      getOperationalCanisterId(),
+      getCanisterId('operational_contract'),
       operationalIdlFactory,
     );
   }

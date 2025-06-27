@@ -1,7 +1,7 @@
 import { AuthClient } from "@dfinity/auth-client";
 import { HttpAgent, Identity } from "@dfinity/agent";
 import { BaseService } from "./base.service";
-import { getInternetIdentityUrl, getICHostUrl } from "@/config/canisters";
+import { getHost, getIdentityProvider } from "@/config/canisters";
 
 export class AuthService extends BaseService {
   private authClient?: AuthClient;
@@ -11,7 +11,7 @@ export class AuthService extends BaseService {
       this.authClient = await AuthClient.create();
 
       // Always create an agent, even if not authenticated
-      const host = getICHostUrl();
+      const host = getHost();
 
       if (await this.authClient.isAuthenticated()) {
         const identity = this.authClient.getIdentity();
@@ -43,14 +43,14 @@ export class AuthService extends BaseService {
 
       return new Promise((resolve, reject) => {
         this.authClient!.login({
-          identityProvider: getInternetIdentityUrl(),
+          identityProvider: getIdentityProvider(),
           onSuccess: async () => {
             try {
               const identity = this.authClient!.getIdentity();
               this.identity = identity;
 
               // Use correct host based on environment
-              const host = getICHostUrl();
+              const host = getHost();
 
               this.agent = HttpAgent.createSync({
                 identity,

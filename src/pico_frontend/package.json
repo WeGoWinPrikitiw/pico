@@ -54,11 +54,12 @@
   "scripts": {
     "build": "tsc --noEmit && vite build",
     "format": "prettier --write \"src/**/*.{json,js,jsx,ts,tsx,css,scss}\"",
-    "prebuild": "dfx generate",
+    "prebuild": "dfx generate && npm run generate:canister-ids",
     "setup": "npm i && dfx canister create pico_backend && dfx generate pico_backend && dfx deploy",
     "start": "vite --port 3000",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate:canister-ids": "node ../../scripts/generate-canister-ids.js"
   },
   "type": "module",
   "version": "0.0.0"

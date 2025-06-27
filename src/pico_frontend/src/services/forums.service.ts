@@ -1,9 +1,6 @@
 import { Actor, Identity, HttpAgent } from "@dfinity/agent";
 import { BaseService, ApiError } from "./base.service";
-import {
-  createActor as createForumsActor,
-  canisterId as forumsCanisterId,
-} from "../../../declarations/forums_contract";
+import { idlFactory as forumsIdlFactory } from "../../../declarations/forums_contract";
 import type {
   Forum,
   CreateForumInput,
@@ -15,9 +12,10 @@ import type {
   Result_3 as ForumResult_3,
   _SERVICE as ForumsContractService,
 } from "../../../declarations/forums_contract/forums_contract.did";
+import { getCanisterId } from "@/config/canisters";
 
 export class ForumsService extends BaseService {
-  private actor?: Actor;
+  private actor?: ForumsContractService;
 
   constructor(agent: HttpAgent, identity: Identity) {
     super(agent, identity);
@@ -26,13 +24,12 @@ export class ForumsService extends BaseService {
 
   private initializeActor() {
     try {
-      if (!forumsCanisterId) {
+      const canisterId = getCanisterId('forums_contract');
+      if (!canisterId) {
         throw new Error("Forums canister ID not found");
       }
 
-      this.actor = createForumsActor(forumsCanisterId, {
-        agent: this.agent,
-      }) as Actor;
+      this.actor = this.createActor<ForumsContractService>(canisterId, forumsIdlFactory);
     } catch (error) {
       console.error("Failed to initialize forums actor:", error);
       throw new ApiError("Failed to initialize forums service", "INIT_ERROR");
@@ -43,7 +40,7 @@ export class ForumsService extends BaseService {
     if (!this.actor) {
       throw new ApiError("Forums actor not initialized", "ACTOR_NOT_INITIALIZED");
     }
-    return this.actor as unknown as ForumsContractService;
+    return this.actor;
   }
 
   // Query methods

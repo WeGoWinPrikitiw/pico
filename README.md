@@ -1,7 +1,7 @@
-# Feature that we implemented
+# Features Implemented
 - `operational_contract` - Your main business logic with `PiCO` token operations
 - `icrc1_ledger_canister` - our ICRC-1 tokens which called `PiCO`
-- `icrc2_ledger_canister`- our approval method for sending token
+- `icrc2_ledger_canister` - our approval method for sending token
 - `pico_frontend` - Your frontend (depends on operational_contract)
 - `internet_identity` - Authentication
 
@@ -69,7 +69,7 @@ If you are hosting frontend code somewhere without using DFX, you may need to ma
 
 A comprehensive Internet Computer (IC) project featuring the **PiCO** ICRC-1 token and an **Operational Contract** for managing token operations, NFT purchases, and transaction tracking.
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 pico/
@@ -84,7 +84,7 @@ pico/
 └── README.md                       # This file
 ```
 
-## 🪙 PiCO Token Details
+## PiCO Token Details
 
 - **Name**: PiCO
 - **Symbol**: PiCO
@@ -94,18 +94,45 @@ pico/
 - **Transfer Fee**: 0.0001 PiCO
 - **Minter**: `igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe`
 
-## 🚀 Deployment
+## Deployment
 
-### Local Development
+### Automated Deployment with Canister ID Management
+
+The project now includes an automated canister management system that eliminates hardcoded canister IDs and provides a single source of truth for all canister configurations.
+
+#### Quick Start
 
 1. **Start the local IC replica:**
    ```bash
    dfx start --clean --background
    ```
 
-2. **Deploy all canisters:**
+2. **Deploy with automatic canister ID generation:**
+   ```bash
+   # Deploy locally with automatic ID generation
+   npm run deploy:local
+   
+   # OR deploy to IC mainnet
+   npm run deploy:ic
+   ```
+
+3. **Start the frontend development server:**
+   ```bash
+   npm start
+   ```
+
+#### Manual Deployment Steps
+
+If you prefer manual control:
+
+1. **Deploy all canisters:**
    ```bash
    dfx deploy
+   ```
+
+2. **Generate canister IDs configuration:**
+   ```bash
+   npm run generate:canister-ids
    ```
 
 3. **Deploy specific canisters:**
@@ -120,9 +147,49 @@ pico/
    dfx deploy pico_frontend
    ```
 
-## 📋 Operational Contract API
+### Canister ID Management
 
-### 🎯 TOKEN -> ICRC1 Functions
+The project uses a centralized configuration system located in `src/pico_frontend/src/config/canisters.ts` that:
+
+- **Automatically extracts** canister IDs from dfx deployment
+- **Updates environment variables** in `.env` file
+- **Provides type-safe access** to all canister IDs
+- **Supports environment overrides** for custom configurations
+
+#### Available Commands
+
+```bash
+# Generate/update canister IDs from current dfx state
+npm run generate:canister-ids
+
+# Deploy locally and auto-generate IDs
+npm run deploy:local
+
+# Deploy to IC mainnet and auto-generate IDs  
+npm run deploy:ic
+```
+
+#### Environment Variable Overrides
+
+You can override any canister ID using environment variables:
+
+```bash
+# Override specific canister IDs
+export CANISTER_ID_NFT_CONTRACT=your-custom-nft-id
+export CANISTER_ID_OPERATIONAL_CONTRACT=your-custom-ops-id
+npm start
+```
+
+#### Network Detection
+
+The system automatically detects the deployment network and configures:
+- **Host URLs** (localhost:4943 for local, ic0.app for mainnet)
+- **Identity providers** (local II canister vs ic0.app)
+- **Canister endpoints** based on the active network
+
+## Operational Contract API
+
+### TOKEN -> ICRC1 Functions
 
 #### `top_up` - Mint PiCO tokens to users
 Mints new PiCO tokens to a specified user account.
@@ -146,7 +213,7 @@ dfx canister call operational_contract top_up '("rdmx6-jaaaa-aaaaa-aaadq-cai", 5
 Result<{transaction_id: Nat; message: Text}, Text>
 ```
 
-### 🛒 OPERATIONAL Functions
+### OPERATIONAL Functions
 
 #### `buy_nft` - Handle NFT purchases
 Records NFT purchase transactions with PiCO token payments.
@@ -170,7 +237,7 @@ dfx canister call operational_contract buy_nft '("xtzxu-fjc7d-ud3rp-qz6ad-23inu-
 Result<{transaction_id: Nat; message: Text}, Text>
 ```
 
-### 🔍 Query Functions (Read-only)
+### Query Functions (Read-only)
 
 #### `getUserBalance` - Get user's PiCO balance
 ```bash
@@ -224,7 +291,7 @@ dfx canister call operational_contract getLedgerCanisterId '()'
 dfx canister call operational_contract getTransactionCount '()'
 ```
 
-## 📊 Transaction Data Structure
+## Transaction Data Structure
 
 Each operational transaction contains:
 
@@ -241,7 +308,7 @@ Each operational transaction contains:
 }
 ```
 
-## 🧪 Testing Examples
+## Testing Examples
 
 ### 1. Create Mock User Identity
 ```bash
@@ -279,7 +346,7 @@ dfx canister call operational_contract getUserTransactions '("MOCK_USER_PRINCIPA
 dfx canister call operational_contract getTransaction '(1)'
 ```
 
-## 🌐 Direct ICRC-1 Ledger Operations
+## Direct ICRC-1 Ledger Operations
 
 You can also interact directly with the PiCO token ledger:
 
@@ -302,7 +369,7 @@ dfx canister call icrc1_ledger_canister icrc1_transfer '(record {
 })'
 ```
 
-## 🔐 Admin Functions
+## Admin Functions
 
 As the admin/minter (`igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe`), you can:
 
@@ -310,7 +377,7 @@ As the admin/minter (`igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczy
 - View all transactions using `getAllTransactions`
 - Manage the operational contract
 
-## 📱 Frontend Integration
+## Frontend Integration
 
 The operational contract is designed to work with your frontend application. Key integration points:
 
@@ -320,14 +387,17 @@ The operational contract is designed to work with your frontend application. Key
 4. **NFT Purchases**: Call `buy_nft` when users purchase NFTs
 5. **Top-up Feature**: Call `top_up` for admin token distribution
 
-## 🛠️ Development Notes
+## Development Notes
 
 - **Local Testing**: All commands shown work in local development environment
-- **Mainnet Deployment**: Use `--network ic` flag for mainnet deployment
+- **Mainnet Deployment**: Use `npm run deploy:ic` for automated mainnet deployment
+- **Canister Management**: No hardcoded canister IDs - all managed centrally via configuration
+- **Environment Flexibility**: Easy switching between local and IC networks via automatic detection
 - **Error Handling**: All functions return `Result` types for proper error handling
 - **Transaction Tracking**: Every operation creates a trackable transaction record
+- **Type Safety**: TypeScript interfaces ensure canister ID consistency across the application
 
-## 📚 Resources
+## Resources
 
 - [Internet Computer Documentation](https://internetcomputer.org/docs)
 - [Motoko Documentation](https://internetcomputer.org/docs/motoko/home)
@@ -336,4 +406,4 @@ The operational contract is designed to work with your frontend application. Key
 
 ---
 
-**Happy Building! 🚀**
+**Happy Building!**

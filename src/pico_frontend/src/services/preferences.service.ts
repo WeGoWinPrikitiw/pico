@@ -3,7 +3,7 @@ import { BaseService } from "./base.service";
 import { idlFactory } from "declarations/preferences_contract";
 import { _SERVICE as PreferencesContract } from "declarations/preferences_contract/preferences_contract.did";
 import type { UserPreferences, PreferencesInput } from "@/types";
-import { getPreferencesCanisterId } from "@/config/canisters";
+import { getCanisterId } from "@/config/canisters";
 
 export class PreferencesService extends BaseService {
   private actor?: PreferencesContract;
@@ -16,13 +16,13 @@ export class PreferencesService extends BaseService {
   private initializeActor() {
     if (!this.agent) return;
 
-    try {
-      const canisterId = getPreferencesCanisterId();
-      this.actor = this.createActor<PreferencesContract>(canisterId, idlFactory);
-    } catch (error) {
-      console.warn("Preferences contract canister ID not found:", error);
+    const canisterId = getCanisterId('preferences_contract');
+    if (!canisterId) {
+      console.warn("Preferences contract canister ID not found");
       return;
     }
+
+    this.actor = this.createActor<PreferencesContract>(canisterId, idlFactory);
   }
 
   public updateAgent(agent: HttpAgent, identity?: Identity) {

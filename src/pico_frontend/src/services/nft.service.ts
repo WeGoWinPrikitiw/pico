@@ -10,12 +10,12 @@ import {
   TransferArgs,
 } from "../../../declarations/nft_contract/nft_contract.did";
 import { idlFactory as nftIdlFactory } from "../../../declarations/nft_contract";
-import { getNFTCanisterId } from "@/config/canisters";
+import { getCanisterId } from "@/config/canisters";
 
 export class NFTService extends BaseService {
   private get nftActor(): NFT {
     return this.createActor<NFT>(
-      getNFTCanisterId(),
+      getCanisterId('nft_contract'),
       nftIdlFactory,
     );
   }
