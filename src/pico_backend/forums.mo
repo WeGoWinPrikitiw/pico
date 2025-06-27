@@ -29,6 +29,7 @@ actor Forums {
     forum_id : Nat;
     nft_id : Nat;
     principal_id : Text;
+    nft_name : Text;
     title : Text;
     description : Text;
     likes : Nat;
@@ -42,6 +43,7 @@ actor Forums {
   public type CreateForumInput = {
     nft_id : Nat;
     principal_id : Text;
+    nft_name : Text;
     title : Text;
     description : Text;
   };
@@ -49,6 +51,7 @@ actor Forums {
   // Update forum input type
   public type UpdateForumInput = {
     forum_id : Nat;
+    nft_name : ?Text; // Optional update
     title : ?Text; // Optional update
     description : ?Text; // Optional update
     is_sold : ?Bool; // Optional update
@@ -56,6 +59,7 @@ actor Forums {
   
   // Search/Filter criteria
   public type SearchCriteria = {
+    nft_name : ?Text;
     title : ?Text;
     description : ?Text;
     nft_id : ?Nat;
@@ -121,6 +125,7 @@ actor Forums {
       forum_id = forumId;
       nft_id = input.nft_id;
       principal_id = input.principal_id;
+      nft_name = input.nft_name;
       title = input.title;
       description = input.description;
       likes = 0;
@@ -151,6 +156,14 @@ actor Forums {
     let allForums = Iter.toArray(forums.vals());
     Array.filter<Forum>(allForums, func(forum) {
       var matches = true;
+      
+      // Filter by NFT name
+      switch (criteria.nft_name) {
+        case (?name) {
+          matches := matches and Text.contains(forum.nft_name, #text name);
+        };
+        case null { /* No filter */ };
+      };
       
       // Filter by title
       switch (criteria.title) {
@@ -325,6 +338,17 @@ actor Forums {
     switch (forums.get(input.forum_id)) {
       case (?forum) {
         var updatedForum = forum;
+        
+        // Update NFT name if provided
+        switch (input.nft_name) {
+          case (?newName) {
+            updatedForum := {
+              updatedForum with
+              nft_name = newName;
+            };
+          };
+          case null { /* No update */ };
+        };
         
         // Update title if provided
         switch (input.title) {

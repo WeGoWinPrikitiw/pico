@@ -222,20 +222,20 @@ export class ForumsService extends BaseService {
     }
   }
 
-  async likeForum(forumId: bigint, userId: string): Promise<ForumResult> {
+  async likeForum(forumId: bigint, userId: string): Promise<ForumResult_1> {
     try {
       const actor = this.getActor();
-      return await actor.likeForum(forumId, userId);
+      return await actor.toggleLikeForum(forumId, userId);
     } catch (error) {
       console.error("Failed to like forum:", error);
       throw new ApiError("Failed to like forum", "LIKE_ERROR", error);
     }
   }
 
-  async unlikeForum(forumId: bigint, userId: string): Promise<ForumResult> {
+  async unlikeForum(forumId: bigint, userId: string): Promise<ForumResult_1> {
     try {
       const actor = this.getActor();
-      return await actor.unlikeForum(forumId, userId);
+      return await actor.toggleLikeForum(forumId, userId);
     } catch (error) {
       console.error("Failed to unlike forum:", error);
       throw new ApiError("Failed to unlike forum", "UNLIKE_ERROR", error);
