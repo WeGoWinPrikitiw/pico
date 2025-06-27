@@ -161,7 +161,7 @@ export function TrendingSection() {
   const bottomRowData = mockTrendingData.slice(3, 6);
 
   return (
-    <section className="bg-[#0C031A] py-16 sm:py-20 md:py-24 lg:py-28">
+    <section className="bg-[#0C031A] py-16 sm:py-20 md:py-24 lg:py-28 overflow-hidden">
       {/* Section Header */}
       <div className=" mx-auto px-4 sm:px-6 md:px-8 mb-12 sm:mb-16">
         <div className="text-center">
@@ -173,7 +173,7 @@ export function TrendingSection() {
       </div>
 
       {/* Scrolling Container - Full Width */}
-      <div className="relative w-full">
+      <div className="relative w-full overflow-hidden">
         {/* Left Gradient */}
         <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-[#0C031A] to-transparent z-10 pointer-events-none"></div>
 
@@ -197,7 +197,7 @@ export function TrendingSection() {
                 >
                   <TrendingCard item={item} />
                 </div>
-              ),
+              )
             )}
           </div>
         </div>
@@ -219,7 +219,7 @@ export function TrendingSection() {
                 >
                   <TrendingCard item={item} />
                 </div>
-              ),
+              )
             )}
           </div>
         </div>
