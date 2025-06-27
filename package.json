@@ -11,9 +11,11 @@
     "start": "npm start --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
     "generate:canister-ids": "node scripts/generate-canister-ids.js",
-    "postgenerate": "npm run generate:canister-ids",
-    "deploy:local": "dfx deploy && npm run generate:canister-ids",
-    "deploy:ic": "dfx deploy --network ic && npm run generate:canister-ids"
+    "update:backend-config": "node scripts/update-backend-config.js",
+    "sync:canisters": "npm run generate:canister-ids && npm run update:backend-config",
+    "postgenerate": "npm run update:backend-config",
+    "deploy:local": "dfx deploy && npm run sync:canisters",
+    "deploy:ic": "dfx deploy --network ic && npm run sync:canisters"
   },
   "type": "module",
   "workspaces": [

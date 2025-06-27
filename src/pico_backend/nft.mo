@@ -11,6 +11,7 @@ import Hash "mo:base/Hash";
 import Error "mo:base/Error";
 import Blob "mo:base/Blob";
 import OpenAI "openai";
+import Config "config";
 
 actor class NFT() = {
 

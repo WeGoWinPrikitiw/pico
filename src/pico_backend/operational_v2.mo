@@ -20,11 +20,12 @@ import HashMap "mo:base/HashMap";
 import Array "mo:base/Array";
 import Iter "mo:base/Iter";
 import Text "mo:base/Text";
+import Config "config";
 
 actor OperationalV2 {
   
   // Admin principal (for management)
-  private let ADMIN_PRINCIPAL = "2sl3b-tf63d-g5z2g-44tut-vfgiw-af5tm-j65bi-37h3o-uce26-wvs2v-qqe";
+  private let ADMIN_PRINCIPAL = Config.ADMIN_PRINCIPAL;
   
   // Transaction counter for unique IDs
   private stable var transactionCounter : Nat = 0;

@@ -75,9 +75,22 @@ A comprehensive Internet Computer (IC) project featuring the **PiCO** ICRC-1 tok
 pico/
 ├── src/
 │   ├── pico_backend/
-│   │   └── operational.mo          # Operational Contract (Motoko)
-│   ├── pico_frontend/              # Frontend Application
+│   │   ├── config.mo               # Centralized backend configuration
+│   │   ├── operational.mo          # Operational Contract (Motoko)
+│   │   ├── nft.mo                 # NFT Contract
+│   │   ├── forums.mo              # Forums Contract
+│   │   ├── preferences.mo         # User Preferences Contract
+│   │   ├── token.mo               # Token Contract
+│   │   └── openai.mo              # OpenAI Integration
+│   ├── pico_frontend/
+│   │   ├── src/config/
+│   │   │   └── canisters.ts       # Frontend canister configuration
+│   │   └── ...                    # React/TypeScript frontend
 │   └── declarations/               # Generated type declarations
+├── scripts/
+│   ├── generate-canister-ids.js   # Frontend config generator
+│   └── update-backend-config.js   # Backend config updater
+├── docs/                           # Comprehensive documentation
 ├── dfx.json                        # Project configuration
 ├── icrc1_ledger.wasm.gz           # ICRC-1 Ledger WebAssembly
 ├── icrc1_ledger.did               # ICRC-1 Ledger Interface
@@ -96,9 +109,9 @@ pico/
 
 ## Deployment
 
-### Automated Deployment with Canister ID Management
+### Automated Deployment with Complete Canister Management
 
-The project now includes an automated canister management system that eliminates hardcoded canister IDs and provides a single source of truth for all canister configurations.
+The project features a comprehensive, automated canister management system that eliminates hardcoded canister IDs and provides seamless synchronization between dfx deployment state and your application code - for both **frontend** and **backend**.
 
 #### Quick Start
 
@@ -107,9 +120,9 @@ The project now includes an automated canister management system that eliminates
    dfx start --clean --background
    ```
 
-2. **Deploy with automatic canister ID generation:**
+2. **Deploy with automatic canister ID synchronization:**
    ```bash
-   # Deploy locally with automatic ID generation
+   # Deploy locally with automatic ID generation and sync
    npm run deploy:local
    
    # OR deploy to IC mainnet
@@ -130,9 +143,9 @@ If you prefer manual control:
    dfx deploy
    ```
 
-2. **Generate canister IDs configuration:**
+2. **Synchronize canister IDs across frontend and backend:**
    ```bash
-   npm run generate:canister-ids
+   npm run sync:canisters
    ```
 
 3. **Deploy specific canisters:**
@@ -147,26 +160,36 @@ If you prefer manual control:
    dfx deploy pico_frontend
    ```
 
-### Canister ID Management
+### Complete Canister Management System
 
-The project uses a centralized configuration system located in `src/pico_frontend/src/config/canisters.ts` that:
+The project uses a **dual-layer centralized configuration system**:
 
-- **Automatically extracts** canister IDs from dfx deployment
-- **Updates environment variables** in `.env` file
-- **Provides type-safe access** to all canister IDs
-- **Supports environment overrides** for custom configurations
+#### Frontend Configuration (`src/pico_frontend/src/config/canisters.ts`)
+- **TypeScript interfaces** for type safety
+- **Environment variable overrides** for custom configurations
+- **Network detection** with automatic host/identity provider configuration
+- **Priority system**: ENV vars > Generated IDs > Defaults
+
+#### Backend Configuration (`src/pico_backend/config.mo`)
+- **Single source of truth** for all Motoko contracts
+- **Network-aware configuration** (local vs IC)
+- **Utility functions** for token conversions and validation
+- **Automatic synchronization** with dfx state
 
 #### Available Commands
 
 ```bash
-# Generate/update canister IDs from current dfx state
-npm run generate:canister-ids
+# Complete synchronization (recommended)
+npm run sync:canisters          # Sync frontend + backend
+npm run deploy:local            # Deploy + sync all
+npm run deploy:ic               # Deploy IC + sync all
 
-# Deploy locally and auto-generate IDs
-npm run deploy:local
+# Individual updates
+npm run generate:canister-ids   # Frontend only
+npm run update:backend-config   # Backend only
 
-# Deploy to IC mainnet and auto-generate IDs  
-npm run deploy:ic
+# Build with auto-sync
+npm run build                   # Automatically syncs before building
 ```
 
 #### Environment Variable Overrides
@@ -177,15 +200,26 @@ You can override any canister ID using environment variables:
 # Override specific canister IDs
 export CANISTER_ID_NFT_CONTRACT=your-custom-nft-id
 export CANISTER_ID_OPERATIONAL_CONTRACT=your-custom-ops-id
+export DFX_NETWORK=ic
 npm start
 ```
 
-#### Network Detection
+#### Network Detection & Configuration
 
 The system automatically detects the deployment network and configures:
 - **Host URLs** (localhost:4943 for local, ic0.app for mainnet)
-- **Identity providers** (local II canister vs ic0.app)
+- **Identity providers** (local II canister vs identity.ic0.app)
 - **Canister endpoints** based on the active network
+- **Backend network settings** in Motoko contracts
+
+#### Key Benefits
+
+**Single Source of Truth** - All canister IDs centralized  
+**Automatic Synchronization** - Always in sync with dfx state  
+**Network Awareness** - Automatic local vs IC detection  
+**Type Safety** - TypeScript + Motoko compile-time validation  
+**Zero Manual Updates** - No hardcoded IDs anywhere  
+**Better DX** - Simple npm scripts for everything
 
 ## Operational Contract API
 
@@ -390,12 +424,14 @@ The operational contract is designed to work with your frontend application. Key
 ## Development Notes
 
 - **Local Testing**: All commands shown work in local development environment
-- **Mainnet Deployment**: Use `npm run deploy:ic` for automated mainnet deployment
-- **Canister Management**: No hardcoded canister IDs - all managed centrally via configuration
-- **Environment Flexibility**: Easy switching between local and IC networks via automatic detection
+- **Mainnet Deployment**: Use `npm run deploy:ic` for automated mainnet deployment  
+- **Zero Hardcoded IDs**: Complete elimination of hardcoded canister IDs across frontend and backend
+- **Automatic Synchronization**: Canister IDs automatically sync with dfx state during deployment
+- **Network Flexibility**: Seamless switching between local and IC networks with automatic detection
+- **Type Safety**: TypeScript + Motoko compile-time validation ensures configuration consistency
 - **Error Handling**: All functions return `Result` types for proper error handling
 - **Transaction Tracking**: Every operation creates a trackable transaction record
-- **Type Safety**: TypeScript interfaces ensure canister ID consistency across the application
+- **Developer Experience**: Simple npm scripts handle complex configuration management automatically
 
 ## Resources
 
