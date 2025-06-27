@@ -22,17 +22,14 @@ import HashMap "mo:base/HashMap";
 import Array "mo:base/Array";
 import Iter "mo:base/Iter";
 import Text "mo:base/Text";
+import Config "config";
 
 actor OperationalV3 {
   
-  // Admin principal (for initial supply and management)
-  private let ADMIN_PRINCIPAL = "igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe";
-  
-  // This contract is the minter
-  private let MINTER_PRINCIPAL = "ucwa4-rx777-77774-qaada-cai"; // This operational_v3 contract
-  
-  // ICRC-1 Ledger canister
-  private let LEDGER_CANISTER_ID = "uxrrr-q7777-77774-qaaaq-cai";
+  // Use centralized configuration
+  private let ADMIN_PRINCIPAL = Config.ADMIN_PRINCIPAL;
+  private let MINTER_PRINCIPAL = Config.TOKEN_CONTRACT_CANISTER; // This operational_v3 contract
+  private let LEDGER_CANISTER_ID = Config.ICRC1_LEDGER_CANISTER;
   
   // Transaction counter for unique IDs
   private stable var transactionCounter : Nat = 0;
@@ -119,13 +116,13 @@ actor OperationalV3 {
     icrc1_decimals : () -> async Nat8;
   };
   
-  // Helper functions
+  // Helper functions - use centralized conversion functions
   private func picoToUnits(pico : Nat) : Nat {
-    pico * 100_000_000 // 8 decimals
+    Config.picoToUnits(pico)
   };
   
   private func unitsToPico(units : Nat) : Nat {
-    units / 100_000_000 // 8 decimals
+    Config.unitsToPico(units)
   };
   
   private func generateTransactionId() : Nat {

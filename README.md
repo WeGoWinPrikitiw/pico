@@ -1,7 +1,7 @@
-# Feature that we implemented
+# Features Implemented
 - `operational_contract` - Your main business logic with `PiCO` token operations
 - `icrc1_ledger_canister` - our ICRC-1 tokens which called `PiCO`
-- `icrc2_ledger_canister`- our approval method for sending token
+- `icrc2_ledger_canister` - our approval method for sending token
 - `pico_frontend` - Your frontend (depends on operational_contract)
 - `internet_identity` - Authentication
 
@@ -69,22 +69,35 @@ If you are hosting frontend code somewhere without using DFX, you may need to ma
 
 A comprehensive Internet Computer (IC) project featuring the **PiCO** ICRC-1 token and an **Operational Contract** for managing token operations, NFT purchases, and transaction tracking.
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 pico/
 ├── src/
 │   ├── pico_backend/
-│   │   └── operational.mo          # Operational Contract (Motoko)
-│   ├── pico_frontend/              # Frontend Application
+│   │   ├── config.mo               # Centralized backend configuration
+│   │   ├── operational.mo          # Operational Contract (Motoko)
+│   │   ├── nft.mo                 # NFT Contract
+│   │   ├── forums.mo              # Forums Contract
+│   │   ├── preferences.mo         # User Preferences Contract
+│   │   ├── token.mo               # Token Contract
+│   │   └── openai.mo              # OpenAI Integration
+│   ├── pico_frontend/
+│   │   ├── src/config/
+│   │   │   └── canisters.ts       # Frontend canister configuration
+│   │   └── ...                    # React/TypeScript frontend
 │   └── declarations/               # Generated type declarations
+├── scripts/
+│   ├── generate-canister-ids.js   # Frontend config generator
+│   └── update-backend-config.js   # Backend config updater
+├── docs/                           # Comprehensive documentation
 ├── dfx.json                        # Project configuration
 ├── icrc1_ledger.wasm.gz           # ICRC-1 Ledger WebAssembly
 ├── icrc1_ledger.did               # ICRC-1 Ledger Interface
 └── README.md                       # This file
 ```
 
-## 🪙 PiCO Token Details
+## PiCO Token Details
 
 - **Name**: PiCO
 - **Symbol**: PiCO
@@ -94,18 +107,45 @@ pico/
 - **Transfer Fee**: 0.0001 PiCO
 - **Minter**: `igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe`
 
-## 🚀 Deployment
+## Deployment
 
-### Local Development
+### Automated Deployment with Complete Canister Management
+
+The project features a comprehensive, automated canister management system that eliminates hardcoded canister IDs and provides seamless synchronization between dfx deployment state and your application code - for both **frontend** and **backend**.
+
+#### Quick Start
 
 1. **Start the local IC replica:**
    ```bash
    dfx start --clean --background
    ```
 
-2. **Deploy all canisters:**
+2. **Deploy with automatic canister ID synchronization:**
+   ```bash
+   # Deploy locally with automatic ID generation and sync
+   npm run deploy:local
+   
+   # OR deploy to IC mainnet
+   npm run deploy:ic
+   ```
+
+3. **Start the frontend development server:**
+   ```bash
+   npm start
+   ```
+
+#### Manual Deployment Steps
+
+If you prefer manual control:
+
+1. **Deploy all canisters:**
    ```bash
    dfx deploy
+   ```
+
+2. **Synchronize canister IDs across frontend and backend:**
+   ```bash
+   npm run sync:canisters
    ```
 
 3. **Deploy specific canisters:**
@@ -120,9 +160,70 @@ pico/
    dfx deploy pico_frontend
    ```
 
-## 📋 Operational Contract API
+### Complete Canister Management System
 
-### 🎯 TOKEN -> ICRC1 Functions
+The project uses a **dual-layer centralized configuration system**:
+
+#### Frontend Configuration (`src/pico_frontend/src/config/canisters.ts`)
+- **TypeScript interfaces** for type safety
+- **Environment variable overrides** for custom configurations
+- **Network detection** with automatic host/identity provider configuration
+- **Priority system**: ENV vars > Generated IDs > Defaults
+
+#### Backend Configuration (`src/pico_backend/config.mo`)
+- **Single source of truth** for all Motoko contracts
+- **Network-aware configuration** (local vs IC)
+- **Utility functions** for token conversions and validation
+- **Automatic synchronization** with dfx state
+
+#### Available Commands
+
+```bash
+# Complete synchronization (recommended)
+npm run sync:canisters          # Sync frontend + backend
+npm run deploy:local            # Deploy + sync all
+npm run deploy:ic               # Deploy IC + sync all
+
+# Individual updates
+npm run generate:canister-ids   # Frontend only
+npm run update:backend-config   # Backend only
+
+# Build with auto-sync
+npm run build                   # Automatically syncs before building
+```
+
+#### Environment Variable Overrides
+
+You can override any canister ID using environment variables:
+
+```bash
+# Override specific canister IDs
+export CANISTER_ID_NFT_CONTRACT=your-custom-nft-id
+export CANISTER_ID_OPERATIONAL_CONTRACT=your-custom-ops-id
+export DFX_NETWORK=ic
+npm start
+```
+
+#### Network Detection & Configuration
+
+The system automatically detects the deployment network and configures:
+- **Host URLs** (localhost:4943 for local, ic0.app for mainnet)
+- **Identity providers** (local II canister vs identity.ic0.app)
+- **Canister endpoints** based on the active network
+- **Backend network settings** in Motoko contracts
+
+#### Key Benefits
+
+**Single Source of Truth** - All canister IDs centralized  
+**Automatic Synchronization** - Always in sync with dfx state  
+**Network Awareness** - Automatic local vs IC detection  
+**Type Safety** - TypeScript + Motoko compile-time validation  
+**Zero Manual Updates** - No hardcoded IDs anywhere  
+**Better DX** - Simple npm scripts for everything
+
+## Operational Contract API
+
+### TOKEN -> ICRC1 Functions
 
 #### `top_up` - Mint PiCO tokens to users
 Mints new PiCO tokens to a specified user account.
@@ -146,7 +247,7 @@ dfx canister call operational_contract top_up '("rdmx6-jaaaa-aaaaa-aaadq-cai", 5
 Result<{transaction_id: Nat; message: Text}, Text>
 ```
 
-### 🛒 OPERATIONAL Functions
+### OPERATIONAL Functions
 
 #### `buy_nft` - Handle NFT purchases
 Records NFT purchase transactions with PiCO token payments.
@@ -170,7 +271,7 @@ dfx canister call operational_contract buy_nft '("xtzxu-fjc7d-ud3rp-qz6ad-23inu-
 Result<{transaction_id: Nat; message: Text}, Text>
 ```
 
-### 🔍 Query Functions (Read-only)
+### Query Functions (Read-only)
 
 #### `getUserBalance` - Get user's PiCO balance
 ```bash
@@ -224,7 +325,7 @@ dfx canister call operational_contract getLedgerCanisterId '()'
 dfx canister call operational_contract getTransactionCount '()'
 ```
 
-## 📊 Transaction Data Structure
+## Transaction Data Structure
 
 Each operational transaction contains:
 
@@ -241,7 +342,7 @@ Each operational transaction contains:
 }
 ```
 
-## 🧪 Testing Examples
+## Testing Examples
 
 ### 1. Create Mock User Identity
 ```bash
@@ -279,7 +380,7 @@ dfx canister call operational_contract getUserTransactions '("MOCK_USER_PRINCIPA
 dfx canister call operational_contract getTransaction '(1)'
 ```
 
-## 🌐 Direct ICRC-1 Ledger Operations
+## Direct ICRC-1 Ledger Operations
 
 You can also interact directly with the PiCO token ledger:
 
@@ -302,7 +403,7 @@ dfx canister call icrc1_ledger_canister icrc1_transfer '(record {
 })'
 ```
 
-## 🔐 Admin Functions
+## Admin Functions
 
 As the admin/minter (`igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe`), you can:
 
@@ -310,7 +411,7 @@ As the admin/minter (`igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczy
 - View all transactions using `getAllTransactions`
 - Manage the operational contract
 
-## 📱 Frontend Integration
+## Frontend Integration
 
 The operational contract is designed to work with your frontend application. Key integration points:
 
@@ -320,14 +421,19 @@ The operational contract is designed to work with your frontend application. Key
 4. **NFT Purchases**: Call `buy_nft` when users purchase NFTs
 5. **Top-up Feature**: Call `top_up` for admin token distribution
 
-## 🛠️ Development Notes
+## Development Notes
 
 - **Local Testing**: All commands shown work in local development environment
-- **Mainnet Deployment**: Use `--network ic` flag for mainnet deployment
+- **Mainnet Deployment**: Use `npm run deploy:ic` for automated mainnet deployment  
+- **Zero Hardcoded IDs**: Complete elimination of hardcoded canister IDs across frontend and backend
+- **Automatic Synchronization**: Canister IDs automatically sync with dfx state during deployment
+- **Network Flexibility**: Seamless switching between local and IC networks with automatic detection
+- **Type Safety**: TypeScript + Motoko compile-time validation ensures configuration consistency
 - **Error Handling**: All functions return `Result` types for proper error handling
 - **Transaction Tracking**: Every operation creates a trackable transaction record
+- **Developer Experience**: Simple npm scripts handle complex configuration management automatically
 
-## 📚 Resources
+## Resources
 
 - [Internet Computer Documentation](https://internetcomputer.org/docs)
 - [Motoko Documentation](https://internetcomputer.org/docs/motoko/home)
@@ -336,4 +442,4 @@ The operational contract is designed to work with your frontend application. Key
 
 ---
 
-**Happy Building! 🚀**
+**Happy Building!**

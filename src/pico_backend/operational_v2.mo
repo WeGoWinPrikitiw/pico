@@ -20,11 +20,12 @@ import HashMap "mo:base/HashMap";
 import Array "mo:base/Array";
 import Iter "mo:base/Iter";
 import Text "mo:base/Text";
+import Config "config";
 
 actor OperationalV2 {
   
   // Admin principal (for management)
-  private let ADMIN_PRINCIPAL = "igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe";
+  private let ADMIN_PRINCIPAL = Config.ADMIN_PRINCIPAL;
   
   // Transaction counter for unique IDs
   private stable var transactionCounter : Nat = 0;
@@ -63,7 +64,7 @@ actor OperationalV2 {
   
   // Initialize admin with initial balance
   private func initializeAdmin() {
-    userBalances.put(ADMIN_PRINCIPAL, 1_000_000); // 1M PiCO initial supply
+    userBalances.put(ADMIN_PRINCIPAL, Config.INITIAL_ADMIN_SUPPLY);
     tokenHolders.put(ADMIN_PRINCIPAL, true);
   };
   

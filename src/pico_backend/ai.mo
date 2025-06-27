@@ -2,11 +2,11 @@ import LLM "mo:llm";
 import Result "mo:base/Result";
 import Array "mo:base/Array";
 import Text "mo:base/Text";
-import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
 import Iter "mo:base/Iter";
 import Nat32 "mo:base/Nat32";
 import Char "mo:base/Char";
+import Config "config";
 
 actor RecommendationSystem {
   // Types for inter-canister calls
@@ -86,7 +86,7 @@ actor RecommendationSystem {
 
     try {
       // Step 1: Fetch all NFT data from NFT contract with error handling
-      let nftContract: NFTContract = actor("vb2j2-fp777-77774-qaafq-cai"); // NFT contract canister ID
+      let nftContract: NFTContract = actor(Config.NFT_CONTRACT_CANISTER); // NFT contract canister ID
       let allNFTs = try {
         await nftContract.list_all_nfts()
       } catch (error) {
@@ -101,7 +101,7 @@ actor RecommendationSystem {
       };
 
       // Step 2: Get user preferences from preferences contract
-      let preferencesContract: PreferencesContract = actor("vizcg-th777-77774-qaaea-cai"); // Preferences contract canister ID
+      let preferencesContract: PreferencesContract = actor(Config.PREFERENCES_CONTRACT_CANISTER); // Preferences contract canister ID
       let userPrefs = try {
         let hasPrefs = await preferencesContract.hasPreferences(userPrincipal);
         if (hasPrefs) {
@@ -208,7 +208,7 @@ actor RecommendationSystem {
         switch (parseNFTIds(responseText)) {
           case (#ok(nftIds)) {
             try {
-              let nftContract: NFTContract = actor("vb2j2-fp777-77774-qaafq-cai"); // NFT contract canister ID
+              let nftContract: NFTContract = actor(Config.NFT_CONTRACT_CANISTER); // NFT contract canister ID
               var detailedNFTs: [NFTInfo] = [];
               
               // Note: This would need a get_nft method in the NFTContract interface
