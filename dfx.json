@@ -32,6 +32,10 @@
       "main": "src/pico_backend/forums.mo",
       "type": "motoko"
     },
+    "ai_contract": {
+      "main": "src/pico_backend/ai.mo",
+      "type": "motoko"
+    },
     "pico_frontend": {
       "dependencies": ["nft_contract", "operational_contract", "preferences_contract", "forums_contract", "token_contract"],
       "source": ["src/pico_frontend/dist"],
@@ -48,7 +52,7 @@
   "defaults": {
     "build": {
       "args": "",
-      "packtool": ""
+      "packtool": "mops sources"
     }
   },
   "output_env_file": ".env",
