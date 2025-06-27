@@ -38,7 +38,7 @@
     token_contract canister created with canister id: vizcg-th777-77774-qaaea-cai
     ```
 
-2. Change variable canister inside `config.mo` by replace it from output
+2. Change variable canister inside `config.mo` by replace it from above output
     ```
     public let INTERNET_IDENTITY_CANISTER = "rdmx6-jaaaa-aaaaa-aaadq-cai";
     public let NFT_CONTRACT_CANISTER = "umunu-kh777-77774-qaaca-cai";
