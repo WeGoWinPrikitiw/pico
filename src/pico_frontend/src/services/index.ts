@@ -17,9 +17,16 @@ import { ForumsService } from "./forums.service";
 import { PreferencesService } from "./preferences.service";
 import { ICRC1Service } from "./icrc1.service";
 
+import type { CanisterConfig } from "@/config/canisters";
+import generatedCanisterIds from "@/config/generated-canister-ids.json";
+
 // Service factory for creating service instances with shared agent
+
 export class ServiceFactory {
   private authService: AuthService;
+  private canisterIds: CanisterConfig;
+
+  // Service instances
   private nftService?: NFTService;
   private operationalService?: OperationalService;
   private forumsService?: ForumsService;
@@ -28,30 +35,58 @@ export class ServiceFactory {
 
   constructor() {
     this.authService = new AuthService();
+    // Load canister IDs immediately on creation
+    this.canisterIds = { ...generatedCanisterIds.canister_ids };
   }
 
   async initialize() {
     await this.authService.initialize();
-    this.updateServices();
+    // After auth is initialized, we have an agent, so we can create services
+    this.createAllServices();
   }
 
-  private updateServices() {
+  private createAllServices() {
     const agent = this.authService.getAgent();
     const identity = this.authService.getIdentity();
 
-    // Always create NFT service since it supports anonymous queries
-    if (agent) {
-      this.nftService = new NFTService(agent, identity);
+    if (!agent) {
+      // Cannot create services without an agent
+      return;
     }
 
-    // Other services require authentication
-    if (agent && identity) {
-      this.operationalService = new OperationalService(agent, identity);
-      this.forumsService = new ForumsService(agent, identity);
-      this.preferencesService = new PreferencesService(agent, identity);
-      this.icrc1Service = new ICRC1Service(agent, identity);
+    // Always create NFT service as it might have public methods
+    this.nftService = new NFTService(
+      this.canisterIds.nft_contract,
+      agent,
+      identity!,
+    );
+
+    // Services that require a logged-in user
+    if (identity) {
+      this.operationalService = new OperationalService(
+        this.canisterIds.operational_contract,
+        agent,
+        identity,
+      );
+      this.forumsService = new ForumsService(
+        this.canisterIds.forums_contract,
+        agent,
+        identity,
+      );
+      this.preferencesService = new PreferencesService(
+        this.canisterIds.preferences_contract,
+        agent,
+        identity,
+      );
+      this.icrc1Service = new ICRC1Service(
+        this.canisterIds.icrc1_ledger_canister,
+        agent,
+        identity,
+      );
     }
   }
+
+  // --- Service Getters ---
 
   getAuthService(): AuthService {
     return this.authService;
@@ -59,61 +94,58 @@ export class ServiceFactory {
 
   getNFTService(): NFTService {
     if (!this.nftService) {
-      throw new Error("NFT service not initialized. Please login first.");
+      throw new Error("NFT service not available.");
     }
-    return this.nftService;
-  }
-
-  // Safe accessor that returns undefined if not available
-  getNFTServiceSafe(): NFTService | undefined {
     return this.nftService;
   }
 
   getOperationalService(): OperationalService {
     if (!this.operationalService) {
-      throw new Error(
-        "Operational service not initialized. Please login first.",
-      );
+      throw new Error("Operational service not available. Please log in.");
     }
     return this.operationalService;
   }
 
   getForumsService(): ForumsService {
     if (!this.forumsService) {
-      throw new Error("Forums service not initialized. Please login first.");
+      throw new Error("Forums service not available. Please log in.");
     }
     return this.forumsService;
   }
 
   getPreferencesService(): PreferencesService {
     if (!this.preferencesService) {
-      throw new Error(
-        "Preferences service not initialized. Please login first.",
-      );
+      throw new Error("Preferences service not available. Please log in.");
     }
     return this.preferencesService;
   }
 
   getICRC1Service(): ICRC1Service {
     if (!this.icrc1Service) {
-      throw new Error("ICRC1 service not initialized. Please login first.");
+      throw new Error("ICRC1 service not available. Please log in.");
     }
     return this.icrc1Service;
   }
 
+  // --- Auth Methods ---
+
   async login() {
     const result = await this.authService.login();
-    this.updateServices();
+    // Re-create services with the new identity
+    this.createAllServices();
     return result;
   }
 
   async logout() {
     await this.authService.logout();
+    // Clear out services
     this.nftService = undefined;
     this.operationalService = undefined;
     this.forumsService = undefined;
     this.preferencesService = undefined;
     this.icrc1Service = undefined;
+    // Re-create services with anonymous agent
+    this.createAllServices();
   }
 
   isAuthenticated(): Promise<boolean> {

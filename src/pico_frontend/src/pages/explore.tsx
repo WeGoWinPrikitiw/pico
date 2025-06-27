@@ -44,7 +44,7 @@ export function ExplorePage() {
     queryFn: async () => {
       // Ensure services are initialized
       await serviceFactory.initialize();
-      const nftService = serviceFactory.getNFTServiceSafe();
+      const nftService = serviceFactory.getNFTService();
       if (!nftService) {
         console.warn("NFT service not available");
         return [];

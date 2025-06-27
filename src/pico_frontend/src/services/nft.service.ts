@@ -1,4 +1,4 @@
-import { BaseService } from "./base.service";
+import { ApiError, BaseService } from "./base.service";
 import type {
   NFTInfo,
   Trait,
@@ -8,16 +8,51 @@ import type {
 import {
   NFT,
   TransferArgs,
+  _SERVICE as NFTContract,
 } from "../../../declarations/nft_contract/nft_contract.did";
 import { idlFactory as nftIdlFactory } from "../../../declarations/nft_contract";
 import { getCanisterId } from "@/config/canisters";
+import { HttpAgent } from "@dfinity/agent";
+import { Identity } from "@dfinity/agent";
 
 export class NFTService extends BaseService {
-  private get nftActor(): NFT {
-    return this.createActor<NFT>(
-      getCanisterId('nft_contract'),
-      nftIdlFactory,
-    );
+  private actor?: NFTContract;
+
+  constructor(
+    private canisterId: string,
+    agent: HttpAgent,
+    identity: Identity,
+  ) {
+    super(agent, identity);
+    this.initializeActor();
+  }
+
+  private initializeActor() {
+    try {
+      if (!this.canisterId) {
+        throw new Error("NFT canister ID not provided");
+      }
+      this.actor = this.createActor<NFTContract>(
+        this.canisterId,
+        nftIdlFactory,
+      );
+    } catch (error) {
+      console.error("Failed to initialize nft actor:", error);
+      throw new ApiError(
+        "Failed to initialize nft service",
+        "INIT_ERROR",
+      );
+    }
+  }
+
+  private getActor(): NFTContract {
+    if (!this.actor) {
+      throw new ApiError(
+        "NFT actor not initialized",
+        "ACTOR_NOT_INITIALIZED",
+      );
+    }
+    return this.actor;
   }
 
   private convertNFTInfo(nft: NFTInfo): FrontendNFTInfo {
@@ -38,7 +73,8 @@ export class NFTService extends BaseService {
   // NFT Query Methods
   async getAllNFTs(): Promise<FrontendNFTInfo[]> {
     try {
-      const result = await this.nftActor.list_all_nfts();
+      const actor = this.getActor();
+      const result = await actor.list_all_nfts();
       return result.map((nft: NFTInfo) => this.convertNFTInfo(nft));
     } catch (error) {
       this.handleError(error);
@@ -47,7 +83,8 @@ export class NFTService extends BaseService {
 
   async getNFT(id: number): Promise<FrontendNFTInfo | null> {
     try {
-      const result = await this.nftActor.get_nft(BigInt(id));
+      const actor = this.getActor();
+      const result = await actor.get_nft(BigInt(id));
       if (result.length > 0 && result[0]) {
         return this.convertNFTInfo(result[0]);
       }
@@ -59,7 +96,8 @@ export class NFTService extends BaseService {
 
   async getAIGeneratedNFTs(): Promise<FrontendNFTInfo[]> {
     try {
-      const result = await this.nftActor.get_ai_generated_nfts();
+      const actor = this.getActor();
+      const result = await actor.get_ai_generated_nfts();
       return result.map((nft) => this.convertNFTInfo(nft));
     } catch (error) {
       this.handleError(error);
@@ -72,7 +110,8 @@ export class NFTService extends BaseService {
     self_made: number;
   }> {
     try {
-      const result = await this.nftActor.get_stats();
+      const actor = this.getActor();
+      const result = await actor.get_stats();
       return {
         total_nfts: this.convertBigIntToNumber(result.total_nfts),
         ai_generated: this.convertBigIntToNumber(result.ai_generated),
@@ -85,7 +124,8 @@ export class NFTService extends BaseService {
 
   async getAllTraitTypes(): Promise<string[]> {
     try {
-      return await this.nftActor.get_all_trait_types();
+      const actor = this.getActor();
+      return await actor.get_all_trait_types();
     } catch (error) {
       this.handleError(error);
     }
@@ -93,7 +133,8 @@ export class NFTService extends BaseService {
 
   async getTraitValues(traitType: string): Promise<string[]> {
     try {
-      return await this.nftActor.get_trait_values(traitType);
+      const actor = this.getActor();
+      return await actor.get_trait_values(traitType);
     } catch (error) {
       this.handleError(error);
     }
@@ -104,7 +145,8 @@ export class NFTService extends BaseService {
     traitValue: string,
   ): Promise<FrontendNFTInfo[]> {
     try {
-      const result = await this.nftActor.get_nfts_by_trait(
+      const actor = this.getActor();
+      const result = await actor.get_nfts_by_trait(
         traitType,
         traitValue,
       );
@@ -116,7 +158,8 @@ export class NFTService extends BaseService {
 
   async getNFTsByRarity(rarity: string): Promise<FrontendNFTInfo[]> {
     try {
-      const result = await this.nftActor.get_nfts_by_rarity(rarity);
+      const actor = this.getActor();
+      const result = await actor.get_nfts_by_rarity(rarity);
       return result.map((nft) => this.convertNFTInfo(nft));
     } catch (error) {
       this.handleError(error);
@@ -126,7 +169,8 @@ export class NFTService extends BaseService {
   // ICRC-7 Standard Methods
   async getBalance(account: Account): Promise<number> {
     try {
-      const result = await this.nftActor.icrc7_balance_of([account]);
+      const actor = this.getActor();
+      const result = await actor.icrc7_balance_of([account]);
       return this.convertBigIntToNumber(result[0]);
     } catch (error) {
       this.handleError(error);
@@ -135,7 +179,8 @@ export class NFTService extends BaseService {
 
   async getOwnerOf(tokenIds: number[]): Promise<(Account | null)[]> {
     try {
-      const result = await this.nftActor.icrc7_owner_of(
+      const actor = this.getActor();
+      const result = await actor.icrc7_owner_of(
         tokenIds.map((id) => BigInt(id)),
       );
       return result.map((owner) =>
@@ -152,7 +197,8 @@ export class NFTService extends BaseService {
     take?: number,
   ): Promise<number[]> {
     try {
-      const result = await this.nftActor.icrc7_tokens_of(
+      const actor = this.getActor();
+      const result = await actor.icrc7_tokens_of(
         account,
         prev ? [BigInt(prev)] : [],
         take ? [BigInt(take)] : [],
@@ -165,7 +211,8 @@ export class NFTService extends BaseService {
 
   async getCollectionMetadata(): Promise<Record<string, any>> {
     try {
-      const result = await this.nftActor.icrc7_collection_metadata();
+      const actor = this.getActor();
+      const result = await actor.icrc7_collection_metadata();
       const metadata: Record<string, any> = {};
       result.forEach(([key, value]) => {
         if ("Text" in value) {
@@ -194,7 +241,8 @@ export class NFTService extends BaseService {
   ): Promise<number> {
     try {
       const toPrincipal = this.convertToPrincipal(to);
-      const result = await this.nftActor.mint_nft(
+      const actor = this.getActor();
+      const result = await actor.mint_nft(
         toPrincipal,
         name,
         description,
@@ -219,7 +267,8 @@ export class NFTService extends BaseService {
         created_at_time: arg.created_at_time || [],
       }));
 
-      const result = await this.nftActor.icrc7_transfer(args);
+      const actor = this.getActor();
+      const result = await actor.icrc7_transfer(args);
       return result.map((error) => (error ? Object.keys(error)[0] : null));
     } catch (error) {
       this.handleError(error);
@@ -228,7 +277,8 @@ export class NFTService extends BaseService {
 
   async generateAIImage(prompt: string): Promise<AIImageResult> {
     try {
-      const result = await this.nftActor.generate_ai_image(prompt);
+      const actor = this.getActor();
+      const result = await actor.generate_ai_image(prompt);
       return this.handleResult(result);
     } catch (error) {
       this.handleError(error);

@@ -1,6 +1,6 @@
 import { HttpAgent, Identity } from "@dfinity/agent";
-import { BaseService } from "./base.service";
-import { idlFactory } from "declarations/preferences_contract";
+import { ApiError, BaseService } from "./base.service";
+import { idlFactory as preferencesIdlFactory } from "declarations/preferences_contract";
 import { _SERVICE as PreferencesContract } from "declarations/preferences_contract/preferences_contract.did";
 import type { UserPreferences, PreferencesInput } from "@/types";
 import { getCanisterId } from "@/config/canisters";
@@ -8,32 +8,38 @@ import { getCanisterId } from "@/config/canisters";
 export class PreferencesService extends BaseService {
   private actor?: PreferencesContract;
 
-  constructor(agent?: HttpAgent, identity?: Identity) {
+  constructor(
+    private canisterId: string,
+    agent: HttpAgent,
+    identity: Identity,
+  ) {
     super(agent, identity);
     this.initializeActor();
   }
 
   private initializeActor() {
-    if (!this.agent) return;
-
-    const canisterId = getCanisterId('preferences_contract');
-    if (!canisterId) {
-      console.warn("Preferences contract canister ID not found");
-      return;
+    try {
+      if (!this.canisterId) {
+        throw new Error("Preferences canister ID not provided");
+      }
+      this.actor = this.createActor<PreferencesContract>(
+        this.canisterId,
+        preferencesIdlFactory,
+      );
+    } catch (error) {
+      console.error("Failed to initialize preferences actor:", error);
+      throw new ApiError(
+        "Failed to initialize preferences service",
+        "INIT_ERROR",
+      );
     }
-
-    this.actor = this.createActor<PreferencesContract>(canisterId, idlFactory);
   }
 
-  public updateAgent(agent: HttpAgent, identity?: Identity) {
-    super.updateAgent(agent, identity);
-    this.initializeActor();
-  }
-
-  private ensureActor() {
+  private getActor(): PreferencesContract {
     if (!this.actor) {
-      throw new Error(
-        "Preferences service not initialized. Please authenticate first.",
+      throw new ApiError(
+        "Preferences actor not initialized",
+        "ACTOR_NOT_INITIALIZED",
       );
     }
     return this.actor;
@@ -42,7 +48,7 @@ export class PreferencesService extends BaseService {
   // Core preferences methods
   async createPreferences(input: PreferencesInput): Promise<UserPreferences> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       const result = await actor.createPreferences(input);
       return this.handleResult(result);
     } catch (error) {
@@ -52,7 +58,7 @@ export class PreferencesService extends BaseService {
 
   async getPreferences(principalId: string): Promise<UserPreferences> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       const result = await actor.getPreferences(principalId);
       return this.handleResult(result);
     } catch (error) {
@@ -62,7 +68,7 @@ export class PreferencesService extends BaseService {
 
   async updatePreferences(input: PreferencesInput): Promise<UserPreferences> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       const result = await actor.updatePreferences(input);
       return this.handleResult(result);
     } catch (error) {
@@ -72,7 +78,7 @@ export class PreferencesService extends BaseService {
 
   async deletePreferences(principalId: string): Promise<string> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       const result = await actor.deletePreferences(principalId);
       return this.handleResult(result);
     } catch (error) {
@@ -85,7 +91,7 @@ export class PreferencesService extends BaseService {
     preference: string,
   ): Promise<UserPreferences> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       const result = await actor.addPreference(principalId, preference);
       return this.handleResult(result);
     } catch (error) {
@@ -98,7 +104,7 @@ export class PreferencesService extends BaseService {
     preference: string,
   ): Promise<UserPreferences> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       const result = await actor.removePreference(principalId, preference);
       return this.handleResult(result);
     } catch (error) {
@@ -109,7 +115,7 @@ export class PreferencesService extends BaseService {
   // Query methods
   async getAllPreferences(): Promise<UserPreferences[]> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.getAllPreferences();
     } catch (error) {
       this.handleError(error);
@@ -118,7 +124,7 @@ export class PreferencesService extends BaseService {
 
   async getAllUserIds(): Promise<string[]> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.getAllUserIds();
     } catch (error) {
       this.handleError(error);
@@ -127,7 +133,7 @@ export class PreferencesService extends BaseService {
 
   async hasPreferences(principalId: string): Promise<boolean> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.hasPreferences(principalId);
     } catch (error) {
       this.handleError(error);
@@ -136,7 +142,7 @@ export class PreferencesService extends BaseService {
 
   async getUsersByPreference(preference: string): Promise<UserPreferences[]> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.getUsersByPreference(preference);
     } catch (error) {
       this.handleError(error);
@@ -145,7 +151,7 @@ export class PreferencesService extends BaseService {
 
   async searchPreferences(query: string): Promise<UserPreferences[]> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.searchPreferences(query);
     } catch (error) {
       this.handleError(error);
@@ -159,7 +165,7 @@ export class PreferencesService extends BaseService {
     average_preferences_per_user: bigint;
   }> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.getStats();
     } catch (error) {
       this.handleError(error);
@@ -168,7 +174,7 @@ export class PreferencesService extends BaseService {
 
   async getPreferencesCount(): Promise<bigint> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.getPreferencesCount();
     } catch (error) {
       this.handleError(error);
@@ -177,7 +183,7 @@ export class PreferencesService extends BaseService {
 
   async healthCheck(): Promise<string> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.healthCheck();
     } catch (error) {
       this.handleError(error);

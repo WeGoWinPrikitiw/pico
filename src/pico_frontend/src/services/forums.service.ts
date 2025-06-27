@@ -17,28 +17,39 @@ import { getCanisterId } from "@/config/canisters";
 export class ForumsService extends BaseService {
   private actor?: ForumsContractService;
 
-  constructor(agent: HttpAgent, identity: Identity) {
+  constructor(
+    private canisterId: string,
+    agent: HttpAgent,
+    identity: Identity,
+  ) {
     super(agent, identity);
     this.initializeActor();
   }
 
   private initializeActor() {
     try {
-      const canisterId = getCanisterId('forums_contract');
-      if (!canisterId) {
-        throw new Error("Forums canister ID not found");
+      if (!this.canisterId) {
+        throw new Error("Forums canister ID not provided");
       }
-
-      this.actor = this.createActor<ForumsContractService>(canisterId, forumsIdlFactory);
+      this.actor = this.createActor<ForumsContractService>(
+        this.canisterId,
+        forumsIdlFactory,
+      );
     } catch (error) {
       console.error("Failed to initialize forums actor:", error);
-      throw new ApiError("Failed to initialize forums service", "INIT_ERROR");
+      throw new ApiError(
+        "Failed to initialize forums service",
+        "INIT_ERROR",
+      );
     }
   }
 
   private getActor(): ForumsContractService {
     if (!this.actor) {
-      throw new ApiError("Forums actor not initialized", "ACTOR_NOT_INITIALIZED");
+      throw new ApiError(
+        "Forums actor not initialized",
+        "ACTOR_NOT_INITIALIZED",
+      );
     }
     return this.actor;
   }

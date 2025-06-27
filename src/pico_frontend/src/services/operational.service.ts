@@ -1,9 +1,9 @@
-import { BaseService } from "./base.service";
+import { ApiError, BaseService } from "./base.service";
 import type { OperationalTransaction } from "@/types";
 import {
   idlFactory as operationalIdlFactory
 } from "../../../declarations/operational_contract";
-import { getCanisterId } from "@/config/canisters";
+import { HttpAgent, Identity } from "@dfinity/agent";
 
 export interface OperationalActor {
   top_up: (
@@ -72,11 +72,43 @@ export interface OperationalActor {
 }
 
 export class OperationalService extends BaseService {
-  private get operationalActor(): OperationalActor {
-    return this.createActor<OperationalActor>(
-      getCanisterId('operational_contract'),
-      operationalIdlFactory,
-    );
+  private actor?: OperationalActor;
+
+  constructor(
+    private canisterId: string,
+    agent: HttpAgent,
+    identity: Identity,
+  ) {
+    super(agent, identity);
+    this.initializeActor();
+  }
+
+  private initializeActor() {
+    try {
+      if (!this.canisterId) {
+        throw new Error("Operational canister ID not provided");
+      }
+      this.actor = this.createActor<OperationalActor>(
+        this.canisterId,
+        operationalIdlFactory,
+      );
+    } catch (error) {
+      console.error("Failed to initialize operational actor:", error);
+      throw new ApiError(
+        "Failed to initialize operational service",
+        "INIT_ERROR",
+      );
+    }
+  }
+
+  private getActor(): OperationalActor {
+    if (!this.actor) {
+      throw new ApiError(
+        "Operational actor not initialized",
+        "ACTOR_NOT_INITIALIZED",
+      );
+    }
+    return this.actor;
   }
 
   // Token Operations
@@ -85,7 +117,8 @@ export class OperationalService extends BaseService {
     amount: number,
   ): Promise<{ transactionId: number; message: string }> {
     try {
-      const result = await this.operationalActor.top_up(
+      const actor = this.getActor();
+      const result = await actor.top_up(
         userPrincipal,
         BigInt(amount),
       );
@@ -104,7 +137,8 @@ export class OperationalService extends BaseService {
     amount: number,
   ): Promise<{ transactionId: number; mintCommand: string }> {
     try {
-      const result = await this.operationalActor.mint_to_user(
+      const actor = this.getActor();
+      const result = await actor.mint_to_user(
         userPrincipal,
         BigInt(amount),
       );
@@ -120,7 +154,8 @@ export class OperationalService extends BaseService {
 
   async getUserBalance(userPrincipal: string): Promise<number> {
     try {
-      const result = await this.operationalActor.getUserBalance(userPrincipal);
+      const actor = this.getActor();
+      const result = await actor.getUserBalance(userPrincipal);
       const balance = this.handleResult(result);
       return this.convertBigIntToNumber(balance);
     } catch (error) {
@@ -130,7 +165,8 @@ export class OperationalService extends BaseService {
 
   async checkAllowance(userPrincipal: string): Promise<number> {
     try {
-      const result = await this.operationalActor.check_allowance(userPrincipal);
+      const actor = this.getActor();
+      const result = await actor.check_allowance(userPrincipal);
       const allowance = this.handleResult(result);
       return this.convertBigIntToNumber(allowance);
     } catch (error) {
@@ -147,7 +183,8 @@ export class OperationalService extends BaseService {
     forumId?: number,
   ): Promise<{ transactionId: number; message: string }> {
     try {
-      const result = await this.operationalActor.buy_nft(
+      const actor = this.getActor();
+      const result = await actor.buy_nft(
         buyer,
         seller,
         BigInt(nftId),
@@ -174,7 +211,8 @@ export class OperationalService extends BaseService {
     approvalMessage: string;
   }> {
     try {
-      const result = await this.operationalActor.check_nft_purchase_approval(
+      const actor = this.getActor();
+      const result = await actor.check_nft_purchase_approval(
         buyer,
         BigInt(price),
       );
@@ -201,7 +239,8 @@ export class OperationalService extends BaseService {
     javascriptExample: string;
   }> {
     try {
-      const result = await this.operationalActor.get_approval_info(
+      const actor = this.getActor();
+      const result = await actor.get_approval_info(
         BigInt(amount),
       );
       return {
@@ -220,8 +259,8 @@ export class OperationalService extends BaseService {
     userPrincipal: string,
   ): Promise<OperationalTransaction[]> {
     try {
-      const result =
-        await this.operationalActor.getUserTransactions(userPrincipal);
+      const actor = this.getActor();
+      const result = await actor.getUserTransactions(userPrincipal);
       return result.map(this.mapTransaction);
     } catch (error) {
       this.handleError(error);
@@ -230,7 +269,8 @@ export class OperationalService extends BaseService {
 
   async getAllTransactions(): Promise<OperationalTransaction[]> {
     try {
-      const result = await this.operationalActor.getAllTransactions();
+      const actor = this.getActor();
+      const result = await actor.getAllTransactions();
       return result.map(this.mapTransaction);
     } catch (error) {
       this.handleError(error);
@@ -241,7 +281,8 @@ export class OperationalService extends BaseService {
     nftId: number,
   ): Promise<OperationalTransaction[]> {
     try {
-      const result = await this.operationalActor.getNFTTransactionHistory(
+      const actor = this.getActor();
+      const result = await actor.getNFTTransactionHistory(
         BigInt(nftId),
       );
       return result.map(this.mapTransaction);
@@ -257,7 +298,8 @@ export class OperationalService extends BaseService {
     decimals: number;
   }> {
     try {
-      const result = await this.operationalActor.getTokenInfo();
+      const actor = this.getActor();
+      const result = await actor.getTokenInfo();
       return this.handleResult(result);
     } catch (error) {
       this.handleError(error);
@@ -269,7 +311,8 @@ export class OperationalService extends BaseService {
     minterBalance: number;
   }> {
     try {
-      const result = await this.operationalActor.getTotalSupplyInfo();
+      const actor = this.getActor();
+      const result = await actor.getTotalSupplyInfo();
       const data = this.handleResult(result);
       return {
         holdersCount: this.convertBigIntToNumber(data.holders_count),
@@ -283,7 +326,8 @@ export class OperationalService extends BaseService {
   // Health Check
   async isContractHealthy(): Promise<string> {
     try {
-      return await this.operationalActor.is_contract_healthy();
+      const actor = this.getActor();
+      return await actor.is_contract_healthy();
     } catch (error) {
       this.handleError(error);
     }

@@ -11,20 +11,17 @@
       },
       "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz"
     },
-
     "nft_contract": {
       "main": "src/pico_backend/nft.mo",
       "type": "motoko"
     },
     "operational_contract": {
       "main": "src/pico_backend/operational.mo",
-      "type": "motoko",
-      "specified_id": "uxrrr-q7777-77774-qaaaq-cai"
+      "type": "motoko"
     },
     "token_contract": {
       "main": "src/pico_backend/token.mo",
-      "type": "motoko",
-      "specified_id": "ucwa4-rx777-77774-qaada-cai"
+      "type": "motoko"
     },
     "preferences_contract": {
       "main": "src/pico_backend/preferences.mo",
@@ -32,11 +29,22 @@
     },
     "forums_contract": {
       "main": "src/pico_backend/forums.mo",
-      "type": "motoko"
+      "type": "motoko",
+      "dependencies": [
+        "operational_contract"
+      ]
     },
     "pico_frontend": {
-      "dependencies": ["nft_contract", "operational_contract", "preferences_contract", "forums_contract", "token_contract"],
-      "source": ["src/pico_frontend/dist"],
+      "dependencies": [
+        "nft_contract",
+        "operational_contract",
+        "preferences_contract",
+        "forums_contract",
+        "token_contract"
+      ],
+      "source": [
+        "src/pico_frontend/dist"
+      ],
       "type": "assets",
       "workspace": "pico_frontend"
     },
@@ -44,7 +52,7 @@
       "type": "custom",
       "candid": "icrc1_ledger.did",
       "wasm": "icrc1_ledger.wasm.gz",
-      "init_arg": "(variant { Init = record { token_symbol = \"PiCO\"; token_name = \"PiCO\"; minting_account = record { owner = principal \"uxrrr-q7777-77774-qaaaq-cai\" }; transfer_fee = 10_000; metadata = vec {}; feature_flags = opt record { icrc2 = true }; initial_balances = vec { record { record { owner = principal \"uxrrr-q7777-77774-qaaaq-cai\" }; 100_000_000_000_000 } }; archive_options = record { num_blocks_to_archive = 1000; trigger_threshold = 2000; controller_id = principal \"igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe\"; cycles_for_archive_creation = opt 10_000_000_000_000 } } })"
+      "init_arg": "(variant { Init = record { token_symbol = \"PiCO\"; token_name = \"PiCO\"; minting_account = record { owner = principal \"umunu-kh777-77774-qaaca-cai\" }; transfer_fee = 10_000; metadata = vec {}; feature_flags = opt record { icrc2 = true }; initial_balances = vec { record { record { owner = principal \"umunu-kh777-77774-qaaca-cai\" }; 100_000_000_000_000 } }; archive_options = record { num_blocks_to_archive = 1000; trigger_threshold = 2000; controller_id = principal \"igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe\"; cycles_for_archive_creation = opt 10_000_000_000_000 } } })"
     }
   },
   "defaults": {

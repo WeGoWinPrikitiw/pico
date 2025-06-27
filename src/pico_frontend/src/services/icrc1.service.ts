@@ -1,6 +1,6 @@
 import { HttpAgent, Identity } from "@dfinity/agent";
-import { BaseService } from "./base.service";
-import { idlFactory } from "declarations/icrc1_ledger_canister";
+import { ApiError, BaseService } from "./base.service";
+import { idlFactory as icrc1IdlFactory } from "declarations/icrc1_ledger_canister";
 import { _SERVICE as ICRC1Contract } from "declarations/icrc1_ledger_canister/icrc1_ledger_canister.did";
 import type {
   Account,
@@ -19,32 +19,38 @@ import { getCanisterId } from "@/config/canisters";
 export class ICRC1Service extends BaseService {
   private actor?: ICRC1Contract;
 
-  constructor(agent?: HttpAgent, identity?: Identity) {
+  constructor(
+    private canisterId: string,
+    agent: HttpAgent,
+    identity: Identity,
+  ) {
     super(agent, identity);
     this.initializeActor();
   }
 
   private initializeActor() {
-    if (!this.agent) return;
-
-    const canisterId = getCanisterId('icrc1_ledger_canister');
-    if (!canisterId) {
-      console.warn("ICRC1 ledger canister ID not found");
-      return;
+    try {
+      if (!this.canisterId) {
+        throw new Error("ICRC1 canister ID not provided");
+      }
+      this.actor = this.createActor<ICRC1Contract>(
+        this.canisterId,
+        icrc1IdlFactory,
+      );
+    } catch (error) {
+      console.error("Failed to initialize icrc1 actor:", error);
+      throw new ApiError(
+        "Failed to initialize icrc1 service",
+        "INIT_ERROR",
+      );
     }
-
-    this.actor = this.createActor<ICRC1Contract>(canisterId, idlFactory);
   }
 
-  public updateAgent(agent: HttpAgent, identity?: Identity) {
-    super.updateAgent(agent, identity);
-    this.initializeActor();
-  }
-
-  private ensureActor() {
+  private getActor(): ICRC1Contract {
     if (!this.actor) {
-      throw new Error(
-        "ICRC1 service not initialized. Please authenticate first.",
+      throw new ApiError(
+        "ICRC1 actor not initialized",
+        "ACTOR_NOT_INITIALIZED",
       );
     }
     return this.actor;
@@ -53,7 +59,7 @@ export class ICRC1Service extends BaseService {
   // Core ICRC1 methods
   async getBalance(account: Account): Promise<Tokens> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.icrc1_balance_of(account);
     } catch (error) {
       this.handleError(error);
@@ -62,7 +68,7 @@ export class ICRC1Service extends BaseService {
 
   async transfer(args: TransferArg): Promise<TransferResult> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.icrc1_transfer(args);
     } catch (error) {
       this.handleError(error);
@@ -71,7 +77,7 @@ export class ICRC1Service extends BaseService {
 
   async getTotalSupply(): Promise<Tokens> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.icrc1_total_supply();
     } catch (error) {
       this.handleError(error);
@@ -80,7 +86,7 @@ export class ICRC1Service extends BaseService {
 
   async getDecimals(): Promise<number> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.icrc1_decimals();
     } catch (error) {
       this.handleError(error);
@@ -89,7 +95,7 @@ export class ICRC1Service extends BaseService {
 
   async getFee(): Promise<Tokens> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.icrc1_fee();
     } catch (error) {
       this.handleError(error);
@@ -98,7 +104,7 @@ export class ICRC1Service extends BaseService {
 
   async getName(): Promise<string> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.icrc1_name();
     } catch (error) {
       this.handleError(error);
@@ -107,7 +113,7 @@ export class ICRC1Service extends BaseService {
 
   async getSymbol(): Promise<string> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.icrc1_symbol();
     } catch (error) {
       this.handleError(error);
@@ -116,7 +122,7 @@ export class ICRC1Service extends BaseService {
 
   async getMetadata(): Promise<Array<[string, MetadataValue]>> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.icrc1_metadata();
     } catch (error) {
       this.handleError(error);
@@ -125,7 +131,7 @@ export class ICRC1Service extends BaseService {
 
   async getMintingAccount(): Promise<Account | null> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       const result = await actor.icrc1_minting_account();
       return result.length > 0 ? result[0]! : null;
     } catch (error) {
@@ -136,7 +142,7 @@ export class ICRC1Service extends BaseService {
   // ICRC2 methods (approve/allowance)
   async approve(args: ApproveArgs): Promise<ApproveResult> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.icrc2_approve(args);
     } catch (error) {
       this.handleError(error);
@@ -145,7 +151,7 @@ export class ICRC1Service extends BaseService {
 
   async getAllowance(args: AllowanceArgs): Promise<Allowance> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.icrc2_allowance(args);
     } catch (error) {
       this.handleError(error);
@@ -154,7 +160,7 @@ export class ICRC1Service extends BaseService {
 
   async transferFrom(args: any): Promise<any> {
     try {
-      const actor = this.ensureActor();
+      const actor = this.getActor();
       return await actor.icrc2_transfer_from(args);
     } catch (error) {
       this.handleError(error);
