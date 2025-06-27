@@ -15,13 +15,14 @@ module {
 
   // Canister IDs (auto-updated by script)
   public let INTERNET_IDENTITY_CANISTER = "rdmx6-jaaaa-aaaaa-aaadq-cai";
-  public let NFT_CONTRACT_CANISTER = "uzt4z-lp777-77774-qaabq-cai";
-  public let OPERATIONAL_CONTRACT_CANISTER = "umunu-kh777-77774-qaaca-cai";
-  public let TOKEN_CONTRACT_CANISTER = "ufxgi-4p777-77774-qaadq-cai";
-  public let PREFERENCES_CONTRACT_CANISTER = "ucwa4-rx777-77774-qaada-cai";
-  public let FORUMS_CONTRACT_CANISTER = "uxrrr-q7777-77774-qaaaq-cai";
-  public let ICRC1_LEDGER_CANISTER = "u6s2n-gx777-77774-qaaba-cai";
-  public let PICO_FRONTEND_CANISTER = "ulvla-h7777-77774-qaacq-cai";
+  public let NFT_CONTRACT_CANISTER = "umunu-kh777-77774-qaaca-cai";
+  public let OPERATIONAL_CONTRACT_CANISTER = "ulvla-h7777-77774-qaacq-cai";
+  public let TOKEN_CONTRACT_CANISTER = "vizcg-th777-77774-qaaea-cai";
+  public let PREFERENCES_CONTRACT_CANISTER = "ufxgi-4p777-77774-qaadq-cai";
+  public let FORUMS_CONTRACT_CANISTER = "u6s2n-gx777-77774-qaaba-cai";
+  public let ICRC1_LEDGER_CANISTER = "uzt4z-lp777-77774-qaabq-cai";
+  public let PICO_FRONTEND_CANISTER = "ucwa4-rx777-77774-qaada-cai";
+  public let AI_CONTRACT_CANISTER = "uxrrr-q7777-77774-qaaaq-cai";
 
   // Admin and system principals
   public let ADMIN_PRINCIPAL = "2sl3b-tf63d-g5z2g-44tut-vfgiw-af5tm-j65bi-37h3o-uce26-wvs2v-qqe";

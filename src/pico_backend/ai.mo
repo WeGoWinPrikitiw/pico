@@ -86,7 +86,7 @@ actor RecommendationSystem {
 
     try {
       // Step 1: Fetch all NFT data from NFT contract with error handling
-      let nftContract: NFTContract = actor("x5pps-pqaaa-aaaab-qadbq-cai"); // NFT contract canister ID
+      let nftContract: NFTContract = actor(Config.NFT_CONTRACT_CANISTER); // NFT contract canister ID
       let allNFTs = try {
         await nftContract.list_all_nfts()
       } catch (error) {
@@ -101,7 +101,7 @@ actor RecommendationSystem {
       };
 
       // Step 2: Get user preferences from preferences contract
-      let preferencesContract: PreferencesContract = actor("uy3uz-syaaa-aaaab-qadka-cai"); // Preferences contract canister ID
+      let preferencesContract: PreferencesContract = actor(Config.PREFERENCES_CONTRACT_CANISTER); // Preferences contract canister ID
       let userPrefs = try {
         let hasPrefs = await preferencesContract.hasPreferences(userPrincipal);
         if (hasPrefs) {
@@ -195,7 +195,7 @@ actor RecommendationSystem {
         switch (parseNFTIds(responseText)) {
           case (#ok(nftIds)) {
             try {
-              let nftContract: NFTContract = actor("x5pps-pqaaa-aaaab-qadbq-cai"); // NFT contract canister ID
+              let nftContract: NFTContract = actor(Config.NFT_CONTRACT_CANISTER); // NFT contract canister ID
               var detailedNFTs: [NFTInfo] = [];
               
               // Note: This would need a get_nft method in the NFTContract interface
@@ -219,10 +219,10 @@ actor RecommendationSystem {
   // Debug method to check data retrieval
   public func debugGetData(): async Text {
     try {
-      let nftContract: NFTContract = actor("x5pps-pqaaa-aaaab-qadbq-cai");
+      let nftContract: NFTContract = actor(Config.NFT_CONTRACT_CANISTER);
       let allNFTs = await nftContract.list_all_nfts();
       
-      let preferencesContract: PreferencesContract = actor("uy3uz-syaaa-aaaab-qadka-cai");
+      let preferencesContract: PreferencesContract = actor(Config.PREFERENCES_CONTRACT_CANISTER);
       let userPrefs = try {
         switch (await preferencesContract.getPreferences("igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe")) {
           case (#ok(prefs)) ?prefs;
@@ -259,7 +259,7 @@ actor RecommendationSystem {
   public func getRecommendationsDebug(userPrincipal: Text): async Text {
     try {
       // Step 1: Fetch NFT data
-      let nftContract: NFTContract = actor("x5pps-pqaaa-aaaab-qadbq-cai");
+      let nftContract: NFTContract = actor(Config.NFT_CONTRACT_CANISTER);
       let allNFTs = try {
         await nftContract.list_all_nfts()
       } catch (error) {
@@ -271,7 +271,7 @@ actor RecommendationSystem {
       };
 
       // Step 2: Get user preferences
-      let preferencesContract: PreferencesContract = actor("uy3uz-syaaa-aaaab-qadka-cai");
+      let preferencesContract: PreferencesContract = actor(Config.PREFERENCES_CONTRACT_CANISTER);
       let userPrefs = try {
         let hasPrefs = await preferencesContract.hasPreferences(userPrincipal);
         if (hasPrefs) {
