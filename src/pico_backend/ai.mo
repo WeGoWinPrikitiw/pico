@@ -101,7 +101,7 @@ actor RecommendationSystem {
       };
 
       // Step 2: Get user preferences from preferences contract
-      let preferencesContract: PreferencesContract = actor("wzcaa-wqaaa-aaaab-qadhq-cai"); // Preferences contract canister ID
+      let preferencesContract: PreferencesContract = actor("uy3uz-syaaa-aaaab-qadka-cai"); // Preferences contract canister ID
       let userPrefs = try {
         let hasPrefs = await preferencesContract.hasPreferences(userPrincipal);
         if (hasPrefs) {
@@ -123,15 +123,22 @@ actor RecommendationSystem {
       let prompt = "Based on these NFTs and user preferences, return ONLY a JSON array of recommended NFT IDs.\n\n" #
                    nftContext # "\n" #
                    preferencesContext # "\n\n" #
-                   "User likes: fantasy, dragons, epic rarity, high detail, cyberpunk style\n" #
-                   "Return format: [1,3] or [2] or []\n" #
+                   "Match NFT traits with user preferences. Return JSON array of actual NFT IDs or []\n" #
                    "Return ONLY the array, no explanation:";
 
       // Step 4: Get LLM recommendation
       let llmResponse = await LLM.prompt(#Llama3_1_8B, prompt);
       
-      // Return the response directly (it should be a JSON array)
-      #ok(Text.trim(llmResponse, #text " \n\t\r"))
+      // Step 5: Validate format with second LLM call
+      let validationPrompt = "ANGRY INSTRUCTION: " # llmResponse # "\n" #
+                            "RETURN ONLY THE ARRAY! NO CODE! NO EXPLANATION! NO TEXT!\n" #
+                            "Example: [1,3] or [2] or []\n" #
+                            "DO NOT WRITE ANYTHING ELSE! JUST THE ARRAY!";
+      
+      let validatedResponse = await LLM.prompt(#Llama3_1_8B, validationPrompt);
+      
+      // Return the validated response
+      #ok(Text.trim(validatedResponse, #text " \n\t\r"))
       
     } catch (error) {
       // Ultimate fallback - return empty array format
@@ -215,7 +222,7 @@ actor RecommendationSystem {
       let nftContract: NFTContract = actor("x5pps-pqaaa-aaaab-qadbq-cai");
       let allNFTs = await nftContract.list_all_nfts();
       
-      let preferencesContract: PreferencesContract = actor("wzcaa-wqaaa-aaaab-qadhq-cai");
+      let preferencesContract: PreferencesContract = actor("uy3uz-syaaa-aaaab-qadka-cai");
       let userPrefs = try {
         switch (await preferencesContract.getPreferences("igjqa-zhtmo-qhppn-eh7lt-5viq5-4e5qj-lhl7n-qd2fz-2yzx2-oczyc-tqe")) {
           case (#ok(prefs)) ?prefs;
@@ -264,7 +271,7 @@ actor RecommendationSystem {
       };
 
       // Step 2: Get user preferences
-      let preferencesContract: PreferencesContract = actor("wzcaa-wqaaa-aaaab-qadhq-cai");
+      let preferencesContract: PreferencesContract = actor("uy3uz-syaaa-aaaab-qadka-cai");
       let userPrefs = try {
         let hasPrefs = await preferencesContract.hasPreferences(userPrincipal);
         if (hasPrefs) {
@@ -286,8 +293,7 @@ actor RecommendationSystem {
       let prompt = "Based on these NFTs and user preferences, return ONLY a JSON array of recommended NFT IDs.\n\n" #
                    nftContext # "\n" #
                    preferencesContext # "\n\n" #
-                   "User likes: fantasy, dragons, epic rarity, high detail, cyberpunk style\n" #
-                   "Return format: [1,3] or [2] or []\n" #
+                   "Match NFT traits with user preferences. Return JSON array of actual NFT IDs or []\n" #
                    "Return ONLY the array, no explanation:";
 
       // Step 4: Get LLM recommendation
@@ -297,7 +303,19 @@ actor RecommendationSystem {
         return "STEP 4 FAILED: LLM.prompt call failed - LLM service not available";
       };
       
-      "STEP 4 SUCCESS: LLM Response = " # llmResponse
+      // Step 5: Validate format
+      let validationPrompt = "ANGRY INSTRUCTION: " # llmResponse # "\n" #
+                            "RETURN ONLY THE ARRAY! NO CODE! NO EXPLANATION! NO TEXT!\n" #
+                            "Example: [1,3] or [2] or []\n" #
+                            "DO NOT WRITE ANYTHING ELSE! JUST THE ARRAY!";
+      
+      let validatedResponse = try {
+        await LLM.prompt(#Llama3_1_8B, validationPrompt)
+      } catch (error) {
+        return "STEP 5 FAILED: Validation LLM call failed";
+      };
+      
+      "STEP 4 SUCCESS: Original = " # llmResponse # " | STEP 5 SUCCESS: Validated = " # validatedResponse
       
          } catch (error) {
        "GENERAL ERROR: Exception occurred"
