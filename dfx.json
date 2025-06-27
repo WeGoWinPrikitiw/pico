@@ -34,6 +34,10 @@
         "operational_contract"
       ]
     },
+    "ai_contract": {
+      "main": "src/pico_backend/ai.mo",
+      "type": "motoko"
+    },
     "pico_frontend": {
       "dependencies": [
         "nft_contract",
@@ -58,7 +62,7 @@
   "defaults": {
     "build": {
       "args": "",
-      "packtool": ""
+      "packtool": "mops sources"
     }
   },
   "output_env_file": ".env",
