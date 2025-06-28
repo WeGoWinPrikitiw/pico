@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   Button,
   Card,
@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 
 export function ExplorePage() {
-  const { isAuthenticated, isServicesReady, login, principal } = useAuth();
+  const { isAuthenticated, login } = useAuth();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("trending");
   const [searchQuery, setSearchQuery] = useState("");
