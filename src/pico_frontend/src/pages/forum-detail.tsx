@@ -1,30 +1,20 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
     Button,
     Card,
     CardHeader,
     CardContent,
-    CardTitle,
-    CardDescription,
-    Avatar,
+    CardTitle, Avatar,
     AvatarImage,
     AvatarFallback,
-    Textarea,
-    Separator,
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-    Badge,
+    Textarea, Badge,
     Dialog,
     DialogContent,
     DialogDescription,
     DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-    DialogFooter,
-    Input,
+    DialogTitle, DialogFooter,
+    Input
 } from "@/components/ui";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAuth } from "@/context/auth-context";
@@ -46,12 +36,10 @@ import {
     Trash2,
     ExternalLink,
     Calendar,
-    User,
-    MoreVertical,
-    Image as ImageIcon,
+    User, Image as ImageIcon,
     AlertCircle,
     Eye,
-    Clock,
+    Clock
 } from "lucide-react";
 import { toast } from "sonner";
 
