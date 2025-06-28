@@ -17,6 +17,7 @@ export interface CanisterConfig {
     token_contract: string;
     preferences_contract: string;
     forums_contract: string;
+    ai_contract: string;
     icrc1_ledger_canister: string;
     internet_identity: string;
     pico_frontend: string;
@@ -29,6 +30,7 @@ const defaultConfig: CanisterConfig = {
     token_contract: "ucwa4-rx777-77774-qaada-cai",
     preferences_contract: "vu5yx-eh777-77774-qaaga-cai",
     forums_contract: "vpyes-67777-77774-qaaeq-cai",
+    ai_contract: "vpyes-67777-77774-qaaeq-cai",
     icrc1_ledger_canister: "u6s2n-gx777-77774-qaaba-cai",
     internet_identity: "rdmx6-jaaaa-aaaaa-aaadq-cai",
     pico_frontend: "ulvla-h7777-77774-qaacq-cai",
@@ -42,7 +44,7 @@ const canisterIds: CanisterConfig = {
 // The `getCanisterId` function retrieves the canister ID based on the provided `canisterName`. It first checks for an environment variable override (`CANISTER_ID_MY_CANISTER`) before falling back to the `canisterIds` object. 
 export const getCanisterId = (canisterName: keyof CanisterConfig): string => {
     const envKey = `CANISTER_ID_${canisterName.toUpperCase()}`;
-    const envValue = process.env[envKey];
+    const envValue = import.meta.env[envKey];
 
     if (envValue) {
         return envValue;
@@ -52,7 +54,7 @@ export const getCanisterId = (canisterName: keyof CanisterConfig): string => {
 };
 
 // Network detection
-export const isMainnet = process.env.DFX_NETWORK === "ic";
+export const isMainnet = import.meta.env.DFX_NETWORK === "ic";
 export const isLocal = !isMainnet;
 
 // Host configuration

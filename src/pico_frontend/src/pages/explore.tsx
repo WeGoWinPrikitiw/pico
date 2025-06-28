@@ -15,6 +15,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAuth } from "@/context/auth-context";
 import { createQueryKey } from "@/types";
 import { serviceFactory } from "@/services";
+import { useDetailedAIRecommendations } from "@/hooks";
 import {
   Search,
   Grid3X3,
@@ -28,11 +29,17 @@ import {
 } from "lucide-react";
 
 export function ExplorePage() {
-  const { isAuthenticated, isServicesReady, login } = useAuth();
+  const { isAuthenticated, isServicesReady, login, principal } = useAuth();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("trending");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+
+  // Get AI recommendations for authenticated users
+  const {
+    data: aiRecommendations = [],
+    isLoading: isLoadingRecommendations,
+  } = useDetailedAIRecommendations(5);
 
   const {
     data: allNFTs = [],
@@ -237,6 +244,66 @@ export function ExplorePage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* AI Recommendations Section */}
+        {isAuthenticated && aiRecommendations.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">AI Recommendations for You</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {aiRecommendations.map((nft) => (
+                <Link key={Number(nft.nft_id)} to={`/nft/${Number(nft.nft_id)}`}>
+                  <Card className="group hover:shadow-lg transition-shadow">
+                    <CardContent className="p-0">
+                      <div className="relative aspect-square">
+                        <img
+                          src={nft.image_url || "/placeholder-nft.png"}
+                          alt={nft.name}
+                          className="w-full h-full object-cover rounded-t-lg"
+                        />
+                        <div className="absolute top-2 left-2">
+                          <Badge
+                            variant="secondary"
+                            className="bg-primary/90 text-primary-foreground"
+                          >
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            AI Pick
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <h3 className="font-semibold mb-1 text-sm truncate">{nft.name}</h3>
+                        <p className="font-semibold text-primary text-xs">
+                          {Number(nft.price)} PiCO
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Loading state for recommendations */}
+        {isAuthenticated && isLoadingRecommendations && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">AI Recommendations for You</h2>
+            </div>
+            <div className="flex justify-center py-8">
+              <LoadingSpinner size="sm" />
+              <span className="ml-2 text-muted-foreground">Getting your recommendations...</span>
+            </div>
+          </div>
+        )}
+
+        {/* All NFTs Section */}
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold">All NFTs</h2>
+        </div>
         <div
           className={
             viewMode === "grid"
@@ -246,7 +313,7 @@ export function ExplorePage() {
         >
           {filteredNFTs.length > 0 ? (
             filteredNFTs.map((nft) => (
-              <Link key={nft.nft_id} to={`/nft/${nft.nft_id}`}>
+              <Link key={Number(nft.nft_id)} to={`/nft/${Number(nft.nft_id)}`}>
                 <Card className="group hover:shadow-lg transition-shadow">
                   <CardContent className="p-0">
                     {/* Image */}
@@ -311,7 +378,7 @@ export function ExplorePage() {
                             Current Price
                           </p>
                           <p className="font-semibold text-primary">
-                            {nft.price} PiCO
+                            {Number(nft.price)} PiCO
                           </p>
                         </div>
                         <div className="flex items-center gap-3 text-sm text-muted-foreground">

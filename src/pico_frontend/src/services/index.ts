@@ -1,5 +1,6 @@
 // Export all services
 export { AuthService } from "./auth.service";
+export { AIService } from "./ai.service";
 export { NFTService } from "./nft.service";
 export { OperationalService } from "./operational.service";
 export { ForumsService } from "./forums.service";
@@ -12,6 +13,7 @@ export { BaseService, ApiError } from "./base.service";
 // Import service classes for internal use
 import { AuthService } from "./auth.service";
 import { NFTService } from "./nft.service";
+import { AIService } from "./ai.service";
 import { OperationalService } from "./operational.service";
 import { ForumsService } from "./forums.service";
 import { PreferencesService } from "./preferences.service";
@@ -28,6 +30,7 @@ export class ServiceFactory {
 
   // Service instances
   private nftService?: NFTService;
+  private aiService?: AIService;
   private operationalService?: OperationalService;
   private forumsService?: ForumsService;
   private preferencesService?: PreferencesService;
@@ -63,6 +66,11 @@ export class ServiceFactory {
 
     // Services that require a logged-in user
     if (identity) {
+      this.aiService = new AIService(
+        this.canisterIds.ai_contract,
+        agent,
+        identity,
+      );
       this.operationalService = new OperationalService(
         this.canisterIds.operational_contract,
         agent,
@@ -97,6 +105,13 @@ export class ServiceFactory {
       throw new Error("NFT service not available.");
     }
     return this.nftService;
+  }
+
+  getAIService(): AIService {
+    if (!this.aiService) {
+      throw new Error("AI service not available. Please log in.");
+    }
+    return this.aiService;
   }
 
   getOperationalService(): OperationalService {
@@ -140,6 +155,7 @@ export class ServiceFactory {
     await this.authService.logout();
     // Clear out services
     this.nftService = undefined;
+    this.aiService = undefined;
     this.operationalService = undefined;
     this.forumsService = undefined;
     this.preferencesService = undefined;

@@ -107,6 +107,13 @@ export const createQueryKey = {
   userPreferences: (principal: string) =>
     [...createQueryKey.preferences(), "user", principal] as const,
   preferencesStats: () => [...createQueryKey.preferences(), "stats"] as const,
+
+  // AI keys
+  ai: () => [...createQueryKey.all(), "ai"] as const,
+  aiRecommendations: (principal: string, maxRecommendations?: number) =>
+    [...createQueryKey.ai(), "recommendations", principal, maxRecommendations] as const,
+  aiDetailedRecommendations: (principal: string, maxRecommendations?: number) =>
+    [...createQueryKey.ai(), "detailed-recommendations", principal, maxRecommendations] as const,
 } as const;
 
 // Helper functions for invalidating related queries

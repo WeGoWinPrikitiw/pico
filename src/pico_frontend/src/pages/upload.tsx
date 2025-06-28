@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMintNFT, useGenerateAIImage } from "@/hooks/useNFT";
+import { useCreateForum } from "@/hooks";
 import {
   Button,
   Card,
@@ -68,6 +69,7 @@ export function UploadPage() {
   // Mutations for NFT operations
   const mintNftMutation = useMintNFT();
   const generateAiImageMutation = useGenerateAIImage();
+  const createForumMutation = useCreateForum();
 
   const [aiPrompt, setAiPrompt] = useState({
     prompt: "",
@@ -187,7 +189,8 @@ export function UploadPage() {
     }
 
     try {
-      await mintNftMutation.mutateAsync({
+      // First, mint the NFT
+      const nftTokenId = await mintNftMutation.mutateAsync({
         to: principal,
         name: nftData.title,
         description: nftData.description,
@@ -196,6 +199,26 @@ export function UploadPage() {
         isAiGenerated: nftData.isAiGenerated,
         traits: nftData.traits,
       });
+
+      // If NFT minting is successful, create a forum for it
+      if (nftTokenId) {
+        try {
+          await createForumMutation.mutateAsync({
+            nftId: nftTokenId, // Use the NFT token ID from mint result
+            nftName: nftData.title,
+            title: `Discussion about "${nftData.title}"`,
+            description: `Share your thoughts about this ${nftData.isAiGenerated ? 'AI-generated' : ''} NFT. ${nftData.description}`,
+            principalId: principal,
+          });
+
+          toast.success("NFT minted and forum created successfully!");
+          navigate("/forums"); // Redirect to forums page after successful creation
+        } catch (forumError) {
+          console.error("Failed to create forum:", forumError);
+          toast.warning("NFT minted successfully, but failed to create forum. You can create one manually later.");
+          navigate("/explore"); // Still navigate away even if forum creation fails
+        }
+      }
     } catch (error) {
       console.error("Minting failed:", error);
     }
@@ -256,16 +279,19 @@ export function UploadPage() {
                 disabled={
                   !isFormValid ||
                   mintNftMutation.isPending ||
-                  generateAiImageMutation.isPending
+                  generateAiImageMutation.isPending ||
+                  createForumMutation.isPending
                 }
                 className="bg-gradient-to-r from-primary to-primary/90 shadow-lg"
               >
                 {mintNftMutation.isPending ||
-                  generateAiImageMutation.isPending ? (
+                  generateAiImageMutation.isPending ||
+                  createForumMutation.isPending ? (
                   <LoadingSpinner size="sm" className="mr-2" />
                 ) : (
                   <span className="mr-2">
-                    {mintNftMutation.isPending ? "Minting..." : "Mint NFT"}
+                    {mintNftMutation.isPending ? "Minting..." :
+                      createForumMutation.isPending ? "Creating forum..." : "Mint NFT"}
                   </span>
                 )}
               </Button>
