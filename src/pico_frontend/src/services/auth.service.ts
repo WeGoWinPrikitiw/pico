@@ -9,14 +9,11 @@ export class AuthService extends BaseService {
   async initialize(): Promise<void> {
     try {
       this.authClient = await AuthClient.create();
-
       // Always create an agent, even if not authenticated
       const host = getHost();
-
       if (await this.authClient.isAuthenticated()) {
         const identity = this.authClient.getIdentity();
         this.identity = identity;
-
         this.agent = HttpAgent.createSync({
           identity,
           host
@@ -101,7 +98,8 @@ export class AuthService extends BaseService {
     }
   }
 
-  getPrincipal(): string | undefined {
+  getPrincipal(): string |
+    undefined {
     return this.identity?.getPrincipal().toString();
   }
 

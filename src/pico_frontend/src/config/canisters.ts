@@ -1,5 +1,3 @@
-// src/pico_frontend/src/config/canisters.ts
-
 /**
  * Canister Configuration
  *
@@ -11,7 +9,6 @@
  *
  * Do not edit the generated file manually.
  */
-
 import generatedCanisterIds from "./generated-canister-ids.json";
 
 export interface CanisterConfig {
@@ -36,14 +33,13 @@ const defaultConfig: CanisterConfig = {
     internet_identity: "rdmx6-jaaaa-aaaaa-aaadq-cai",
     pico_frontend: "ulvla-h7777-77774-qaacq-cai",
 };
-
-// Merge configurations: generated IDs override defaults
+// The `canisterIds` object is constructed by merging `defaultConfig` and `generatedCanisterIds.canister_ids`. This ensures that any IDs generated during deployment will override the default placeholders. 
 const canisterIds: CanisterConfig = {
     ...defaultConfig,
-    ...generatedCanisterIds,
+    ...generatedCanisterIds.canister_ids,
 };
 
-// Function to get the final canister ID, respecting environment variable overrides
+// The `getCanisterId` function retrieves the canister ID based on the provided `canisterName`. It first checks for an environment variable override (`CANISTER_ID_MY_CANISTER`) before falling back to the `canisterIds` object. 
 export const getCanisterId = (canisterName: keyof CanisterConfig): string => {
     const envKey = `CANISTER_ID_${canisterName.toUpperCase()}`;
     const envValue = import.meta.env[envKey];
@@ -61,12 +57,14 @@ export const isLocal = !isMainnet;
 
 // Host configuration
 export const getHost = () => {
-    return isMainnet ? "https://ic0.app" : "http://localhost:4943";
+    return isMainnet ?
+        "https://ic0.app" : "http://localhost:4943";
 };
 
 // Identity provider configuration
 export const getIdentityProvider = () => {
     return isMainnet
-        ? "https://identity.ic0.app"
+        ?
+        "https://identity.ic0.app"
         : `http://${getCanisterId("internet_identity")}.localhost:4943`;
 };
