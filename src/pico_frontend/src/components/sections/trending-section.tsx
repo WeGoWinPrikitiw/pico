@@ -213,7 +213,7 @@ export function TrendingSection() {
       </div>
 
       {/* Scrolling Container - Full Width */}
-      <div className="relative w-full overflow-hidden">
+      <div className="relative w-full overflow-hidden py-4">
         {/* Left Gradient */}
         <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-[#0C031A] to-transparent z-10 pointer-events-none"></div>
 
@@ -221,7 +221,7 @@ export function TrendingSection() {
         <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-[#0C031A] to-transparent z-10 pointer-events-none"></div>
 
         {/* Top Row - Scroll Left */}
-        <div className="mb-6 lg:mb-8">
+        <div className="mb-6 lg:mb-8 py-6">
           <div
             className="flex items-start"
             style={{
@@ -243,7 +243,7 @@ export function TrendingSection() {
         </div>
 
         {/* Bottom Row - Scroll Right */}
-        <div>
+        <div className="py-6">
           <div
             className="flex items-start"
             style={{
