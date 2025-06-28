@@ -52,7 +52,7 @@ export const getCanisterId = (canisterName: keyof CanisterConfig): string => {
 };
 
 // Network detection
-export const isMainnet = import.meta.env.DFX_NETWORK === "ic";
+export const isMainnet = process.env.DFX_NETWORK === "ic";
 export const isLocal = !isMainnet;
 
 // Host configuration

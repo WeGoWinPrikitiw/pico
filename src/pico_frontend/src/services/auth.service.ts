@@ -24,7 +24,7 @@ export class AuthService extends BaseService {
       }
 
       // Only fetch root key in development
-      if (import.meta.env.DFX_NETWORK !== "ic") {
+      if (process.env.DFX_NETWORK !== "ic") {
         await this.agent.fetchRootKey();
       }
     } catch (error) {
@@ -55,7 +55,7 @@ export class AuthService extends BaseService {
               });
 
               // Only fetch root key in development
-              if (import.meta.env.DFX_NETWORK !== "ic") {
+              if (process.env.DFX_NETWORK !== "ic") {
                 await this.agent.fetchRootKey();
               }
 
