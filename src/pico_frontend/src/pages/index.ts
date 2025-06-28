@@ -1,9 +1,9 @@
-export * from "./landing";
-export * from "./explore";
-export * from "./posts";
-export * from "./post-detail";
-export * from "./profile";
-export * from "./upload";
-export * from "./operational-dashboard";
-export * from "./app-page";
-export * from "./forums";
+export { LandingPage } from "./landing";
+export { AppPage } from "./app-page";
+export { ExplorePage } from "./explore";
+export { UploadPage } from "./upload";
+export { ForumsPage } from "./forums";
+export { ForumDetailPage } from "./forum-detail";
+export { NFTDetailPage } from "./nft-detail";
+export { ProfilePage } from "./profile";
+export { OperationalDashboard } from "./operational-dashboard";

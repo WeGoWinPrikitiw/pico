@@ -11,8 +11,8 @@ import {
   SheetTrigger,
   Badge,
   Avatar,
-  AvatarFallback,
   AvatarImage,
+  AvatarFallback,
   Separator,
   Popover,
   PopoverContent,
@@ -22,16 +22,14 @@ import { useAuth } from "@/context/auth-context";
 import {
   User,
   Search,
-  Upload,
-  Grid3X3,
-  LogOut,
+  Upload, LogOut,
   Settings,
   Wallet,
   Menu,
   Home,
   Info,
   Star,
-  MessageSquare,
+  MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -45,11 +43,9 @@ export function Header() {
     userBalance,
     refreshBalance,
   } = useAuth();
-
   const isActive = (path: string) => {
     return location.pathname === path;
   };
-
   const NavLink = ({
     to,
     icon: Icon,
@@ -72,7 +68,6 @@ export function Header() {
       {children}
     </Link>
   );
-
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <nav className="container mx-auto px-4 h-14 flex items-center justify-between">
@@ -91,11 +86,7 @@ export function Header() {
                     Explore
                   </NavLink>
                 </NavigationMenuItem>
-                <NavigationMenuItem>
-                  <NavLink to="/posts" icon={Grid3X3}>
-                    Posts
-                  </NavLink>
-                </NavigationMenuItem>
+
                 <NavigationMenuItem>
                   <NavLink to="/upload" icon={Upload}>
                     Upload
@@ -235,9 +226,7 @@ export function Header() {
                     <NavLink to="/explore" icon={Search}>
                       Explore
                     </NavLink>
-                    <NavLink to="/posts" icon={Grid3X3}>
-                      Posts
-                    </NavLink>
+
                     <NavLink to="/upload" icon={Upload}>
                       Upload
                     </NavLink>

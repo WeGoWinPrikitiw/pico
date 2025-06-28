@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMintNFT, useGenerateAIImage } from "@/hooks/useNFT";
+import { useCreateForum } from "@/hooks";
 import {
   Button,
   Card,
@@ -62,6 +63,7 @@ export function UploadPage() {
   // Mutations for NFT operations
   const mintNftMutation = useMintNFT();
   const generateAiImageMutation = useGenerateAIImage();
+  const createForumMutation = useCreateForum();
 
   const [aiPrompt, setAiPrompt] = useState({
     prompt: "",
@@ -265,16 +267,18 @@ export function UploadPage() {
                 disabled={
                   !isFormValid ||
                   mintNftMutation.isPending ||
-                  generateAiImageMutation.isPending
+                  generateAiImageMutation.isPending ||
+                  createForumMutation.isPending
                 }
                 className="bg-gradient-to-r from-primary to-primary/90 shadow-lg"
               >
                 {mintNftMutation.isPending ||
-                generateAiImageMutation.isPending ? (
+                  generateAiImageMutation.isPending ? (
                   <LoadingSpinner size="sm" className="mr-2" />
                 ) : (
                   <span className="mr-2">
-                    {mintNftMutation.isPending ? "Minting..." : "Mint NFT"}
+                    {mintNftMutation.isPending ? "Minting..." :
+                      createForumMutation.isPending ? "Creating forum..." : "Mint NFT"}
                   </span>
                 )}
               </Button>
@@ -344,11 +348,10 @@ export function UploadPage() {
                       </div>
                     ) : (
                       <div
-                        className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer ${
-                          dragOver
+                        className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer ${dragOver
                             ? "border-primary bg-primary/5"
                             : "border-muted-foreground/25 hover:border-muted-foreground/50"
-                        }`}
+                          }`}
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
@@ -400,11 +403,10 @@ export function UploadPage() {
                             className="flex items-center cursor-pointer"
                           >
                             <div
-                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                nftData.isAiGenerated
+                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.isAiGenerated
                                   ? "bg-purple-600 border-purple-600"
                                   : "border-gray-300 hover:border-purple-400"
-                              }`}
+                                }`}
                             >
                               {nftData.isAiGenerated && (
                                 <svg
