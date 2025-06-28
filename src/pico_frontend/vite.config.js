@@ -33,6 +33,9 @@ export default defineConfig({
       },
     },
   },
+  define: {
+    'process.env': 'import.meta.env'
+  },
   server: {
     proxy: {
       "/api": {
