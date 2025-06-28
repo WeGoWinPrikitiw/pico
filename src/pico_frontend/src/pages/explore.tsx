@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Card,
@@ -29,10 +29,28 @@ import {
 
 export function ExplorePage() {
   const { isAuthenticated, isServicesReady, login } = useAuth();
+  const location = useLocation();
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("trending");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+
+  // Check if we came from a fresh mint
+  const freshlyMinted = location.state?.freshlyMinted;
+  const mintedNftId = location.state?.mintedNftId;
+
+  // Force refetch when coming from fresh mint
+  useEffect(() => {
+    if (freshlyMinted) {
+      console.log("Detected fresh mint, forcing refetch...");
+      queryClient.invalidateQueries({ queryKey: createQueryKey.nfts() });
+      queryClient.refetchQueries({ queryKey: createQueryKey.nfts() });
+
+      // Clear the state to prevent repeated refetches
+      window.history.replaceState({}, document.title);
+    }
+  }, [freshlyMinted, mintedNftId, queryClient]);
 
   const {
     data: allNFTs = [],
@@ -42,6 +60,7 @@ export function ExplorePage() {
   } = useQuery({
     queryKey: createQueryKey.nfts(),
     queryFn: async () => {
+      console.log("Fetching NFTs from service...");
       // Ensure services are initialized
       await serviceFactory.initialize();
       const nftService = serviceFactory.getNFTService();
@@ -49,10 +68,15 @@ export function ExplorePage() {
         console.warn("NFT service not available");
         return [];
       }
-      return await nftService.getAllNFTs();
+      const nfts = await nftService.getAllNFTs();
+      console.log(`Fetched ${nfts.length} NFTs`);
+      return nfts;
     },
     enabled: true, // Enable even without authentication for public queries
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 0, // Always consider data stale to ensure fresh data
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchInterval: 30000, // Refetch every 30 seconds (reduced from 10)
   });
 
   const filteredNFTs = useMemo(() => {
@@ -64,7 +88,7 @@ export function ExplorePage() {
       filtered = filtered.filter(
         (nft) =>
           nft.name.toLowerCase().includes(query) ||
-          nft.description.toLowerCase().includes(query),
+          nft.description.toLowerCase().includes(query)
       );
     }
 
@@ -130,11 +154,7 @@ export function ExplorePage() {
             {/* Actions */}
             <div className="flex items-center gap-2">
               {!isAuthenticated && (
-                <Button
-                  onClick={login}
-                  size="sm"
-                  className="bg-primary"
-                >
+                <Button onClick={login} size="sm" className="bg-primary">
                   <User className="h-4 w-4 mr-2" />
                   Connect Wallet
                 </Button>
@@ -247,14 +267,14 @@ export function ExplorePage() {
           {filteredNFTs.length > 0 ? (
             filteredNFTs.map((nft) => (
               <Link key={nft.nft_id} to={`/nft/${nft.nft_id}`}>
-                <Card className="group hover:shadow-lg transition-shadow">
-                  <CardContent className="p-0">
+                <Card className="group hover:shadow-lg transition-shadow h-full flex flex-col">
+                  <CardContent className="p-0 flex flex-col h-full">
                     {/* Image */}
-                    <div className="relative aspect-square">
+                    <div className="relative aspect-square overflow-hidden rounded-t-lg">
                       <img
                         src={nft.image_url || "/placeholder-nft.png"}
                         alt={nft.name}
-                        className="w-full h-full object-cover rounded-t-lg"
+                        className="w-full h-full object-cover"
                       />
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex gap-1">
@@ -278,7 +298,7 @@ export function ExplorePage() {
                         <div className="absolute top-2 left-2">
                           <Badge
                             variant="secondary"
-                            className="bg-primary/90 text-primary-foreground"
+                            className="bg-purple-600/90 text-white"
                           >
                             <Sparkles className="h-3 w-3 mr-1" />
                             AI Generated
@@ -288,7 +308,7 @@ export function ExplorePage() {
                     </div>
 
                     {/* Info */}
-                    <div className="p-4">
+                    <div className="p-4 flex flex-col flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <Avatar className="h-6 w-6">
                           <AvatarImage
@@ -303,9 +323,37 @@ export function ExplorePage() {
                         </span>
                       </div>
 
-                      <h3 className="font-semibold mb-2">{nft.name}</h3>
+                      <h3 className="font-semibold mb-2 truncate">
+                        {nft.name}
+                      </h3>
 
-                      <div className="flex items-center justify-between">
+                      {/* Traits */}
+                      {nft.traits && nft.traits.length > 0 && (
+                        <div className="mb-3">
+                          <div className="flex flex-wrap gap-1">
+                            {nft.traits.slice(0, 3).map((trait, index) => (
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                className="text-xs px-2 py-0.5"
+                              >
+                                {trait.trait_type}: {trait.value}
+                              </Badge>
+                            ))}
+                            {nft.traits.length > 3 && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs px-2 py-0.5"
+                              >
+                                +{nft.traits.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Price and Actions - pushed to bottom */}
+                      <div className="flex items-center justify-between mt-auto">
                         <div>
                           <p className="text-xs text-muted-foreground mb-1">
                             Current Price
