@@ -1,11 +1,40 @@
+# Presentation
+We're suggesting to you to read the power point and watch video to better understanding about our products.
+
+Power Point: [PowerPoints](https://www.figma.com/slides/mH7sUwO1O5SNGH1NeXvPhp/Pitch-Deck-PiCO)  <br/>
+Video Demo: [Demo Link](www.youtube.com)
+
 # PICO
-{Explanation}
+Pico is a social media platform and NFT marketplace designed to empower artists in this rapidly evolving landscape by prioritizing authorship, authenticity, and transparency.
+
+We’re building a creative space where artists can share, mint, and connectwithout the fear of being miscredited or lost in the noise of untagged AI content.
+
 
 # Background
-{Background}
+Artists put a lot of time into their work. But the moment it hits social media, "boom" everything’s gone. No name, no credit, no copyright. People just repost it like it’s theirs. And that’s messed up.
+
+According to a report by IPTC, around 93% of images online have their metadata stripped. Platforms like Twitter remove 100% of it. Instagram and Facebook wipe out about 85 - 90%. So even if you create something amazing, once it’s out there, no one knows it’s yours.
+
+That’s why we built PiCO, a platform where your art stays yours. It keeps the name, the proof, and the credit, whether it's AI-generated, hand-drawn, or anything in between. And yeah, if you want, you can mint it as an NFT. But more importantly, your name stays with your work. Always.
 
 # Tech stacks & Features Implementation
 {Tech stack}
+- Frontend: 
+  - React
+  - Vite.
+  - React Context
+  - Layered Services Architecture Design
+  - React Query
+- Backend:
+  - Motoko 
+  - Open AI
+  - Cloudflare R2
+  - Http outcalls
+  - ICRC7 & NFT
+  - Decentralized AI memakai LLM Canister Ollama
+  - Memakai HTTP Outcalls AI Open AI Sora
+  - Bikin token ICP ICRC1, ICRC2, ICRC7
+  - World Computer HTTP OUTCALLS
 {Feature}
 - `operational_contract` - Your main business logic with `PiCO` token operations
 - `icrc1_ledger_canister` - our ICRC-1 tokens which called `PiCO`
@@ -109,21 +138,36 @@
     ```
 
 # Requirements to Run applications
-{Requirements}
+- Node JS > 18.0
+- ICP
 
 # Deployed Canisters
-Deployed canisters.
+Deployed mainnet canisters.
+
 URLs:
+
   Frontend canister via browser:
-    pico_frontend: https://eueyk-uiaaa-aaaap-qp4la-cai.icp0.io/
+  
+  - pico_frontend: https://eueyk-uiaaa-aaaap-qp4la-cai.icp0.io/
+
   Backend canister via Candid interface:
-    ai_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=ebdjh-vaaaa-aaaap-qp4iq-cai
-    forums_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=eiac3-diaaa-aaaap-qp4ja-cai
-    icrc1_ledger_canister: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=epbep-oqaaa-aaaap-qp4jq-cai
-    nft_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=e2gvc-pyaaa-aaaap-qp4ka-cai
-    operational_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=e5htw-caaaa-aaaap-qp4kq-cai
-    preferences_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=etf66-zqaaa-aaaap-qp4lq-cai
-    token_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=f6l2q-wyaaa-aaaap-qp4ma-cai
+
+  - ai_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=ebdjh-vaaaa-aaaap-qp4iq-cai
+  - forums_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=eiac3-diaaa-aaaap-qp4ja-cai
+  - icrc1_ledger_canister: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=epbep-oqaaa-aaaap-qp4jq-cai
+  - nft_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=e2gvc-pyaaa-aaaap-qp4ka-cai
+  - operational_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=e5htw-caaaa-aaaap-qp4kq-cai
+  - preferences_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=etf66-zqaaa-aaaap-qp4lq-cai
+  - token_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=f6l2q-wyaaa-aaaap-qp4ma-cai
 
 # Team Participants
-{Team Participants}
+1. Fajar Muhammad Hamka
+    - Github: https://github.com/fajartd02
+2. Natasya Felicia Malonda
+    - Github: https://github.com/tasyafelcia
+3. Pelangi Savana Puspa Romadoni
+    - Github: https://github.com/pelangiromadoni
+4. Stanislaus Kanaya Jerry Febriano
+    - Github: https://github.com/yoshikazuuu
+5. Reynaldo Marchell Bagas Adji
+    - Github: https://github.com/reynaldomarchell
