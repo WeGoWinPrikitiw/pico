@@ -25,6 +25,7 @@ export {
   SheetClose,
 } from "./sheet";
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
+export { TraitsEditor } from "./traits-editor";
 export {
   NavigationMenu,
   NavigationMenuList,
