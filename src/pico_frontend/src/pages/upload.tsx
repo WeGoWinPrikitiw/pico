@@ -19,6 +19,10 @@ import {
   TabsList,
   TabsTrigger,
   TabsContent,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAuth, useServices } from "@/context/auth-context";
@@ -31,6 +35,8 @@ import {
   DollarSign,
   FileText,
   Sparkles,
+  MoreVertical,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Trait } from "@/types";
@@ -279,28 +285,53 @@ export function UploadPage() {
       {/* Header */}
       <div className="border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Link to="/explore">
+          <div className="flex items-center justify-between min-h-16 py-3">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+              <Link to="/explore" className="flex-shrink-0">
                 <Button variant="ghost" size="sm" className="gap-2">
                   <ArrowLeft className="h-4 w-4" />
-                  Back
+                  <span className="hidden xs:inline">Back</span>
                 </Button>
               </Link>
-              <div className="h-6 w-px bg-border" />
-              <div>
+              <div className="h-6 w-px bg-border hidden sm:block" />
+              <div className="min-w-0 flex-1">
                 <h1 className="text-lg font-semibold">Mint NFT</h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground hidden sm:block">
                   Upload and mint your digital artwork
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Button size="lg" onClick={resetForm} variant="outline">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              {/* Mobile dropdown menu for actions */}
+              <div className="sm:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreVertical className="h-4 w-4" />
+                      <span className="sr-only">More actions</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={resetForm}>
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Reset Form
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Desktop reset button */}
+              <Button
+                size="sm"
+                onClick={resetForm}
+                variant="outline"
+                className="hidden sm:inline-flex sm:size-lg"
+              >
                 Reset
               </Button>
+
               <Button
-                size="lg"
+                size="sm"
                 onClick={handleMintNft}
                 disabled={
                   !isFormValid ||
@@ -309,23 +340,22 @@ export function UploadPage() {
                   uploadImageMutation.isPending ||
                   createForumMutation.isPending
                 }
-                className="bg-gradient-to-r from-primary to-primary/90 shadow-lg"
+                className="bg-gradient-to-r from-primary to-primary/90 shadow-lg sm:size-lg"
               >
                 {mintNftMutation.isPending ||
                 generateAiImageMutation.isPending ||
                 uploadImageMutation.isPending ? (
-                  <LoadingSpinner size="sm" className="mr-2" />
-                ) : (
-                  <span className="mr-2">
-                    {mintNftMutation.isPending
-                      ? "Minting..."
-                      : uploadImageMutation.isPending
-                      ? "Uploading..."
-                      : createForumMutation.isPending
-                      ? "Creating forum..."
-                      : "Mint NFT"}
-                  </span>
-                )}
+                  <LoadingSpinner size="sm" className="mr-1 sm:mr-2" />
+                ) : null}
+                <span className="text-xs sm:text-sm">
+                  {mintNftMutation.isPending
+                    ? "Minting..."
+                    : uploadImageMutation.isPending
+                    ? "Uploading..."
+                    : createForumMutation.isPending
+                    ? "Creating..."
+                    : "Mint"}
+                </span>
               </Button>
             </div>
           </div>
@@ -333,29 +363,37 @@ export function UploadPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <Tabs
           value={activeTab}
           onValueChange={(value) => setActiveTab(value as "mint" | "generate")}
         >
           {/* Tab Navigation */}
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <TabsList className="grid w-full grid-cols-2 max-w-md">
-              <TabsTrigger value="mint" className="flex items-center gap-2">
-                <UploadIcon className="h-4 w-4" />
-                Mint NFT
+              <TabsTrigger
+                value="mint"
+                className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+              >
+                <UploadIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Mint NFT</span>
+                <span className="xs:hidden">Mint</span>
               </TabsTrigger>
-              <TabsTrigger value="generate" className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                Generate NFT
+              <TabsTrigger
+                value="generate"
+                className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+              >
+                <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Generate NFT</span>
+                <span className="xs:hidden">Generate</span>
               </TabsTrigger>
             </TabsList>
           </div>
 
           <TabsContent value="mint">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
               {/* Left Column - Upload & Media */}
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <Card>
                   <CardHeader className="pb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -479,11 +517,7 @@ export function UploadPage() {
                                         : "Human-Made"
                                     } (${Math.round(
                                       result.confidence * 100
-                                    )}% confidence)`,
-                                    {
-                                      description: result.reasoning,
-                                      duration: 8000,
-                                    }
+                                    )}% confidence)`
                                   );
                                 } catch (error) {
                                   console.error("AI detection failed:", error);
@@ -749,9 +783,9 @@ export function UploadPage() {
           </TabsContent>
 
           <TabsContent value="generate">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
               {/* Left Column - AI Generation */}
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <Card>
                   <CardHeader className="pb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
