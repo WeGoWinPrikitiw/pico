@@ -173,7 +173,8 @@ export class PreferencesService extends BaseService {
   }> {
     try {
       const actor = this.getActor();
-      return await actor.getStats();
+      const stats = await actor.getStats();
+      return stats.preferences;
     } catch (error) {
       this.handleError(error);
     }
