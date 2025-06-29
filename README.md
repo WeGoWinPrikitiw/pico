@@ -92,20 +92,13 @@ The PiCO platform follows a modular, decentralized architecture built on the Int
 
 ### User & AI Services Layer
 - **preferences_contract**: User settings and personalization data
-- **ai_contract**: AI-powered features including content generation, authenticity verification, and recommendations
+- **ai_contract**: AI-powered features using Ollama for intelligent recommendation systems. The contract employs two specialized agents: a recommendation agent that analyzes user preferences and behavior patterns, and a formatter/judge agent that structures responses into appropriate formats (JSON, arrays) for frontend consumption.
 
 ### External Integrations
 - **OpenAI/Sora API**: Text-to-image generation and AI reasoning via HTTP outcalls
+- **GPT Vision**: AI-powered authenticity detection to determine if uploaded images are AI-generated or human-created, ensuring honest user submissions
 - **Base64 Encoding**: On-chain media storage for NFT assets using base64 string encoding
 - **LLM Canister (Ollama)**: On-chain AI processing for recommendation systems
-
-### Data Flow
-1. Users authenticate via Internet Identity
-2. Frontend communicates with operational_contract as the main orchestrator
-3. Operational contract coordinates with specialized contracts (NFT, forums, preferences)
-4. Token operations flow through the ICRC-1 ledger and utility approval of ICRC-2 ledger
-5. AI features leverage both external APIs and on-chain LLM processing
-6. All data persists on-chain with media assets stored on base64 encoding string
 
 This architecture ensures scalability, security, and true decentralization while maintaining seamless user experience.
 
