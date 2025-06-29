@@ -59,8 +59,8 @@ interface NFTCardInternalProps {
 function NFTGridCard({ nft, isNew, onLike, onShare }: NFTCardInternalProps) {
     return (
         <Link to={`/nft/${nft.nft_id}`} className="block">
-            <Card className="group hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 overflow-hidden border-0 shadow-md py-0">
-                <CardContent className="p-0">
+            <Card className="group hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 overflow-hidden border-0 shadow-md py-0 h-full flex flex-col">
+                <CardContent className="p-0 flex flex-col h-full">
                     <div className="relative aspect-square overflow-hidden">
                         <img
                             src={nft.image_url || "/placeholder-nft.png"}
@@ -94,7 +94,7 @@ function NFTGridCard({ nft, isNew, onLike, onShare }: NFTCardInternalProps) {
                         </div>
                     </div>
 
-                    <div className="p-4 space-y-3">
+                    <div className="p-4 flex flex-col flex-1">
                         {/* Owner */}
                         <div className="flex items-center gap-2">
                             <Avatar className="h-6 w-6">
@@ -109,32 +109,36 @@ function NFTGridCard({ nft, isNew, onLike, onShare }: NFTCardInternalProps) {
                         </div>
 
                         {/* Title */}
-                        <h3 className="font-semibold text-base leading-tight line-clamp-1">
+                        <h3 className="font-semibold text-base leading-tight line-clamp-2 mt-2 mb-2 min-h-[2.5rem]">
                             {nft.name}
                         </h3>
 
                         {/* Traits */}
-                        {nft.traits && nft.traits.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                                {nft.traits.slice(0, 2).map((trait, index) => (
-                                    <Badge
-                                        key={index}
-                                        variant="outline"
-                                        className="text-xs px-2 py-1 bg-muted/50"
-                                    >
-                                        {trait.trait_type}: {trait.value}
-                                    </Badge>
-                                ))}
-                                {nft.traits.length > 2 && (
-                                    <Badge variant="outline" className="text-xs px-2 py-1 bg-muted/50">
-                                        +{nft.traits.length - 2}
-                                    </Badge>
-                                )}
-                            </div>
-                        )}
+                        <div className="flex-1 mb-3">
+                            {nft.traits && nft.traits.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                    {nft.traits.slice(0, 2).map((trait, index) => (
+                                        <Badge
+                                            key={index}
+                                            variant="outline"
+                                            className="text-xs px-2 py-1 bg-muted/50"
+                                        >
+                                            {trait.trait_type}: {trait.value}
+                                        </Badge>
+                                    ))}
+                                    {nft.traits.length > 2 && (
+                                        <Badge variant="outline" className="text-xs px-2 py-1 bg-muted/50">
+                                            +{nft.traits.length - 2}
+                                        </Badge>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="h-6"></div>
+                            )}
+                        </div>
 
                         {/* Price and stats */}
-                        <div className="flex items-center justify-between pt-2 border-t">
+                        <div className="flex items-center justify-between pt-2 border-t mt-auto">
                             <div className="space-y-1">
                                 <p className="text-xs text-muted-foreground font-medium">
                                     Current Price
