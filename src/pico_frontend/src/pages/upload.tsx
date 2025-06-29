@@ -178,38 +178,17 @@ export function UploadPage() {
       const fullPrompt = `${aiPrompt.prompt}, ${aiPrompt.style} style, ${aiPrompt.quality} quality`;
       const result = await generateAiImageMutation.mutateAsync(fullPrompt);
 
-      // Add "Generation: AI Created" trait for AI generated images (only if not already present)
-      const hasGenerationTrait = result.suggested_traits.some(
-        (trait) => trait.trait_type === "Generation"
-      );
-
-      let aiGeneratedTraits: Trait[] = [...result.suggested_traits];
-
-      if (!hasGenerationTrait) {
-        const newTrait: Trait = {
-          trait_type: "Generation",
-          value: "AI Created",
-          rarity: ["Special"],
-        };
-        aiGeneratedTraits.push(newTrait);
-      }
-
       // Update NFT data with AI generated content
       setNftData((prev) => ({
         ...prev,
         previewUrl: result.image_url,
         isAiGenerated: true,
         traits: result.suggested_traits,
-        // Preserve the current forSale status
       }));
-
-      // Mark AI detection as performed since we know it's AI generated
+      // Automatically mark detection as completed for AI-generated image
       setAiDetectionPerformed(true);
-      setAiDetectionResult({
-        is_ai_generated: true,
-        confidence: 1.0,
-        reasoning: "Image was generated using AI in this application",
-      });
+      setAiDetectionResult({ is_ai_generated: true, confidence: 1, reasoning: 'AI Generated' });
+
     } catch (error) {
       console.error("AI generation failed:", error);
     }
@@ -223,7 +202,7 @@ export function UploadPage() {
 
     if (!isFormValid) {
       toast.error(
-        "Please fill in all required fields and complete AI detection for uploaded images"
+        "Please complete AI detection and fill in all required fields"
       );
       return;
     }
@@ -322,7 +301,7 @@ export function UploadPage() {
     nftData.description.trim() &&
     nftData.price.trim() &&
     nftData.previewUrl &&
-    (aiDetectionPerformed || nftData.isAiGenerated); // AI detection required for uploaded images, not for AI-generated ones
+    (aiDetectionPerformed || nftData.isAiGenerated); // Skip detection if AI-generated
 
   return (
     <div className="min-h-screen bg-background">
@@ -384,13 +363,15 @@ export function UploadPage() {
                   uploadImageMutation.isPending ||
                   createForumMutation.isPending
                 }
-                className="bg-gradient-to-r from-primary to-primary/90 shadow-lg sm:size-lg"
+                className="bg-gradient-to-r from-primary to-primary/90 shadow-lg sm:size-lg flex items-center"
               >
                 {mintNftMutation.isPending ||
                   generateAiImageMutation.isPending ||
                   uploadImageMutation.isPending ? (
-                  <LoadingSpinner size="sm" className="mr-1 sm:mr-2" />
-                ) : null}
+                  <LoadingSpinner size="sm" className="mr-2" />
+                ) : (
+                  <UploadIcon className="h-4 w-4 mr-2" />
+                )}
                 <span className="text-xs sm:text-sm">
                   {mintNftMutation.isPending
                     ? "Minting..."
@@ -398,7 +379,7 @@ export function UploadPage() {
                       ? "Uploading..."
                       : createForumMutation.isPending
                         ? "Creating..."
-                        : "Mint"}
+                        : "Mint NFT"}
                 </span>
               </Button>
             </div>
@@ -476,8 +457,8 @@ export function UploadPage() {
                     ) : (
                       <div
                         className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer ${dragOver
-                            ? "border-primary bg-primary/5"
-                            : "border-muted-foreground/25 hover:border-muted-foreground/50"
+                          ? "border-primary bg-primary/5"
+                          : "border-muted-foreground/25 hover:border-muted-foreground/50"
                           }`}
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
@@ -511,7 +492,7 @@ export function UploadPage() {
                       </div>
                     )}
 
-                    {/* AI Detection and Checkbox - only show when there's a file uploaded and it's not AI-generated */}
+                    {/* AI Detection and Checkbox - only show when there's a file uploaded */}
                     {nftData.previewUrl && !nftData.isAiGenerated && (
                       <div className="mt-4 space-y-3">
                         {/* AI Detection Button - Mandatory before minting */}
@@ -530,7 +511,7 @@ export function UploadPage() {
                             </div>
                             <p className="text-xs text-muted-foreground">
                               Detect if the image is AI-generated using OpenAI
-                              Vision (required before minting uploaded images)
+                              Vision (required before minting)
                             </p>
                             <Button
                               type="button"
@@ -547,37 +528,11 @@ export function UploadPage() {
                                   setAiDetectionResult(result);
                                   setAiDetectionPerformed(true);
 
-                                  // Automatically update the isAiGenerated flag and add AI trait
-                                  setNftData((prev) => {
-                                    let updatedTraits = prev.traits;
-
-                                    if (result.is_ai_generated) {
-                                      // Check if Generation trait already exists
-                                      const hasGenerationTrait =
-                                        prev.traits.some(
-                                          (trait) =>
-                                            trait.trait_type === "Generation"
-                                        );
-
-                                      if (!hasGenerationTrait) {
-                                        const newTrait: Trait = {
-                                          trait_type: "Generation",
-                                          value: "AI Created",
-                                          rarity: ["Special"],
-                                        };
-                                        updatedTraits = [
-                                          ...prev.traits,
-                                          newTrait,
-                                        ];
-                                      }
-                                    }
-
-                                    return {
-                                      ...prev,
-                                      isAiGenerated: result.is_ai_generated,
-                                      traits: updatedTraits,
-                                    };
-                                  });
+                                  // Automatically update the isAiGenerated flag
+                                  setNftData((prev) => ({
+                                    ...prev,
+                                    isAiGenerated: result.is_ai_generated,
+                                  }));
 
                                   toast.success(
                                     `AI Detection: ${result.is_ai_generated
@@ -639,33 +594,13 @@ export function UploadPage() {
                             )}
                           </div>
                         </div>
-                      </div>
-                    )}
 
-                    {/* AI Generated Status Indicator - show when image is AI-generated */}
-                    {nftData.previewUrl && nftData.isAiGenerated && (
-                      <div className="mt-4 space-y-3">
-                        <div className="p-3 border border-border rounded-lg bg-purple-50 dark:bg-purple-950/30">
-                          <div className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-purple-600" />
-                            <span className="text-sm font-medium text-purple-900 dark:text-purple-100">
-                              AI Generated Image
-                            </span>
-                            <span className="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
-                              Ready to Mint
-                            </span>
-                          </div>
-                          <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">
-                            This image was generated using AI.
-                          </p>
-                        </div>
-
-                        {/* AI Generated Checkbox - Now auto-updated by AI generation */}
+                        {/* AI Generated Checkbox - Now auto-updated by detection */}
                         <div className="flex items-center space-x-3 p-3 border border-border rounded-lg">
                           <div className="relative">
                             <input
                               type="checkbox"
-                              id="aiGeneratedAI"
+                              id="aiGenerated"
                               checked={nftData.isAiGenerated}
                               onChange={(e) =>
                                 setNftData((prev) => ({
@@ -676,13 +611,13 @@ export function UploadPage() {
                               className="sr-only"
                             />
                             <label
-                              htmlFor="aiGeneratedAI"
+                              htmlFor="aiGenerated"
                               className="flex items-center cursor-pointer"
                             >
                               <div
                                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.isAiGenerated
-                                    ? "bg-purple-600 border-purple-600"
-                                    : "border-gray-300 hover:border-purple-400"
+                                  ? "bg-purple-600 border-purple-600"
+                                  : "border-gray-300 hover:border-purple-400"
                                   }`}
                               >
                                 {nftData.isAiGenerated && (
@@ -701,64 +636,17 @@ export function UploadPage() {
                               </div>
                               <span className="ml-3 text-sm font-medium">
                                 This image was generated using AI
+                                {aiDetectionPerformed && (
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    (Auto-detected)
+                                  </span>
+                                )}
                               </span>
                             </label>
                           </div>
                         </div>
                       </div>
                     )}
-
-                    {/* AI Generated Checkbox for uploaded images - only show for uploaded non-AI-generated images */}
-                    {nftData.previewUrl &&
-                      !nftData.isAiGenerated &&
-                      aiDetectionPerformed && (
-                        <div className="mt-4">
-                          <div className="flex items-center space-x-3 p-3 border border-border rounded-lg">
-                            <div className="relative">
-                              <input
-                                type="checkbox"
-                                id="aiGenerated"
-                                checked={nftData.isAiGenerated}
-                                onChange={(e) =>
-                                  setNftData((prev) => ({
-                                    ...prev,
-                                    isAiGenerated: e.target.checked,
-                                  }))
-                                }
-                                className="sr-only"
-                              />
-                              <label
-                                htmlFor="aiGenerated"
-                                className="flex items-center cursor-pointer"
-                              >
-                                <div
-                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.isAiGenerated
-                                      ? "bg-purple-600 border-purple-600"
-                                      : "border-gray-300 hover:border-purple-400"
-                                    }`}
-                                >
-                                  {nftData.isAiGenerated && (
-                                    <svg
-                                      className="w-3 h-3 text-white"
-                                      fill="currentColor"
-                                      viewBox="0 0 20 20"
-                                    >
-                                      <path
-                                        fillRule="evenodd"
-                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                        clipRule="evenodd"
-                                      />
-                                    </svg>
-                                  )}
-                                </div>
-                                <span className="ml-3 text-sm font-medium">
-                                  This image was generated using AI
-                                </span>
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                   </CardContent>
                 </Card>
 
@@ -928,8 +816,8 @@ export function UploadPage() {
                         >
                           <div
                             className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.forSale
-                                ? "bg-blue-600 border-blue-600"
-                                : "border-gray-300 hover:border-blue-400"
+                              ? "bg-blue-600 border-blue-600"
+                              : "border-gray-300 hover:border-blue-400"
                               }`}
                           >
                             {nftData.forSale && (
@@ -955,7 +843,8 @@ export function UploadPage() {
                     <p className="text-xs text-muted-foreground">
                       {nftData.forSale
                         ? "✅ Your NFT will be available for purchase immediately after minting"
-                        : "⏸️ Your NFT will be minted but not listed for sale (you can list it later)"}
+                        : "⏸️ Your NFT will be minted but not listed for sale (you can list it later)"
+                      }
                     </p>
                   </CardContent>
                 </Card>
@@ -1217,8 +1106,8 @@ export function UploadPage() {
                         >
                           <div
                             className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.forSale
-                                ? "bg-blue-600 border-blue-600"
-                                : "border-gray-300 hover:border-blue-400"
+                              ? "bg-blue-600 border-blue-600"
+                              : "border-gray-300 hover:border-blue-400"
                               }`}
                           >
                             {nftData.forSale && (
@@ -1244,7 +1133,8 @@ export function UploadPage() {
                     <p className="text-xs text-muted-foreground">
                       {nftData.forSale
                         ? "✅ Your NFT will be available for purchase immediately after minting"
-                        : "⏸️ Your NFT will be minted but not listed for sale (you can list it later)"}
+                        : "⏸️ Your NFT will be minted but not listed for sale (you can list it later)"
+                      }
                     </p>
                   </CardContent>
                 </Card>
