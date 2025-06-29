@@ -3,7 +3,8 @@ import type {
   NFTInfo,
   Trait,
   AIImageResult,
-  Account, FrontendNFTInfo
+  Account,
+  FrontendNFTInfo,
 } from "@/types";
 import {
   NFT,
@@ -21,7 +22,7 @@ export class NFTService extends BaseService {
   constructor(
     private canisterId: string,
     agent: HttpAgent,
-    identity: Identity,
+    identity: Identity
   ) {
     super(agent, identity);
     this.initializeActor();
@@ -34,23 +35,17 @@ export class NFTService extends BaseService {
       }
       this.actor = this.createActor<NFTContract>(
         this.canisterId,
-        nftIdlFactory,
+        nftIdlFactory
       );
     } catch (error) {
       console.error("Failed to initialize nft actor:", error);
-      throw new ApiError(
-        "Failed to initialize nft service",
-        "INIT_ERROR",
-      );
+      throw new ApiError("Failed to initialize nft service", "INIT_ERROR");
     }
   }
 
   private getActor(): NFTContract {
     if (!this.actor) {
-      throw new ApiError(
-        "NFT actor not initialized",
-        "ACTOR_NOT_INITIALIZED",
-      );
+      throw new ApiError("NFT actor not initialized", "ACTOR_NOT_INITIALIZED");
     }
     return this.actor;
   }
@@ -143,14 +138,11 @@ export class NFTService extends BaseService {
 
   async getNFTsByTrait(
     traitType: string,
-    traitValue: string,
+    traitValue: string
   ): Promise<FrontendNFTInfo[]> {
     try {
       const actor = this.getActor();
-      const result = await actor.get_nfts_by_trait(
-        traitType,
-        traitValue,
-      );
+      const result = await actor.get_nfts_by_trait(traitType, traitValue);
       return result.map((nft) => this.convertNFTInfo(nft));
     } catch (error) {
       this.handleError(error);
@@ -182,10 +174,10 @@ export class NFTService extends BaseService {
     try {
       const actor = this.getActor();
       const result = await actor.icrc7_owner_of(
-        tokenIds.map((id) => BigInt(id)),
+        tokenIds.map((id) => BigInt(id))
       );
       return result.map((owner) =>
-        owner.length > 0 && owner[0] ? owner[0] : null,
+        owner.length > 0 && owner[0] ? owner[0] : null
       );
     } catch (error) {
       this.handleError(error);
@@ -195,14 +187,14 @@ export class NFTService extends BaseService {
   async getTokensOf(
     account: Account,
     prev?: number,
-    take?: number,
+    take?: number
   ): Promise<number[]> {
     try {
       const actor = this.getActor();
       const result = await actor.icrc7_tokens_of(
         account,
         prev ? [BigInt(prev)] : [],
-        take ? [BigInt(take)] : [],
+        take ? [BigInt(take)] : []
       );
       return result.map((id) => this.convertBigIntToNumber(id));
     } catch (error) {
@@ -283,6 +275,76 @@ export class NFTService extends BaseService {
       const actor = this.getActor();
       const result = await actor.generate_ai_image(prompt);
       return this.handleResult(result);
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // AI Detection Methods
+  async detectAIGenerated(imageUrl: string): Promise<{
+    is_ai_generated: boolean;
+    confidence: number;
+    reasoning: string;
+  }> {
+    try {
+      const actor = this.getActor();
+      const result = await actor.detect_ai_generated(imageUrl);
+      const detection = this.handleResult(result);
+      return {
+        is_ai_generated: detection.is_ai_generated,
+        confidence: detection.confidence,
+        reasoning: detection.reasoning,
+      };
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async mintNFTWithAIDetection(
+    to: string,
+    name: string,
+    description: string,
+    price: number,
+    imageUrl: string,
+    traits: Trait[]
+  ): Promise<{
+    nft_id: number;
+    ai_detection: {
+      is_ai_generated: boolean;
+      confidence: number;
+      reasoning: string;
+    };
+  }> {
+    try {
+      const toPrincipal = this.convertToPrincipal(to);
+      const actor = this.getActor();
+      const result = await actor.mint_nft_with_ai_detection(
+        toPrincipal,
+        name,
+        description,
+        BigInt(price),
+        imageUrl,
+        traits
+      );
+      const mintResult = this.handleResult(result);
+      return {
+        nft_id: this.convertBigIntToNumber(mintResult.nft_id),
+        ai_detection: {
+          is_ai_generated: mintResult.ai_detection.is_ai_generated,
+          confidence: mintResult.ai_detection.confidence,
+          reasoning: mintResult.ai_detection.reasoning,
+        },
+      };
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async setOpenAIAPIKey(apiKey: string): Promise<void> {
+    try {
+      const actor = this.getActor();
+      const result = await actor.set_openai_api_key(apiKey);
+      this.handleResult(result);
     } catch (error) {
       this.handleError(error);
     }

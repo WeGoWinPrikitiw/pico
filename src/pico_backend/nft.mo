@@ -618,6 +618,107 @@ actor class NFT() = {
         traitValues
     };
 
+    // AI-related functions
+    
+    // Set OpenAI API key (admin only)
+    public func set_openai_api_key(key: Text): async Result.Result<(), Text> {
+        // TODO: Add proper admin check here
+        openaiApiKey := ?key;
+        #ok(())
+    };
+
+    // Detect if an image is AI-generated using OpenAI Vision API
+    public func detect_ai_generated(imageUrl: Text): async Result.Result<OpenAI.AIDetectionResponse, Text> {
+        switch (openaiApiKey) {
+            case (?key) {
+                // Use real OpenAI API
+                await OpenAI.detectAIGenerated(key, imageUrl);
+            };
+            case null {
+                // Fall back to mock detection for testing
+                let mockResult = await OpenAI.detectAIGeneratedMock(imageUrl);
+                #ok(mockResult);
+            };
+        };
+    };
+
+    // Enhanced mint function that automatically detects AI generation
+    public func mint_nft_with_ai_detection(
+        to: Principal,
+        name: Text, 
+        description: Text, 
+        price: Nat, 
+        image_url: Text, 
+        traits: [Trait]
+    ): async Result.Result<{nft_id: Nat; ai_detection: OpenAI.AIDetectionResponse}, Text> {
+        
+        // First, detect if the image is AI-generated
+        let aiDetectionResult = switch (openaiApiKey) {
+            case (?key) {
+                await OpenAI.detectAIGenerated(key, image_url);
+            };
+            case null {
+                let mockResult = await OpenAI.detectAIGeneratedMock(image_url);
+                #ok(mockResult);
+            };
+        };
+
+        switch (aiDetectionResult) {
+            case (#ok(aiDetection)) {
+                // Mint the NFT with the detected AI status
+                let mintResult = await mint_nft(
+                    to, 
+                    name, 
+                    description, 
+                    price, 
+                    image_url, 
+                    aiDetection.is_ai_generated, 
+                    traits
+                );
+                
+                switch (mintResult) {
+                    case (#ok(nftId)) {
+                        #ok({
+                            nft_id = nftId;
+                            ai_detection = aiDetection;
+                        });
+                    };
+                    case (#err(error)) {
+                        #err("Minting failed: " # error);
+                    };
+                };
+            };
+            case (#err(error)) {
+                // If AI detection fails, mint anyway but mark as unknown
+                let mintResult = await mint_nft(
+                    to, 
+                    name, 
+                    description, 
+                    price, 
+                    image_url, 
+                    false, // Default to false if detection fails
+                    traits
+                );
+                
+                switch (mintResult) {
+                    case (#ok(nftId)) {
+                        #ok({
+                            nft_id = nftId;
+                            ai_detection = {
+                                is_ai_generated = false;
+                                confidence = 0.0;
+                                reasoning = "AI detection failed: " # error;
+                            };
+                        });
+                    };
+                    case (#err(mintError)) {
+                        #err("Both AI detection and minting failed. AI error: " # error # ". Mint error: " # mintError);
+                    };
+                };
+            };
+        };
+    };
+
     // NEW OWNERSHIP AND SALE STATUS METHODS
 
     // Check if a principal owns a specific NFT
