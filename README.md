@@ -18,36 +18,90 @@ According to a report by IPTC, around 93% of images online have their metadata s
 That’s why we built PiCO, a platform where your art stays yours. It keeps the name, the proof, and the credit, whether it's AI-generated, hand-drawn, or anything in between. And yeah, if you want, you can mint it as an NFT. But more importantly, your name stays with your work. Always.
 
 # Tech stacks & Features Implementation
-{Tech stack}
 - Frontend: 
-  - React
-  - Vite.
-  - React Context
-  - Layered Services Architecture Design
-  - React Query
-- Backend:
-  - Motoko 
-  - Open AI
-  - Cloudflare R2
-  - Http outcalls
-  - ICRC7 & NFT
-  - Decentralized AI memakai LLM Canister Ollama
-  - Memakai HTTP Outcalls AI Open AI Sora
-  - Bikin token ICP ICRC1, ICRC2, ICRC7
-  - World Computer HTTP OUTCALLS
-{Feature}
-- `operational_contract` - Your main business logic with `PiCO` token operations
-- `icrc1_ledger_canister` - our ICRC-1 tokens which called `PiCO`
-- `icrc2_ledger_canister` - our approval method for sending token
-- `icrc7`
-- http outcalls & open ai integration - text to image
-- ollama motoko implementation
-- `pico_frontend` - Your frontend (depends on operational_contract)
-- `internet_identity` - Authentication
+  - React — Component-based UI development
+  - Vite — Fast build tool and development server
+  - React Context — Simple and effective global state management
+  - React Query — Robust data fetching and caching
+  - Layered Services Architecture — Clear separation between UI, business logic, and services
+  - pico_frontend — Main frontend application connected to backend contract
 
-# Tech Details & Diagram
-{Diagram}
-{Explanation}
+- Backend:
+  - Motoko — Core language for Internet Computer smart contracts
+  - OpenAI Integration — Used via HTTP outcalls for AI-driven features (text and media)
+  - Cloudflare R2 — Store object and media
+  - Internet Identity — Web3 Authentication
+  - World HTTP Outcalls — Enables canisters to call external services like OpenAI and Sora
+  - Decentralized AI with LLM Canister (Ollama) — On-chain execution of large language models, we use as recommendation system.
+  - OpenAI Sora via HTTP Outcalls — Video generation and AI reasoning capabilities directly from smart contracts
+  - Token Infrastructure based on ICRC standards:
+    - ICRC-1 (icrc1_ledger_canister) — Fungible token ledger for PiCO token
+    - ICRC-2 (icrc2_ledger_canister) — Approval-based token transfers
+    - ICRC-7 (icrc7) — NFT standard for digital identity and assets
+  - 9 Smart Contracts / Canister:
+    - internet_identity — Web3 authentication service
+    - nft_contract — NFT minting and management (ICRC7)
+    - operational_contract — Core business logic and operations, including ICRC-1 and ICRC-2 token utilities
+    - token_contract — PiCO token information
+    - preferences_contract — User preferences and settings
+    - forums_contract — Community forums and discussions
+    - ai_contract — AI-powered features and integrations
+    - icrc1_ledger_canister — ICRC-1 and ICRC-2 compliant token ledger for PiCO token operations
+    - pico_frontend — Frontend assets canister
+  
+# Features
+- Admin token minting capabilities with full control over token distribution
+- Manual NFT upload and minting with metadata preservation
+- AI-powered text-to-image NFT generation using HTTP outcalls to Sora AI
+- Automated authenticity verification for manual uploads using AI detection
+- Intelligent recommendation system powered by AI algorithms
+- Comprehensive NFT marketplace with buy and sell functionality via forums
+- Secure Web3 authentication using Internet Identity
+- Real-time PICO token balance checking and monitoring
+- Seamless NFT upload directly to community forums
+- Interactive forum engagement with like and reaction systems
+- Threaded comment system for community discussions
+- Comprehensive user profiles showcasing NFT collections and forum activity
+- Flexible token top-up system for enhanced platform participation
+- Advanced explore page with latest posts and AI-driven content recommendations
+- Complete transaction history tracking for all marketplace activities
+- Detailed forum interaction history and engagement analytics
+- Personalized wishlist functionality based on user likes and preferences
+- Automatic NFT labeling system that identifies and tags whether content was AI-generated or manually created
+
+
+# Architecture Diagram
+![PiCO Architecture Diagram](architecture.png)
+
+The PiCO platform follows a modular, decentralized architecture built on the Internet Computer Protocol (ICP). The system consists of 9 interconnected smart contracts (canisters) that work together to provide a comprehensive NFT marketplace and community platform.
+
+## Architecture Overview
+
+### Frontend Layer
+- **pico_frontend**: React-based web application serving as the user interface
+- **Internet Identity**: Decentralized authentication system for Web3 login
+
+### Core Business Logic Layer
+- **operational_contract**: Central hub managing business operations, token top-ups, NFT transactions, etc. This contract utilizes ICRC-1 and ICRC-2 approval ledger utilities
+- **nft_contract**: ICRC-7 compliant NFT management with minting, metadata, and ownership tracking. Integrates with external AI services for automated content generation and authenticity verification
+- **forums_contract**: Community engagement platform with posts, comments, likes, and marketplace functionality
+
+### Token Infrastructure Layer
+- **icrc1_ledger_canister**: ICRC-1/ICRC-2 compliant ledger for PiCO token operations
+- **token_contract**: Simplifier Token metadata and information management
+
+### User & AI Services Layer
+- **preferences_contract**: User settings and personalization data
+- **ai_contract**: AI-powered features using Ollama for intelligent recommendation systems. The contract employs two specialized agents: a recommendation agent that analyzes user preferences and behavior patterns, and a formatter/judge agent that structures responses into appropriate formats (JSON, arrays) for frontend consumption.
+
+### External Integrations
+- **OpenAI/Sora API**: Text-to-image generation and AI reasoning via HTTP outcalls
+- **GPT Vision**: AI-powered authenticity detection to determine if uploaded images are AI-generated or human-created, ensuring honest user submissions
+- **Base64 Encoding**: On-chain media storage for NFT assets using base64 string encoding
+- **LLM Canister (Ollama)**: On-chain AI processing for recommendation systems
+
+This architecture ensures scalability, security, and true decentralization while maintaining seamless user experience.
+
 
 # How to run/develop locally
 1. Generate Canister ID for contracts

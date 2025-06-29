@@ -75,6 +75,8 @@ export const createQueryKey = {
     [...createQueryKey.nfts(), "trait", type, value] as const,
   nftsByRarity: (rarity: string) =>
     [...createQueryKey.nfts(), "rarity", rarity] as const,
+  nftsByOwner: (ownerPrincipal: string) =>
+    [...createQueryKey.nfts(), "owner", ownerPrincipal] as const,
 
   // Operational keys
   operational: () => [...createQueryKey.all(), "operational"] as const,
