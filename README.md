@@ -70,7 +70,7 @@ That’s why we built PiCO, a platform where your art stays yours. It keeps the 
 - Automatic NFT labeling system that identifies and tags whether content was AI-generated or manually created
 
 
-# Tech Details & Diagram
+# Architecture Diagram
 ![PiCO Architecture Diagram](architecture.png)
 
 The PiCO platform follows a modular, decentralized architecture built on the Internet Computer Protocol (ICP). The system consists of 9 interconnected smart contracts (canisters) that work together to provide a comprehensive NFT marketplace and community platform.
