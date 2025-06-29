@@ -1,5 +1,6 @@
 // Export all hooks
 export * from "./useAsync";
+export * from "./useExplore";
 export * from "./useForums";
 export * from "./useICRC1";
 export * from "./useNFT";

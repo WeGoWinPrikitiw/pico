@@ -37,4 +37,7 @@ export {
   NavigationMenuIndicator,
 } from "./navigation-menu";
 export * from "./textarea";
-
+export * from "./checkbox"
+export * from "./slider"
+export * from "./switch"
+export * from "./label"
