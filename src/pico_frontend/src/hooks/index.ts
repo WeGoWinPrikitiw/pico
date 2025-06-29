@@ -28,9 +28,11 @@ export {
   useTokenInfo,
   useUserTransactions,
   useAllowance,
+  useNFTPurchaseApproval,
   useTopUp,
   useBuyNFT,
   useApproveContract,
+  useApproveNFTPurchase,
 } from "./useOperational";
 
 // Preferences hooks

@@ -48,6 +48,21 @@ export function useAllowance(principal?: string) {
   });
 }
 
+// Check NFT purchase approval status
+export function useNFTPurchaseApproval(principal?: string, price?: number) {
+  const { operationalService } = useServices();
+
+  return useQuery({
+    queryKey: ["nft-purchase-approval", principal, price],
+    queryFn: async () => {
+      if (!principal || price === undefined) return null;
+      return await operationalService.checkNFTPurchaseApproval(principal, price);
+    },
+    enabled: !!principal && price !== undefined,
+    staleTime: 1000 * 30, // 30 seconds
+  });
+}
+
 // Mutation hooks for operational actions
 export function useTopUp() {
   const { operationalService } = useServices();
@@ -103,6 +118,36 @@ export function useBuyNFT() {
     onError: (error: Error) => {
       console.error("NFT purchase failed:", error);
       toast.error("Failed to purchase NFT. Please try again.");
+    },
+  });
+}
+
+export function useApproveNFTPurchase() {
+  const { operationalService } = useServices();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      userPrincipal: string;
+      amount: number;
+      buffer?: number;
+    }) => {
+      const totalAmount = params.amount + (params.buffer || 1); // Add 1 PICO buffer by default
+      const approvalInfo = await operationalService.getApprovalInfo(totalAmount);
+      return { approvalInfo, totalAmount };
+    },
+    onSuccess: (result, variables) => {
+      // Invalidate approval-related queries
+      queryClient.invalidateQueries({
+        queryKey: ["nft-purchase-approval"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: createQueryKey.allowance(variables.userPrincipal),
+      });
+    },
+    onError: (error: Error) => {
+      console.error("Failed to get approval info:", error);
+      toast.error("Failed to prepare approval. Please try again.");
     },
   });
 }

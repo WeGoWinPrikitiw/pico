@@ -17,6 +17,12 @@ import {
     TabsTrigger,
     TabsContent,
     Separator,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAuth } from "@/context/auth-context";
@@ -27,6 +33,10 @@ import {
     useCommentForum,
     useUserBalance,
     useBuyNFT,
+    useNFTPurchaseApproval,
+    useApprove,
+    useTokenInfo,
+    useTokenHelpers,
 } from "@/hooks";
 import {
     ArrowLeft,
@@ -46,8 +56,11 @@ import {
     MoreVertical,
     List,
     History,
+    Shield,
+    CheckCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getCanisterId } from "@/config/canisters";
 
 export function NFTDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -55,18 +68,30 @@ export function NFTDetailPage() {
     const { isAuthenticated, principal, login } = useAuth();
 
     const [newComment, setNewComment] = useState("");
+    const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+    const [isApproving, setIsApproving] = useState(false);
 
     const nftId = id ? parseInt(id) : 0;
 
     const { data: nft, isLoading: isLoadingNFT, error: nftError } = useNFT(nftId);
     const { data: nftForums = [], isLoading: isLoadingForums, refetch: refetchForums } = useNFTForums(nftId);
     const { data: userBalance = 0, isLoading: isLoadingBalance } = useUserBalance(principal);
+    const { data: tokenInfo } = useTokenInfo();
+    const { createApproveArgs, createAccount } = useTokenHelpers();
+
+    // Check approval status for NFT purchase
+    const {
+        data: approvalStatus,
+        isLoading: isLoadingApproval,
+        refetch: refetchApproval
+    } = useNFTPurchaseApproval(principal, nft?.price);
 
     const mainForum = nftForums.length > 0 ? nftForums[0] : null;
 
     const likeMutation = useLikeForum();
     const commentMutation = useCommentForum();
     const purchaseMutation = useBuyNFT();
+    const approveMutation = useApprove();
 
     const handleLike = () => {
         if (!isAuthenticated) return toast.error("Please login to like.");
@@ -91,9 +116,64 @@ export function NFTDetailPage() {
         });
     };
 
+    const handleApprovalFlow = () => {
+        if (!isAuthenticated) return login();
+        if (!nft || !principal || !tokenInfo) return toast.error("NFT data not available.");
+
+        // Check if approval is needed
+        if (approvalStatus?.hasSufficientApproval) {
+            // Proceed directly to purchase
+            handlePurchase();
+        } else {
+            // Show approval dialog
+            setShowApprovalDialog(true);
+        }
+    };
+
+    const handleApproval = async () => {
+        if (!nft || !principal || !tokenInfo) return;
+
+        setIsApproving(true);
+
+        try {
+            // Create approval for NFT price + 1 PICO buffer
+            const approvalAmount = Number(nft.price) + 1;
+
+            // Get operational contract principal (spender)
+            const operationalPrincipal = getCanisterId("operational_contract");
+
+            const approveArgs = createApproveArgs(
+                operationalPrincipal,
+                approvalAmount.toString(),
+                tokenInfo.decimals,
+                "NFT Purchase Approval"
+            );
+
+            approveMutation.mutate(approveArgs, {
+                onSuccess: () => {
+                    toast.success("Approval successful! You can now purchase the NFT.");
+                    setShowApprovalDialog(false);
+                    refetchApproval();
+                },
+                onError: (error) => {
+                    console.error("Approval failed:", error);
+                    toast.error("Approval failed. Please try again.");
+                },
+                onSettled: () => {
+                    setIsApproving(false);
+                }
+            });
+        } catch (error) {
+            console.error("Approval error:", error);
+            toast.error("Failed to prepare approval.");
+            setIsApproving(false);
+        }
+    };
+
     const handlePurchase = () => {
         if (!isAuthenticated) return login();
         if (!nft || !principal) return toast.error("NFT data not available.");
+
         purchaseMutation.mutate({
             buyer: principal,
             seller: String(nft.owner),
@@ -101,7 +181,10 @@ export function NFTDetailPage() {
             price: Number(nft.price),
             forumId: mainForum ? Number(mainForum.forum_id) : undefined
         }, {
-            onSuccess: () => toast.success("Purchase successful!"),
+            onSuccess: () => {
+                toast.success("Purchase successful!");
+                refetchApproval(); // Refresh approval status
+            },
             onError: (err) => toast.error(`Purchase failed: ${err.message}`),
         });
     };
@@ -142,6 +225,8 @@ export function NFTDetailPage() {
 
     const isOwner = principal === String(nft.owner);
     const hasInsufficientFunds = isAuthenticated && !isOwner && userBalance < Number(nft.price);
+    const needsApproval = isAuthenticated && !isOwner && !isLoadingApproval &&
+        approvalStatus && !approvalStatus.hasSufficientApproval;
 
     return (
         <div className="min-h-screen bg-background text-foreground">
@@ -242,12 +327,37 @@ export function NFTDetailPage() {
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Approval Status */}
+                                    {isAuthenticated && !isOwner && approvalStatus && (
+                                        <div className="mb-4 p-3 rounded-lg border border-border bg-background">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                {approvalStatus.hasSufficientApproval ? (
+                                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                                ) : (
+                                                    <Shield className="h-4 w-4 text-yellow-500" />
+                                                )}
+                                                <span className="text-sm font-medium">
+                                                    {approvalStatus.hasSufficientApproval ? "Approved" : "Approval Required"}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                {approvalStatus.approvalMessage}
+                                            </p>
+                                        </div>
+                                    )}
+
                                     {isOwner ? (
                                         <div className="p-3 bg-background rounded-lg text-center text-sm text-muted-foreground">You own this NFT.</div>
                                     ) : !isAuthenticated ? (
                                         <Button size="lg" className="w-full" onClick={login}><User className="mr-2 h-4 w-4" />Connect Wallet to Purchase</Button>
                                     ) : hasInsufficientFunds ? (
                                         <Button size="lg" className="w-full" disabled><AlertCircle className="mr-2 h-4 w-4" />Insufficient Funds</Button>
+                                    ) : needsApproval ? (
+                                        <Button size="lg" className="w-full" onClick={handleApprovalFlow} disabled={purchaseMutation.isPending || isLoadingApproval}>
+                                            {isLoadingApproval ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shield className="mr-2 h-4 w-4" />}
+                                            Approve & Buy Now
+                                        </Button>
                                     ) : (
                                         <Button size="lg" className="w-full" onClick={handlePurchase} disabled={purchaseMutation.isPending}>
                                             {purchaseMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
@@ -256,6 +366,57 @@ export function NFTDetailPage() {
                                     )}
                                 </CardContent>
                             </Card>
+
+                            {/* Approval Dialog */}
+                            <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+                                <DialogContent className="sm:max-w-[425px]">
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2">
+                                            <Shield className="h-5 w-5 text-primary" />
+                                            Approve Token Spending
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                            To purchase this NFT, you need to approve the contract to spend your PiCO tokens.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="py-4 space-y-4">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-muted-foreground">NFT Price:</span>
+                                            <span className="font-medium">{Number(nft.price)} PiCO</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-muted-foreground">Safety Buffer:</span>
+                                            <span className="font-medium">+1 PiCO</span>
+                                        </div>
+                                        <Separator />
+                                        <div className="flex justify-between items-center text-sm font-semibold">
+                                            <span>Total Approval:</span>
+                                            <span className="text-primary">{Number(nft.price) + 1} PiCO</span>
+                                        </div>
+                                        <div className="p-3 bg-muted rounded-lg text-xs text-muted-foreground">
+                                            <p>This approval allows the contract to spend up to {Number(nft.price) + 1} PiCO tokens from your wallet. The extra 1 PiCO buffer ensures successful transactions.</p>
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="outline" onClick={() => setShowApprovalDialog(false)}>
+                                            Cancel
+                                        </Button>
+                                        <Button onClick={handleApproval} disabled={isApproving}>
+                                            {isApproving ? (
+                                                <>
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    Approving...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Shield className="mr-2 h-4 w-4" />
+                                                    Approve
+                                                </>
+                                            )}
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
 
                             {/* Tabs */}
                             <Tabs defaultValue="discussion">
