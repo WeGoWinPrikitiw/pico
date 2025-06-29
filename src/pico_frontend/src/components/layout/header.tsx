@@ -19,11 +19,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui";
+import { UserAvatar, UserName } from "@/components/ui/user-avatar";
 import { useAuth } from "@/context/auth-context";
 import {
   User,
   Search,
-  Upload, LogOut,
+  Upload,
+  LogOut,
   Settings,
   Wallet,
   Menu,
@@ -34,7 +36,7 @@ import {
   PlusIcon,
   X,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -73,7 +75,7 @@ export function Header() {
         "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
         isActive(to)
           ? "text-primary bg-primary/10 border border-primary/20"
-          : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+          : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
       )}
     >
       <Icon className="h-5 w-5" />
@@ -103,15 +105,17 @@ export function Header() {
         "flex items-center gap-4 px-4 py-4 rounded-xl text-base font-medium transition-all duration-200 group",
         isActive(to)
           ? "text-primary bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 shadow-sm"
-          : "text-foreground hover:text-primary hover:bg-accent/70 active:bg-accent",
+          : "text-foreground hover:text-primary hover:bg-accent/70 active:bg-accent"
       )}
     >
-      <div className={cn(
-        "p-2 rounded-lg transition-colors",
-        isActive(to)
-          ? "bg-primary/20 text-primary"
-          : "bg-muted group-hover:bg-primary/10 group-hover:text-primary"
-      )}>
+      <div
+        className={cn(
+          "p-2 rounded-lg transition-colors",
+          isActive(to)
+            ? "bg-primary/20 text-primary"
+            : "bg-muted group-hover:bg-primary/10 group-hover:text-primary"
+        )}
+      >
         <Icon className="h-5 w-5" />
       </div>
       <span className="flex-1 font-medium">{children}</span>
@@ -184,31 +188,47 @@ export function Header() {
                     className="hidden sm:flex items-center gap-2 px-3 py-1 border border-input bg-background rounded-full cursor-pointer hover:bg-accent transition-colors text-sm"
                     onClick={() => setIsTopUpOpen(!isTopUpOpen)}
                   >
-                    <img src="/brand/pico-glow.png" className="size-8" alt="PiCO" />
-                    <span>{userBalance !== undefined ? (userBalance / 100000000).toFixed(2) : "0.00"}</span>
+                    <img
+                      src="/brand/pico-glow.png"
+                      className="size-8"
+                      alt="PiCO"
+                    />
+                    <span>{userBalance}</span>
                     <PlusIcon className="h-4 w-4" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="end">
                   <div className="bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 gap-2 rounded-lg p-6 text-white">
                     <div className="text-center mb-6">
-                      <h3 className="text-sm font-medium text-purple-200 mb-2">Top Up Pop out</h3>
+                      <h3 className="text-sm font-medium text-purple-200 mb-2">
+                        Top Up Pop out
+                      </h3>
 
                       {/* Balance Display */}
                       <div className="relative mx-auto w-full">
                         <div className="bg-black/20 backdrop-blur-sm border border-purple-400/30 rounded-full w-full px-6 py-2 flex items-center gap-4">
-                          <img src="/brand/pico-glow.png" className="size-16 relative z-10" alt="PiCO" />
+                          <img
+                            src="/brand/pico-glow.png"
+                            className="size-16 relative z-10"
+                            alt="PiCO"
+                          />
 
                           <div className="text-left">
-                            <div className="text-4xl font-bold text-white">{userBalance !== undefined ? (userBalance / 100000000).toFixed(2) : "0.00"}</div>
-                            <div className="text-lg font-medium text-purple-200">Pico Coins</div>
+                            <div className="text-4xl font-bold text-white">
+                              {userBalance}
+                            </div>
+                            <div className="text-lg font-medium text-purple-200">
+                              Pico Coins
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
 
                     <div className="text-center mb-6">
-                      <h4 className="text-lg font-semibold text-white">Top Up</h4>
+                      <h4 className="text-lg font-semibold text-white">
+                        Top Up
+                      </h4>
                     </div>
 
                     {/* Top Up Options */}
@@ -235,38 +255,24 @@ export function Header() {
               <Popover>
                 <PopoverTrigger asChild>
                   <button className="cursor-pointer hover:opacity-80 rounded-full">
-                    <Avatar>
-                      <AvatarImage
-                        src={`https://avatar.vercel.sh/${principal}.png`}
-                        alt={principal}
-                      />
-                      <AvatarFallback>
-                        <User className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar principalId={principal} size="md" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-56 p-2" align="end">
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2 px-2 py-1.5">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage
-                          src={`https://avatar.vercel.sh/${principal}.png`}
-                          alt={principal}
-                        />
-                        <AvatarFallback>
-                          <User className="h-4 w-4" />
-                        </AvatarFallback>
-                      </Avatar>
+                      <UserAvatar principalId={principal} size="sm" />
                       <div className="flex flex-col">
                         <span className="text-sm font-medium">Profile</span>
                         <span
                           className="text-xs text-muted-foreground max-w-[150px] truncate"
                           title={principal}
                         >
-                          {principal && principal.length > 20
-                            ? `${principal.slice(0, 10)}...${principal.slice(-10)}`
-                            : principal}
+                          <UserName
+                            principalId={principal}
+                            showPrincipal={true}
+                            maxLength={20}
+                          />
                         </span>
                       </div>
                     </div>
@@ -309,14 +315,22 @@ export function Header() {
           {/* Enhanced Mobile Menu */}
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-accent/50">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 hover:bg-accent/50"
+              >
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-full sm:w-[400px] p-0">
               {/* Custom Header */}
               <div className="flex items-center gap-3 p-6 border-b bg-gradient-to-r from-background to-accent/10">
-                <img src="/brand/pico-logo.svg" alt="PiCO" className="h-8 w-auto" />
+                <img
+                  src="/brand/pico-logo.svg"
+                  alt="PiCO"
+                  className="h-8 w-auto"
+                />
                 <div>
                   <h2 className="text-lg font-semibold">Menu</h2>
                   <p className="text-sm text-muted-foreground">Navigate PiCO</p>
@@ -328,21 +342,24 @@ export function Header() {
                 {isAuthenticated && (
                   <div className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 border-b">
                     <div className="flex items-center gap-4 mb-4">
-                      <Avatar className="h-12 w-12 ring-2 ring-primary/20">
-                        <AvatarImage
-                          src={`https://avatar.vercel.sh/${principal}.png`}
-                          alt={principal}
-                        />
-                        <AvatarFallback className="bg-primary/10">
-                          <User className="h-6 w-6" />
-                        </AvatarFallback>
-                      </Avatar>
+                      <UserAvatar
+                        principalId={principal}
+                        size="lg"
+                        className="ring-2 ring-primary/20"
+                      />
                       <div className="flex-1">
-                        <h3 className="font-medium text-foreground">Welcome back!</h3>
-                        <p className="text-sm text-muted-foreground truncate max-w-[200px]" title={principal}>
-                          {principal && principal.length > 25
-                            ? `${principal.slice(0, 12)}...${principal.slice(-8)}`
-                            : principal}
+                        <h3 className="font-medium text-foreground">
+                          Welcome back!
+                        </h3>
+                        <p
+                          className="text-sm text-muted-foreground truncate max-w-[200px]"
+                          title={principal}
+                        >
+                          <UserName
+                            principalId={principal}
+                            showPrincipal={true}
+                            maxLength={25}
+                          />
                         </p>
                       </div>
                     </div>
@@ -353,13 +370,21 @@ export function Header() {
                         <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl p-4 border border-primary/20 cursor-pointer hover:bg-gradient-to-r hover:from-primary/15 hover:to-primary/10 transition-all duration-200">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <img src="/brand/pico-glow.png" className="size-10" alt="PiCO" />
+                              <img
+                                src="/brand/pico-glow.png"
+                                className="size-10"
+                                alt="PiCO"
+                              />
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <p className="text-2xl font-bold text-foreground">{userBalance !== undefined ? (userBalance / 100000000).toFixed(2) : "0.00"}</p>
+                                  <p className="text-2xl font-bold text-foreground">
+                                    {userBalance}
+                                  </p>
                                   <PlusIcon className="h-4 w-4 text-muted-foreground" />
                                 </div>
-                                <p className="text-sm text-muted-foreground">Pico Coins • Tap to top up</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Pico Coins • Tap to top up
+                                </p>
                               </div>
                             </div>
                             <Button
@@ -376,26 +401,42 @@ export function Header() {
                           </div>
                         </div>
                       </PopoverTrigger>
-                      <PopoverContent className="w-80 p-0" align="center" side="bottom">
+                      <PopoverContent
+                        className="w-80 p-0"
+                        align="center"
+                        side="bottom"
+                      >
                         <div className="bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 gap-2 rounded-lg p-6 text-white">
                           <div className="text-center mb-6">
-                            <h3 className="text-sm font-medium text-purple-200 mb-2">Top Up Pop out</h3>
+                            <h3 className="text-sm font-medium text-purple-200 mb-2">
+                              Top Up Pop out
+                            </h3>
 
                             {/* Balance Display */}
                             <div className="relative mx-auto w-full">
                               <div className="bg-black/20 backdrop-blur-sm border border-purple-400/30 rounded-full w-full px-6 py-2 flex items-center gap-4">
-                                <img src="/brand/pico-glow.png" className="size-16 relative z-10" alt="PiCO" />
+                                <img
+                                  src="/brand/pico-glow.png"
+                                  className="size-16 relative z-10"
+                                  alt="PiCO"
+                                />
 
                                 <div className="text-left">
-                                  <div className="text-4xl font-bold text-white">{userBalance !== undefined ? (userBalance / 100000000).toFixed(2) : "0.00"}</div>
-                                  <div className="text-lg font-medium text-purple-200">Pico Coins</div>
+                                  <div className="text-4xl font-bold text-white">
+                                    {userBalance}
+                                  </div>
+                                  <div className="text-lg font-medium text-purple-200">
+                                    Pico Coins
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
 
                           <div className="text-center mb-6">
-                            <h4 className="text-lg font-semibold text-white">Top Up</h4>
+                            <h4 className="text-lg font-semibold text-white">
+                              Top Up
+                            </h4>
                           </div>
 
                           {/* Top Up Options */}
