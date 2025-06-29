@@ -11,7 +11,7 @@ export class PreferencesService extends BaseService {
   constructor(
     private canisterId: string,
     agent: HttpAgent,
-    identity: Identity,
+    identity: Identity
   ) {
     super(agent, identity);
     this.initializeActor();
@@ -24,13 +24,13 @@ export class PreferencesService extends BaseService {
       }
       this.actor = this.createActor<PreferencesContract>(
         this.canisterId,
-        preferencesIdlFactory,
+        preferencesIdlFactory
       );
     } catch (error) {
       console.error("Failed to initialize preferences actor:", error);
       throw new ApiError(
         "Failed to initialize preferences service",
-        "INIT_ERROR",
+        "INIT_ERROR"
       );
     }
   }
@@ -39,7 +39,7 @@ export class PreferencesService extends BaseService {
     if (!this.actor) {
       throw new ApiError(
         "Preferences actor not initialized",
-        "ACTOR_NOT_INITIALIZED",
+        "ACTOR_NOT_INITIALIZED"
       );
     }
     return this.actor;
@@ -88,7 +88,7 @@ export class PreferencesService extends BaseService {
 
   async addPreference(
     principalId: string,
-    preference: string,
+    preference: string
   ): Promise<UserPreferences> {
     try {
       const actor = this.getActor();
@@ -101,7 +101,7 @@ export class PreferencesService extends BaseService {
 
   async removePreference(
     principalId: string,
-    preference: string,
+    preference: string
   ): Promise<UserPreferences> {
     try {
       const actor = this.getActor();
@@ -160,9 +160,16 @@ export class PreferencesService extends BaseService {
 
   // Stats and utility methods
   async getStats(): Promise<{
-    total_users: bigint;
-    total_preferences: bigint;
-    average_preferences_per_user: bigint;
+    preferences: {
+      total_users: bigint;
+      total_preferences: bigint;
+      average_preferences_per_user: bigint;
+    };
+    profiles: {
+      total_profiles: bigint;
+      complete_profiles: bigint;
+      incomplete_profiles: bigint;
+    };
   }> {
     try {
       const actor = this.getActor();
@@ -192,16 +199,38 @@ export class PreferencesService extends BaseService {
 
   // Utility methods for frontend usage
   convertStatsToFrontend(stats: {
-    total_users: bigint;
-    total_preferences: bigint;
-    average_preferences_per_user: bigint;
+    preferences: {
+      total_users: bigint;
+      total_preferences: bigint;
+      average_preferences_per_user: bigint;
+    };
+    profiles: {
+      total_profiles: bigint;
+      complete_profiles: bigint;
+      incomplete_profiles: bigint;
+    };
   }) {
     return {
-      total_users: this.convertBigIntToNumber(stats.total_users),
-      total_preferences: this.convertBigIntToNumber(stats.total_preferences),
-      average_preferences_per_user: this.convertBigIntToNumber(
-        stats.average_preferences_per_user,
-      ),
+      preferences: {
+        total_users: this.convertBigIntToNumber(stats.preferences.total_users),
+        total_preferences: this.convertBigIntToNumber(
+          stats.preferences.total_preferences
+        ),
+        average_preferences_per_user: this.convertBigIntToNumber(
+          stats.preferences.average_preferences_per_user
+        ),
+      },
+      profiles: {
+        total_profiles: this.convertBigIntToNumber(
+          stats.profiles.total_profiles
+        ),
+        complete_profiles: this.convertBigIntToNumber(
+          stats.profiles.complete_profiles
+        ),
+        incomplete_profiles: this.convertBigIntToNumber(
+          stats.profiles.incomplete_profiles
+        ),
+      },
     };
   }
 

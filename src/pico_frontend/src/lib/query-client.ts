@@ -111,9 +111,40 @@ export const createQueryKey = {
   // AI keys
   ai: () => [...createQueryKey.all(), "ai"] as const,
   aiRecommendations: (principal: string, maxRecommendations?: number) =>
-    [...createQueryKey.ai(), "recommendations", principal, maxRecommendations] as const,
+    [
+      ...createQueryKey.ai(),
+      "recommendations",
+      principal,
+      maxRecommendations,
+    ] as const,
   aiDetailedRecommendations: (principal: string, maxRecommendations?: number) =>
-    [...createQueryKey.ai(), "detailed-recommendations", principal, maxRecommendations] as const,
+    [
+      ...createQueryKey.ai(),
+      "detailed-recommendations",
+      principal,
+      maxRecommendations,
+    ] as const,
+
+  // User Profile keys
+  userProfile: (principal: string) =>
+    [...createQueryKey.all(), "userProfile", principal] as const,
+  userProfileByUsername: (username: string) =>
+    [...createQueryKey.all(), "userProfile", "username", username] as const,
+  hasProfile: (principal: string) =>
+    [...createQueryKey.all(), "userProfile", "hasProfile", principal] as const,
+  usernameAvailable: (username: string) =>
+    [
+      ...createQueryKey.all(),
+      "userProfile",
+      "usernameAvailable",
+      username,
+    ] as const,
+  listProfiles: (offset: number, limit: number) =>
+    [...createQueryKey.all(), "userProfile", "list", offset, limit] as const,
+  searchProfiles: (searchQuery: string) =>
+    [...createQueryKey.all(), "userProfile", "search", searchQuery] as const,
+  profileStats: () =>
+    [...createQueryKey.all(), "userProfile", "stats"] as const,
 } as const;
 
 // Helper functions for invalidating related queries
@@ -143,6 +174,16 @@ export const invalidateQueries = {
     queryClient.invalidateQueries({ queryKey: createQueryKey.forums() }),
   forum: (id: number | string) =>
     queryClient.invalidateQueries({ queryKey: createQueryKey.forum(id) }),
+
+  // Invalidate user profile queries
+  userProfile: (principal: string) =>
+    queryClient.invalidateQueries({
+      queryKey: createQueryKey.userProfile(principal),
+    }),
+  userProfiles: () =>
+    queryClient.invalidateQueries({
+      queryKey: [...createQueryKey.all(), "userProfile"],
+    }),
 
   // Invalidate all queries
   all: () => queryClient.invalidateQueries({ queryKey: createQueryKey.all() }),

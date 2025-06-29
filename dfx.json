@@ -30,9 +30,7 @@
     "forums_contract": {
       "main": "src/pico_backend/forums.mo",
       "type": "motoko",
-      "dependencies": [
-        "operational_contract"
-      ]
+      "dependencies": ["operational_contract"]
     },
     "ai_contract": {
       "main": "src/pico_backend/ai.mo",
@@ -47,9 +45,7 @@
         "token_contract",
         "ai_contract"
       ],
-      "source": [
-        "src/pico_frontend/dist"
-      ],
+      "source": ["src/pico_frontend/dist"],
       "type": "assets",
       "workspace": "pico_frontend"
     },
