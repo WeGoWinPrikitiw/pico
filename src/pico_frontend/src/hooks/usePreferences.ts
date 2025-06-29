@@ -43,7 +43,7 @@ export function usePreferencesStats() {
 
 export function useUsersByPreference(
   preference: string,
-  enabled: boolean = true,
+  enabled: boolean = true
 ) {
   return useQuery({
     queryKey: [...createQueryKey.preferences(), "by-preference", preference],
@@ -70,7 +70,7 @@ export function useSearchPreferences(query: string, enabled: boolean = true) {
 
 export function useHasPreferences(
   principalId: string,
-  enabled: boolean = true,
+  enabled: boolean = true
 ) {
   return useQuery({
     queryKey: [...createQueryKey.preferences(), "has-preferences", principalId],
@@ -96,6 +96,33 @@ export function usePreferencesHealthCheck() {
 }
 
 // Mutation hooks
+export function useCreateOrUpdatePreferences() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: PreferencesInput) => {
+      const service = serviceFactory.getPreferencesService();
+      return service.createOrUpdatePreferences(input);
+    },
+    onSuccess: (data, variables) => {
+      toast.success("Preferences saved successfully!");
+
+      // Invalidate and refetch related queries
+      invalidateQueries.all();
+
+      // Optimistically update the cache
+      queryClient.setQueryData(
+        createQueryKey.userPreferences(variables.principal_id),
+        data
+      );
+    },
+    onError: (error) => {
+      console.error("Failed to save preferences:", error);
+      toast.error("Failed to save preferences");
+    },
+  });
+}
+
 export function useCreatePreferences() {
   const queryClient = useQueryClient();
 
@@ -113,7 +140,7 @@ export function useCreatePreferences() {
       // Optimistically update the cache
       queryClient.setQueryData(
         createQueryKey.userPreferences(variables.principal_id),
-        data,
+        data
       );
     },
     onError: (error) => {
@@ -148,7 +175,7 @@ export function useUpdatePreferences() {
       // Optimistically update the cache
       queryClient.setQueryData(
         createQueryKey.userPreferences(variables.principal_id),
-        data,
+        data
       );
     },
     onError: (error) => {
@@ -207,7 +234,7 @@ export function useAddPreference() {
       // Update cache and invalidate related queries
       queryClient.setQueryData(
         createQueryKey.userPreferences(principalId),
-        data,
+        data
       );
       queryClient.invalidateQueries({
         queryKey: createQueryKey.preferences(),
@@ -243,7 +270,7 @@ export function useRemovePreference() {
       // Update cache and invalidate related queries
       queryClient.setQueryData(
         createQueryKey.userPreferences(principalId),
-        data,
+        data
       );
       queryClient.invalidateQueries({
         queryKey: createQueryKey.preferences(),

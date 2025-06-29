@@ -112,6 +112,29 @@ export class PreferencesService extends BaseService {
     }
   }
 
+  // Smart method that creates or updates preferences as needed
+  async createOrUpdatePreferences(
+    input: PreferencesInput
+  ): Promise<UserPreferences> {
+    try {
+      // First try to update
+      return await this.updatePreferences(input);
+    } catch (error: any) {
+      // Check if the error is about missing preferences
+      const errorMessage = error?.message || error?.toString() || "";
+      if (
+        errorMessage.includes("No preferences found") ||
+        errorMessage.includes("createPreferences")
+      ) {
+        // User has no preferences record, create it first
+        return await this.createPreferences(input);
+      } else {
+        // Different error, re-throw it
+        throw error;
+      }
+    }
+  }
+
   // Query methods
   async getAllPreferences(): Promise<UserPreferences[]> {
     try {

@@ -16,7 +16,7 @@ export class AuthService extends BaseService {
         this.identity = identity;
         this.agent = HttpAgent.createSync({
           identity,
-          host
+          host,
         });
       } else {
         // Create anonymous agent for public queries
@@ -51,7 +51,7 @@ export class AuthService extends BaseService {
 
               this.agent = HttpAgent.createSync({
                 identity,
-                host
+                host,
               });
 
               // Only fetch root key in development
@@ -98,8 +98,7 @@ export class AuthService extends BaseService {
     }
   }
 
-  getPrincipal(): string |
-    undefined {
+  getPrincipal(): string | undefined {
     return this.identity?.getPrincipal().toString();
   }
 

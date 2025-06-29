@@ -187,8 +187,11 @@ export function UploadPage() {
       }));
       // Automatically mark detection as completed for AI-generated image
       setAiDetectionPerformed(true);
-      setAiDetectionResult({ is_ai_generated: true, confidence: 1, reasoning: 'AI Generated' });
-
+      setAiDetectionResult({
+        is_ai_generated: true,
+        confidence: 1,
+        reasoning: "AI Generated",
+      });
     } catch (error) {
       console.error("AI generation failed:", error);
     }
@@ -301,7 +304,7 @@ export function UploadPage() {
     nftData.description.trim() &&
     nftData.price.trim() &&
     nftData.previewUrl &&
-    (aiDetectionPerformed || nftData.isAiGenerated); // Skip detection if AI-generated
+    aiDetectionPerformed; // AI detection is always required for uploaded images
 
   return (
     <div className="min-h-screen bg-background">
@@ -366,8 +369,8 @@ export function UploadPage() {
                 className="bg-gradient-to-r from-primary to-primary/90 shadow-lg sm:size-lg flex items-center"
               >
                 {mintNftMutation.isPending ||
-                  generateAiImageMutation.isPending ||
-                  uploadImageMutation.isPending ? (
+                generateAiImageMutation.isPending ||
+                uploadImageMutation.isPending ? (
                   <LoadingSpinner size="sm" className="mr-2" />
                 ) : (
                   <UploadIcon className="h-4 w-4 mr-2" />
@@ -376,10 +379,10 @@ export function UploadPage() {
                   {mintNftMutation.isPending
                     ? "Minting..."
                     : uploadImageMutation.isPending
-                      ? "Uploading..."
-                      : createForumMutation.isPending
-                        ? "Creating..."
-                        : "Mint NFT"}
+                    ? "Uploading..."
+                    : createForumMutation.isPending
+                    ? "Creating..."
+                    : "Mint NFT"}
                 </span>
               </Button>
             </div>
@@ -456,10 +459,11 @@ export function UploadPage() {
                       </div>
                     ) : (
                       <div
-                        className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer ${dragOver
-                          ? "border-primary bg-primary/5"
-                          : "border-muted-foreground/25 hover:border-muted-foreground/50"
-                          }`}
+                        className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer ${
+                          dragOver
+                            ? "border-primary bg-primary/5"
+                            : "border-muted-foreground/25 hover:border-muted-foreground/50"
+                        }`}
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
@@ -493,7 +497,7 @@ export function UploadPage() {
                     )}
 
                     {/* AI Detection and Checkbox - only show when there's a file uploaded */}
-                    {nftData.previewUrl && !nftData.isAiGenerated && (
+                    {nftData.previewUrl && (
                       <div className="mt-4 space-y-3">
                         {/* AI Detection Button - Mandatory before minting */}
                         <div className="p-3 border border-border rounded-lg bg-blue-50 dark:bg-blue-950/30">
@@ -528,16 +532,17 @@ export function UploadPage() {
                                   setAiDetectionResult(result);
                                   setAiDetectionPerformed(true);
 
-                                  // Automatically update the isAiGenerated flag
+                                  // Automatically update the isAiGenerated flag (but allow manual override)
                                   setNftData((prev) => ({
                                     ...prev,
                                     isAiGenerated: result.is_ai_generated,
                                   }));
 
                                   toast.success(
-                                    `AI Detection: ${result.is_ai_generated
-                                      ? "AI-Generated"
-                                      : "Human-Made"
+                                    `AI Detection: ${
+                                      result.is_ai_generated
+                                        ? "AI-Generated"
+                                        : "Human-Made"
                                     } (${Math.round(
                                       result.confidence * 100
                                     )}% confidence)`
@@ -574,7 +579,7 @@ export function UploadPage() {
                             {aiDetectionResult && (
                               <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs">
                                 <p>
-                                  <strong>Result:</strong>{" "}
+                                  <strong>AI Detection Result:</strong>{" "}
                                   {aiDetectionResult.is_ai_generated
                                     ? "AI-Generated"
                                     : "Human-Made"}
@@ -590,12 +595,16 @@ export function UploadPage() {
                                   <strong>Reasoning:</strong>{" "}
                                   {aiDetectionResult.reasoning}
                                 </p>
+                                <p className="text-yellow-600 dark:text-yellow-400 mt-1">
+                                  <strong>Note:</strong> You can still manually
+                                  override this detection below.
+                                </p>
                               </div>
                             )}
                           </div>
                         </div>
 
-                        {/* AI Generated Checkbox - Now auto-updated by detection */}
+                        {/* AI Generated Checkbox - Always editable for manual override */}
                         <div className="flex items-center space-x-3 p-3 border border-border rounded-lg">
                           <div className="relative">
                             <input
@@ -615,10 +624,11 @@ export function UploadPage() {
                               className="flex items-center cursor-pointer"
                             >
                               <div
-                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.isAiGenerated
-                                  ? "bg-purple-600 border-purple-600"
-                                  : "border-gray-300 hover:border-purple-400"
-                                  }`}
+                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                  nftData.isAiGenerated
+                                    ? "bg-purple-600 border-purple-600"
+                                    : "border-gray-300 hover:border-purple-400"
+                                }`}
                               >
                                 {nftData.isAiGenerated && (
                                   <svg
@@ -634,14 +644,25 @@ export function UploadPage() {
                                   </svg>
                                 )}
                               </div>
-                              <span className="ml-3 text-sm font-medium">
-                                This image was generated using AI
+                              <div className="ml-3">
+                                <span className="text-sm font-medium">
+                                  This image was generated using AI
+                                </span>
                                 {aiDetectionPerformed && (
-                                  <span className="ml-2 text-xs text-muted-foreground">
-                                    (Auto-detected)
-                                  </span>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {aiDetectionResult?.is_ai_generated ===
+                                    nftData.isAiGenerated ? (
+                                      <span className="text-green-600">
+                                        ✓ Matches AI detection result
+                                      </span>
+                                    ) : (
+                                      <span className="text-orange-600">
+                                        ⚠️ Manual override of AI detection
+                                      </span>
+                                    )}
+                                  </div>
                                 )}
-                              </span>
+                              </div>
                             </label>
                           </div>
                         </div>
@@ -815,10 +836,11 @@ export function UploadPage() {
                           className="flex items-center cursor-pointer"
                         >
                           <div
-                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.forSale
-                              ? "bg-blue-600 border-blue-600"
-                              : "border-gray-300 hover:border-blue-400"
-                              }`}
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                              nftData.forSale
+                                ? "bg-blue-600 border-blue-600"
+                                : "border-gray-300 hover:border-blue-400"
+                            }`}
                           >
                             {nftData.forSale && (
                               <svg
@@ -843,8 +865,7 @@ export function UploadPage() {
                     <p className="text-xs text-muted-foreground">
                       {nftData.forSale
                         ? "✅ Your NFT will be available for purchase immediately after minting"
-                        : "⏸️ Your NFT will be minted but not listed for sale (you can list it later)"
-                      }
+                        : "⏸️ Your NFT will be minted but not listed for sale (you can list it later)"}
                     </p>
                   </CardContent>
                 </Card>
@@ -1105,10 +1126,11 @@ export function UploadPage() {
                           className="flex items-center cursor-pointer"
                         >
                           <div
-                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.forSale
-                              ? "bg-blue-600 border-blue-600"
-                              : "border-gray-300 hover:border-blue-400"
-                              }`}
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                              nftData.forSale
+                                ? "bg-blue-600 border-blue-600"
+                                : "border-gray-300 hover:border-blue-400"
+                            }`}
                           >
                             {nftData.forSale && (
                               <svg
@@ -1133,8 +1155,7 @@ export function UploadPage() {
                     <p className="text-xs text-muted-foreground">
                       {nftData.forSale
                         ? "✅ Your NFT will be available for purchase immediately after minting"
-                        : "⏸️ Your NFT will be minted but not listed for sale (you can list it later)"
-                      }
+                        : "⏸️ Your NFT will be minted but not listed for sale (you can list it later)"}
                     </p>
                   </CardContent>
                 </Card>
