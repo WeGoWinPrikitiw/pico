@@ -15,6 +15,23 @@ import Config "config";
 
 actor class NFT() = {
 
+    // HTTP Transform function to handle consensus issues
+    public query func transform_http_response(raw : {
+        status : Nat;
+        headers : [{ name : Text; value : Text }];
+        body : [Nat8];
+    }) : async {
+        status : Nat;
+        headers : [{ name : Text; value : Text }];
+        body : [Nat8];
+    } {
+        {
+            status = raw.status;
+            body = raw.body;
+            headers = []; // Strip all headers to avoid consensus issues
+        }
+    };
+
     // ICRC-7 Standard Types
     public type Account = {
         owner: Principal;
@@ -431,8 +448,11 @@ actor class NFT() = {
                         null         // use default model (dall-e-3)
                     );
                     
-                    // Use the real OpenAI API
-                    let result = await OpenAI.generateImage(apiKey, openaiRequest);
+                    // Use the real OpenAI API with transform function
+                    let result = await OpenAI.generateImage(apiKey, openaiRequest, ?{
+                        function = transform_http_response;
+                        context = [];
+                    });
                     switch (result) {
                         case (#ok(imageUrl)) {
                             let suggestedTraits = generateTraitsFromPrompt(prompt);
@@ -631,8 +651,11 @@ actor class NFT() = {
     public func detect_ai_generated(imageUrl: Text): async Result.Result<OpenAI.AIDetectionResponse, Text> {
         switch (openaiApiKey) {
             case (?key) {
-                // Use real OpenAI API
-                await OpenAI.detectAIGenerated(key, imageUrl);
+                // Use real OpenAI API with transform function
+                await OpenAI.detectAIGenerated(key, imageUrl, ?{
+                    function = transform_http_response;
+                    context = [];
+                });
             };
             case null {
                 // Fall back to mock detection for testing
@@ -655,7 +678,10 @@ actor class NFT() = {
         // First, detect if the image is AI-generated
         let aiDetectionResult = switch (openaiApiKey) {
             case (?key) {
-                await OpenAI.detectAIGenerated(key, image_url);
+                await OpenAI.detectAIGenerated(key, image_url, ?{
+                    function = transform_http_response;
+                    context = [];
+                });
             };
             case null {
                 let mockResult = await OpenAI.detectAIGeneratedMock(image_url);

@@ -282,8 +282,23 @@ module {
         };
     };
 
-    // Generate image using OpenAI API
-    public func generateImage(apiKey : Text, request : OpenAIImageRequest) : async Result.Result<Text, Text> {
+    // Generate image using OpenAI API with transform function
+    public func generateImage(
+        apiKey : Text, 
+        request : OpenAIImageRequest,
+        transform : ?{
+            function : shared query ({
+                status : Nat;
+                headers : [HttpHeader];
+                body : [Nat8];
+            }) -> async ({
+                status : Nat;
+                headers : [HttpHeader];
+                body : [Nat8];
+            });
+            context : [Nat8];
+        }
+    ) : async Result.Result<Text, Text> {
 
         // Escape quotes in prompt to prevent JSON issues
         let escapedPrompt = Text.replace(request.prompt, #text "\"", "\\\"");
@@ -311,14 +326,14 @@ module {
             { name = "Idempotency-Key"; value = idempotencyKey },
         ];
 
-        // Prepare HTTP request without transform to avoid consensus issues temporarily
+        // Prepare HTTP request with transform function to handle consensus
         let httpRequest : HttpRequestArgs = {
             url = "https://api.openai.com/v1/images/generations";
             max_response_bytes = ?Nat64.fromNat(Config.HTTP_MAX_RESPONSE_BYTES);
             headers = headers;
             body = ?requestBodyBytes;
             method = #post;
-            transform = null;
+            transform = transform;
         };
 
         try {
@@ -363,8 +378,23 @@ module {
         "https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=1024&h=1024&fit=crop&q=80&prompt=" # prompt;
     };
 
-    // Detect AI-generated images using GPT-4 Vision
-    public func detectAIGenerated(apiKey : Text, imageUrl : Text) : async Result.Result<AIDetectionResponse, Text> {
+    // Detect AI-generated images using GPT-4 Vision with transform function
+    public func detectAIGenerated(
+        apiKey : Text, 
+        imageUrl : Text,
+        transform : ?{
+            function : shared query ({
+                status : Nat;
+                headers : [HttpHeader];
+                body : [Nat8];
+            }) -> async ({
+                status : Nat;
+                headers : [HttpHeader];
+                body : [Nat8];
+            });
+            context : [Nat8];
+        }
+    ) : async Result.Result<AIDetectionResponse, Text> {
         
         // Create the system prompt for AI detection
         let systemPrompt = "You are an expert at detecting AI-generated images. Analyze the provided image carefully and determine if it was created by an AI image generator or if it's a natural photograph/traditional artwork. Look for AI generation indicators like unrealistic details, inconsistent lighting, artifacts, or unnatural compositions. Always start your response with either 'YES - this image is AI-generated' or 'NO - this image is not AI-generated' followed by detailed reasoning.";
@@ -398,14 +428,14 @@ module {
             { name = "Idempotency-Key"; value = idempotencyKey },
         ];
 
-        // Prepare HTTP request without transform to avoid consensus issues temporarily  
+        // Prepare HTTP request with transform function to handle consensus
         let httpRequest : HttpRequestArgs = {
             url = "https://api.openai.com/v1/chat/completions";
             max_response_bytes = ?Nat64.fromNat(Config.HTTP_MAX_RESPONSE_BYTES);
             headers = headers;
             body = ?requestBodyBytes;
             method = #post;
-            transform = null;
+            transform = transform;
         };
 
         try {
