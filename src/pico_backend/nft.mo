@@ -673,7 +673,8 @@ actor class NFT() = {
                     price, 
                     image_url, 
                     aiDetection.is_ai_generated, 
-                    traits
+                    traits,
+                    ?true
                 );
                 
                 switch (mintResult) {
@@ -697,7 +698,8 @@ actor class NFT() = {
                     price, 
                     image_url, 
                     false, // Default to false if detection fails
-                    traits
+                    traits,
+                    ?true
                 );
                 
                 switch (mintResult) {
