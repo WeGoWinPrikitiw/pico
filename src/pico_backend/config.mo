@@ -23,6 +23,7 @@ module {
   public let ICRC1_LEDGER_CANISTER = "uzt4z-lp777-77774-qaabq-cai";
   public let PICO_FRONTEND_CANISTER = "ucwa4-rx777-77774-qaada-cai";
   public let AI_CONTRACT_CANISTER = "uxrrr-q7777-77774-qaaaq-cai";
+  public let USER_PROFILE_CONTRACT_CANISTER = "vg3po-ix777-77774-qaafa-cai";
 
   // Admin and system principals
   public let ADMIN_PRINCIPAL = "2sl3b-tf63d-g5z2g-44tut-vfgiw-af5tm-j65bi-37h3o-uce26-wvs2v-qqe";

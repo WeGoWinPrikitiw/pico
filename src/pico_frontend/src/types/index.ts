@@ -44,6 +44,15 @@ export type {
   _SERVICE as ForumsService,
 } from "../../../declarations/forums_contract/forums_contract.did";
 
+// User Profile Contract types
+export type {
+  UserProfileData,
+  ProfileInput,
+  SocialLinks,
+  ProfileStats,
+  _SERVICE as UserProfileService,
+} from "../../../declarations/preferences_contract/preferences_contract.did";
+
 // ICRC1 Ledger types
 export type {
   Account,

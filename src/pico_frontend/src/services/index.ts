@@ -7,6 +7,7 @@ export { ForumsService } from "./forums.service";
 export { PreferencesService } from "./preferences.service";
 export { ICRC1Service } from "./icrc1.service";
 export { UploadService } from "./upload.service";
+export { UserProfileService } from "./user-profile.service";
 
 // Export base service and error handling
 export { BaseService, ApiError } from "./base.service";
@@ -20,6 +21,7 @@ import { ForumsService } from "./forums.service";
 import { PreferencesService } from "./preferences.service";
 import { ICRC1Service } from "./icrc1.service";
 import { UploadService } from "./upload.service";
+import { UserProfileService } from "./user-profile.service";
 
 import type { CanisterConfig } from "@/config/canisters";
 import generatedCanisterIds from "@/config/generated-canister-ids.json";
@@ -38,6 +40,7 @@ export class ServiceFactory {
   private preferencesService?: PreferencesService;
   private icrc1Service?: ICRC1Service;
   private uploadService?: UploadService;
+  private userProfileService?: UserProfileService;
 
   constructor() {
     this.authService = new AuthService();
@@ -94,6 +97,7 @@ export class ServiceFactory {
         agent,
         identity
       );
+      this.userProfileService = new UserProfileService(agent, identity);
 
       // Upload service doesn't require canister interaction, just needs agent/identity
       this.uploadService = new UploadService(agent, identity);
@@ -155,6 +159,13 @@ export class ServiceFactory {
     return this.uploadService;
   }
 
+  getUserProfileService(): UserProfileService {
+    if (!this.userProfileService) {
+      throw new Error("User profile service not available. Please log in.");
+    }
+    return this.userProfileService;
+  }
+
   // --- Auth Methods ---
 
   async login() {
@@ -174,6 +185,7 @@ export class ServiceFactory {
     this.preferencesService = undefined;
     this.icrc1Service = undefined;
     this.uploadService = undefined;
+    this.userProfileService = undefined;
     // Re-create services with anonymous agent
     this.createAllServices();
   }

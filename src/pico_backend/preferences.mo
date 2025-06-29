@@ -1,8 +1,9 @@
 /*
- * PiCO Preferences Contract
+ * PiCO Preferences & User Profile Contract
  * 
- * This contract handles user preferences with CRUD operations.
- * Each user can have their own preferences stored by their principal ID.
+ * This contract handles user preferences with CRUD operations and user profile data
+ * including avatar, name, about, username, social links, and account creation information.
+ * Each user can have their own preferences and profile stored by their principal ID.
  */
 
 import Result "mo:base/Result";
@@ -12,6 +13,7 @@ import HashMap "mo:base/HashMap";
 import Array "mo:base/Array";
 import Iter "mo:base/Iter";
 import Text "mo:base/Text";
+import Char "mo:base/Char";
 
 actor Preferences {
   
@@ -28,14 +30,278 @@ actor Preferences {
     principal_id : Text;
     preferences : [Text];
   };
+
+  // User profile type
+  public type UserProfileData = {
+    principal_id : Text;
+    username : Text;
+    name : Text;
+    about : Text;
+    avatar_url : ?Text;
+    social : SocialLinks;
+    created_at : Int;
+    updated_at : Int;
+    is_profile_complete : Bool;
+  };
+  
+  // Social links type
+  public type SocialLinks = {
+    website : ?Text;
+    twitter : ?Text;
+    instagram : ?Text;
+  };
+  
+  // Create/Update profile input type
+  public type ProfileInput = {
+    username : Text;
+    name : Text;
+    about : Text;
+    avatar_url : ?Text;
+    social : SocialLinks;
+  };
+  
+  // Profile statistics type
+  public type ProfileStats = {
+    total_profiles : Nat;
+    complete_profiles : Nat;
+    incomplete_profiles : Nat;
+  };
   
   // Storage for user preferences
   private var userPreferences = HashMap.HashMap<Text, UserPreferences>(10, Text.equal, Text.hash);
+
+  // Storage for user profiles
+  private var userProfiles = HashMap.HashMap<Text, UserProfileData>(10, Text.equal, Text.hash);
+  
+  // Storage for username to principal mapping (for unique usernames)
+  private var usernameMapping = HashMap.HashMap<Text, Text>(10, Text.equal, Text.hash);
   
   // Helper function to get current timestamp
   private func getCurrentTime() : Int {
     Time.now()
   };
+
+  // Helper function to validate username (alphanumeric and underscore only, 3-20 chars)
+  private func isValidUsername(username : Text) : Bool {
+    let length = Text.size(username);
+    if (length < 3 or length > 20) {
+      return false;
+    };
+    
+    // Check if username contains only valid characters
+    for (char in username.chars()) {
+      let c = Char.toNat32(char);
+      if (not ((c >= 48 and c <= 57) or  // 0-9
+               (c >= 65 and c <= 90) or  // A-Z
+               (c >= 97 and c <= 122) or // a-z
+               c == 95)) {               // underscore
+        return false;
+      };
+    };
+    true
+  };
+
+  // ========== USER PROFILE FUNCTIONS ==========
+
+  // Check if username is available
+  public query func isUsernameAvailable(username : Text) : async Bool {
+    switch (usernameMapping.get(Text.toLowercase(username))) {
+      case (?_existing) false;
+      case null true;
+    }
+  };
+
+  // Create user profile (first time setup)
+  public func createProfile(caller : Text, input : ProfileInput) : async Result.Result<UserProfileData, Text> {
+    // Validate username
+    if (not isValidUsername(input.username)) {
+      return #err("Invalid username. Must be 3-20 characters with only letters, numbers, and underscores.");
+    };
+    
+    // Check if username is already taken
+    let lowercaseUsername = Text.toLowercase(input.username);
+    switch (usernameMapping.get(lowercaseUsername)) {
+      case (?_existing) {
+        return #err("Username is already taken.");
+      };
+      case null {};
+    };
+    
+    // Check if user already has a profile
+    switch (userProfiles.get(caller)) {
+      case (?_existing) {
+        return #err("Profile already exists. Use updateProfile to modify.");
+      };
+      case null {};
+    };
+    
+    let now = getCurrentTime();
+    let newProfile : UserProfileData = {
+      principal_id = caller;
+      username = input.username;
+      name = input.name;
+      about = input.about;
+      avatar_url = input.avatar_url;
+      social = input.social;
+      created_at = now;
+      updated_at = now;
+      is_profile_complete = true;
+    };
+    
+    // Store profile and username mapping
+    userProfiles.put(caller, newProfile);
+    usernameMapping.put(lowercaseUsername, caller);
+    
+    #ok(newProfile)
+  };
+
+  // Update existing user profile
+  public func updateProfile(caller : Text, input : ProfileInput) : async Result.Result<UserProfileData, Text> {
+    switch (userProfiles.get(caller)) {
+      case null {
+        #err("Profile not found. Create a profile first.")
+      };
+      case (?existingProfile) {
+        // Validate username
+        if (not isValidUsername(input.username)) {
+          return #err("Invalid username. Must be 3-20 characters with only letters, numbers, and underscores.");
+        };
+        
+        let lowercaseUsername = Text.toLowercase(input.username);
+        let existingLowercaseUsername = Text.toLowercase(existingProfile.username);
+        
+        // Check if username is changing and if new username is available
+        if (lowercaseUsername != existingLowercaseUsername) {
+          switch (usernameMapping.get(lowercaseUsername)) {
+            case (?existing) {
+              if (existing != caller) {
+                return #err("Username is already taken.");
+              };
+            };
+            case null {};
+          };
+          
+          // Remove old username mapping and add new one
+          usernameMapping.delete(existingLowercaseUsername);
+          usernameMapping.put(lowercaseUsername, caller);
+        };
+        
+        let updatedProfile : UserProfileData = {
+          principal_id = caller;
+          username = input.username;
+          name = input.name;
+          about = input.about;
+          avatar_url = input.avatar_url;
+          social = input.social;
+          created_at = existingProfile.created_at;
+          updated_at = getCurrentTime();
+          is_profile_complete = true;
+        };
+        
+        userProfiles.put(caller, updatedProfile);
+        #ok(updatedProfile)
+      };
+    }
+  };
+
+  // Get user profile by principal ID
+  public query func getProfile(principal_id : Text) : async Result.Result<UserProfileData, Text> {
+    switch (userProfiles.get(principal_id)) {
+      case null #err("Profile not found.");
+      case (?profile) #ok(profile);
+    }
+  };
+
+  // Get user profile by username
+  public query func getProfileByUsername(username : Text) : async Result.Result<UserProfileData, Text> {
+    let lowercaseUsername = Text.toLowercase(username);
+    switch (usernameMapping.get(lowercaseUsername)) {
+      case null #err("Username not found.");
+      case (?principal_id) {
+        switch (userProfiles.get(principal_id)) {
+          case null #err("Profile not found.");
+          case (?profile) #ok(profile);
+        }
+      };
+    }
+  };
+
+  // Check if user has a profile
+  public query func hasProfile(principal_id : Text) : async Bool {
+    switch (userProfiles.get(principal_id)) {
+      case null false;
+      case (?profile) profile.is_profile_complete;
+    }
+  };
+
+  // List all profiles (with pagination)
+  public query func listProfiles(offset : Nat, limit : Nat) : async [UserProfileData] {
+    let allProfiles = Iter.toArray(userProfiles.vals());
+    let profilesArray = Array.sort(allProfiles, func(a: UserProfileData, b: UserProfileData) : {#less; #equal; #greater} {
+      if (a.created_at > b.created_at) #less
+      else if (a.created_at < b.created_at) #greater
+      else #equal
+    });
+    
+    let totalCount = profilesArray.size();
+    if (offset >= totalCount) {
+      return [];
+    };
+    
+    let endIndex = if (offset + limit > totalCount) totalCount else offset + limit;
+    Array.tabulate<UserProfileData>(endIndex - offset, func(i) {
+      profilesArray[offset + i]
+    })
+  };
+
+  // Search profiles by name or username
+  public query func searchProfiles(searchQuery : Text) : async [UserProfileData] {
+    let lowercaseQuery = Text.toLowercase(searchQuery);
+    let allProfiles = Iter.toArray(userProfiles.vals());
+    
+    Array.filter<UserProfileData>(allProfiles, func(profile) {
+      let nameMatch = Text.contains(Text.toLowercase(profile.name), #text lowercaseQuery);
+      let usernameMatch = Text.contains(Text.toLowercase(profile.username), #text lowercaseQuery);
+      nameMatch or usernameMatch
+    })
+  };
+
+  // Delete user profile
+  public func deleteProfile(caller : Text) : async Result.Result<Text, Text> {
+    switch (userProfiles.get(caller)) {
+      case null {
+        #err("Profile not found.")
+      };
+      case (?profile) {
+        let lowercaseUsername = Text.toLowercase(profile.username);
+        userProfiles.delete(caller);
+        usernameMapping.delete(lowercaseUsername);
+        #ok("Profile deleted successfully.")
+      };
+    }
+  };
+
+  // Get profile statistics
+  public query func getProfileStats() : async ProfileStats {
+    let allProfiles = Iter.toArray(userProfiles.vals());
+    let totalProfiles = allProfiles.size();
+    let completeProfiles = Array.filter<UserProfileData>(allProfiles, func(profile) {
+      profile.is_profile_complete
+    }).size();
+    
+    {
+      total_profiles = totalProfiles;
+      complete_profiles = completeProfiles;
+      incomplete_profiles = totalProfiles - completeProfiles;
+    }
+  };
+
+  // Get all usernames (for admin purposes)
+  public query func getAllUsernames() : async [Text] {
+    Iter.toArray(usernameMapping.keys())
+  };
+
+  // ========== USER PREFERENCES FUNCTIONS ==========
   
   // CREATE - Add new user preferences
   public func createPreferences(input : PreferencesInput) : async Result.Result<UserPreferences, Text> {
@@ -211,28 +477,50 @@ actor Preferences {
   
   // Health check
   public query func healthCheck() : async Text {
-    "✅ Preferences contract is healthy! Total users: " # Nat.toText(userPreferences.size())
+    "✅ Preferences & Profile contract is healthy! Total users with preferences: " # Nat.toText(userPreferences.size()) # ", Total profiles: " # Nat.toText(userProfiles.size())
   };
   
-  // Get preferences statistics
+  // Get comprehensive statistics
   public query func getStats() : async {
-    total_users: Nat;
-    total_preferences: Nat;
-    average_preferences_per_user: Nat;
+    preferences: {
+      total_users: Nat;
+      total_preferences: Nat;
+      average_preferences_per_user: Nat;
+    };
+    profiles: {
+      total_profiles: Nat;
+      complete_profiles: Nat;
+      incomplete_profiles: Nat;
+    };
   } {
-    let totalUsers = userPreferences.size();
+    // Preferences stats
+    let totalPrefUsers = userPreferences.size();
     var totalPreferences = 0;
     
     for (userPref in userPreferences.vals()) {
       totalPreferences += userPref.preferences.size();
     };
     
-    let averagePrefs = if (totalUsers > 0) { totalPreferences / totalUsers } else { 0 };
+    let averagePrefs = if (totalPrefUsers > 0) { totalPreferences / totalPrefUsers } else { 0 };
+
+    // Profile stats
+    let allProfiles = Iter.toArray(userProfiles.vals());
+    let totalProfiles = allProfiles.size();
+    let completeProfiles = Array.filter<UserProfileData>(allProfiles, func(profile) {
+      profile.is_profile_complete
+    }).size();
     
     {
-      total_users = totalUsers;
-      total_preferences = totalPreferences;
-      average_preferences_per_user = averagePrefs;
+      preferences = {
+        total_users = totalPrefUsers;
+        total_preferences = totalPreferences;
+        average_preferences_per_user = averagePrefs;
+      };
+      profiles = {
+        total_profiles = totalProfiles;
+        complete_profiles = completeProfiles;
+        incomplete_profiles = totalProfiles - completeProfiles;
+      };
     }
   };
 }

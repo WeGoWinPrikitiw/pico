@@ -155,22 +155,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const interval = setInterval(
-      async () => {
-        try {
-          const stillAuthenticated = await serviceFactory.isAuthenticated();
-          if (!stillAuthenticated) {
-            // User session expired
-            toast.error("Your session has expired. Please log in again.");
-            queryClient.clear();
-            refreshAuth();
-          }
-        } catch (error) {
-          console.warn("Failed to check auth status:", error);
+    const interval = setInterval(async () => {
+      try {
+        const stillAuthenticated = await serviceFactory.isAuthenticated();
+        if (!stillAuthenticated) {
+          // User session expired
+          toast.error("Your session has expired. Please log in again.");
+          queryClient.clear();
+          refreshAuth();
         }
-      },
-      1000 * 60 * 5,
-    ); // Check every 5 minutes
+      } catch (error) {
+        console.warn("Failed to check auth status:", error);
+      }
+    }, 1000 * 60 * 5); // Check every 5 minutes
 
     return () => clearInterval(interval);
   }, [isAuthenticated, queryClient, refreshAuth]);
@@ -254,5 +251,6 @@ export function useServices() {
     forumsService: serviceFactory.getForumsService(),
     preferencesService: serviceFactory.getPreferencesService(),
     icrc1Service: serviceFactory.getICRC1Service(),
+    userProfileService: serviceFactory.getUserProfileService(),
   };
 }
