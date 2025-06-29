@@ -51,7 +51,7 @@ module {
   public let NFT_COLLECTION_SUPPLY_CAP = 10000;
 
   // HTTP outcall configuration (for OpenAI integration)
-  public let HTTP_OUTCALL_CYCLES : Nat = 400_000_000; // 400M cycles
+  public let HTTP_OUTCALL_CYCLES : Nat = 3_000_000_000; // 3B cycles
   public let HTTP_MAX_RESPONSE_BYTES : Nat = 20480; // 20KB
 
   // Conversion utilities

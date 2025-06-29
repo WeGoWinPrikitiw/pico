@@ -2,7 +2,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServices } from "@/context/auth-context";
 import { createQueryKey, invalidateQueries } from "@/lib/query-client";
 import { toast } from "sonner";
-import type { NFTInfo, Trait, AIImageResult } from "@/types";
+import type {
+  NFTInfo,
+  Trait,
+  AIImageResult,
+  AIDetectionResponse,
+} from "@/types";
 import type { TransferArgs } from "../../../declarations/nft_contract/nft_contract.did";
 
 // Query hooks for NFT data
@@ -253,4 +258,87 @@ export function useNFTFilters() {
       return queries;
     },
   };
+}
+
+// AI Detection hooks
+export function useDetectAIGenerated() {
+  const { nftService } = useServices();
+
+  return useMutation({
+    mutationFn: async (imageUrl: string) => {
+      if (!nftService) {
+        throw new Error("NFT service not available");
+      }
+      return nftService.detectAIGenerated(imageUrl);
+    },
+    onError: (error: Error) => {
+      console.error("Failed to detect AI generation:", error);
+      toast.error(
+        "Failed to detect if image is AI-generated. Please try again."
+      );
+    },
+  });
+}
+
+export function useMintNFTWithAIDetection() {
+  const { nftService } = useServices();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      to: string;
+      name: string;
+      description: string;
+      price: number;
+      imageUrl: string;
+      traits: Trait[];
+    }) => {
+      if (!nftService) {
+        throw new Error("NFT service not available");
+      }
+      return nftService.mintNFTWithAIDetection(
+        params.to,
+        params.name,
+        params.description,
+        params.price,
+        params.imageUrl,
+        params.traits
+      );
+    },
+    onSuccess: (result) => {
+      console.log("NFT minted with AI detection:", result);
+      toast.success(
+        `NFT #${result.nft_id} minted successfully! AI detected: ${
+          result.ai_detection.is_ai_generated ? "Yes" : "No"
+        } (${Math.round(result.ai_detection.confidence * 100)}% confidence)`
+      );
+
+      // Invalidate and refetch all NFT-related queries
+      invalidateQueries.nfts();
+    },
+    onError: (error: Error) => {
+      console.error("Failed to mint NFT with AI detection:", error);
+      toast.error("Failed to mint NFT with AI detection. Please try again.");
+    },
+  });
+}
+
+export function useSetOpenAIAPIKey() {
+  const { nftService } = useServices();
+
+  return useMutation({
+    mutationFn: async (apiKey: string) => {
+      if (!nftService) {
+        throw new Error("NFT service not available");
+      }
+      return nftService.setOpenAIAPIKey(apiKey);
+    },
+    onSuccess: () => {
+      toast.success("OpenAI API key set successfully!");
+    },
+    onError: (error: Error) => {
+      console.error("Failed to set OpenAI API key:", error);
+      toast.error("Failed to set OpenAI API key. Please try again.");
+    },
+  });
 }

@@ -1,7 +1,11 @@
 import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMintNFT, useGenerateAIImage } from "@/hooks/useNFT";
+import {
+  useMintNFT,
+  useGenerateAIImage,
+  useDetectAIGenerated,
+} from "@/hooks/useNFT";
 import { useUploadImage } from "@/hooks/useUpload";
 import { useCreateForum } from "@/hooks";
 import {
@@ -61,8 +65,17 @@ export function UploadPage() {
     traits: [],
   });
 
+  // State for AI detection
+  const [aiDetectionPerformed, setAiDetectionPerformed] = useState(false);
+  const [aiDetectionResult, setAiDetectionResult] = useState<{
+    is_ai_generated: boolean;
+    confidence: number;
+    reasoning: string;
+  } | null>(null);
+
   // Mutations for NFT operations
   const mintNftMutation = useMintNFT();
+  const detectAIGeneratedMutation = useDetectAIGenerated();
   const generateAiImageMutation = useGenerateAIImage();
   const uploadImageMutation = useUploadImage();
   const createForumMutation = useCreateForum();
@@ -122,6 +135,10 @@ export function UploadPage() {
         isAiGenerated: false,
         traits: [],
       }));
+
+      // Reset AI detection state when new image is uploaded
+      setAiDetectionPerformed(false);
+      setAiDetectionResult(null);
     } catch (error) {
       console.error("Upload failed:", error);
     }
@@ -172,7 +189,9 @@ export function UploadPage() {
     }
 
     if (!isFormValid) {
-      toast.error("Please fill in all required fields");
+      toast.error(
+        "Please complete AI detection and fill in all required fields"
+      );
       return;
     }
 
@@ -180,7 +199,8 @@ export function UploadPage() {
       // Convert price to nearest integer (backend expects Nat)
       const priceAsInteger = Math.round(parseFloat(nftData.price));
 
-      const result = await mintNftMutation.mutateAsync({
+      // Use regular minting with AI detection result
+      const mintResult = await mintNftMutation.mutateAsync({
         to: principal,
         name: nftData.title,
         description: nftData.description,
@@ -191,7 +211,7 @@ export function UploadPage() {
       });
 
       // Show success message
-      toast.success(`NFT #${result} minted successfully!`);
+      toast.success(`NFT #${mintResult} minted successfully!`);
 
       console.log("Starting query invalidation...");
 
@@ -217,7 +237,7 @@ export function UploadPage() {
       navigate("/explore", {
         state: {
           freshlyMinted: true,
-          mintedNftId: result,
+          mintedNftId: mintResult,
         },
       });
     } catch (error) {
@@ -242,13 +262,17 @@ export function UploadPage() {
       quality: "high",
       aspectRatio: "1:1",
     });
+    // Reset AI detection state
+    setAiDetectionPerformed(false);
+    setAiDetectionResult(null);
   };
 
   const isFormValid =
     nftData.title.trim() &&
     nftData.description.trim() &&
     nftData.price.trim() &&
-    nftData.previewUrl;
+    nftData.previewUrl &&
+    aiDetectionPerformed; // AI detection is now mandatory
 
   return (
     <div className="min-h-screen bg-background">
@@ -406,51 +430,164 @@ export function UploadPage() {
                       </div>
                     )}
 
-                    {/* AI Generated Checkbox - only show when there's a file uploaded */}
+                    {/* AI Detection and Checkbox - only show when there's a file uploaded */}
                     {nftData.previewUrl && (
-                      <div className="mt-4 flex items-center space-x-3 p-3 border border-border rounded-lg">
-                        <div className="relative">
-                          <input
-                            type="checkbox"
-                            id="aiGenerated"
-                            checked={nftData.isAiGenerated}
-                            onChange={(e) =>
-                              setNftData((prev) => ({
-                                ...prev,
-                                isAiGenerated: e.target.checked,
-                              }))
-                            }
-                            className="sr-only"
-                          />
-                          <label
-                            htmlFor="aiGenerated"
-                            className="flex items-center cursor-pointer"
-                          >
-                            <div
-                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                nftData.isAiGenerated
-                                  ? "bg-purple-600 border-purple-600"
-                                  : "border-gray-300 hover:border-purple-400"
-                              }`}
-                            >
-                              {nftData.isAiGenerated && (
-                                <svg
-                                  className="w-3 h-3 text-white"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
+                      <div className="mt-4 space-y-3">
+                        {/* AI Detection Button - Mandatory before minting */}
+                        <div className="p-3 border border-border rounded-lg bg-blue-50 dark:bg-blue-950/30">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Eye className="h-4 w-4 text-blue-600" />
+                              <span className="text-sm font-medium">
+                                AI Detection Required
+                              </span>
+                              {aiDetectionPerformed && (
+                                <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                                  ✓ Completed
+                                </span>
                               )}
                             </div>
-                            <span className="ml-3 text-sm font-medium">
-                              This image was generated using AI
-                            </span>
-                          </label>
+                            <p className="text-xs text-muted-foreground">
+                              Detect if the image is AI-generated using OpenAI
+                              Vision (required before minting)
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={async () => {
+                                if (!nftData.previewUrl) return;
+
+                                try {
+                                  const result =
+                                    await detectAIGeneratedMutation.mutateAsync(
+                                      nftData.previewUrl
+                                    );
+
+                                  setAiDetectionResult(result);
+                                  setAiDetectionPerformed(true);
+
+                                  // Automatically update the isAiGenerated flag
+                                  setNftData((prev) => ({
+                                    ...prev,
+                                    isAiGenerated: result.is_ai_generated,
+                                  }));
+
+                                  toast.success(
+                                    `AI Detection: ${
+                                      result.is_ai_generated
+                                        ? "AI-Generated"
+                                        : "Human-Made"
+                                    } (${Math.round(
+                                      result.confidence * 100
+                                    )}% confidence)`,
+                                    {
+                                      description: result.reasoning,
+                                      duration: 8000,
+                                    }
+                                  );
+                                } catch (error) {
+                                  console.error("AI detection failed:", error);
+                                }
+                              }}
+                              disabled={
+                                detectAIGeneratedMutation.isPending ||
+                                !nftData.previewUrl
+                              }
+                              className="w-full"
+                            >
+                              {detectAIGeneratedMutation.isPending ? (
+                                <>
+                                  <LoadingSpinner className="mr-2" />
+                                  Analyzing...
+                                </>
+                              ) : aiDetectionPerformed ? (
+                                <>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Re-run AI Detection
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Detect AI Generation
+                                </>
+                              )}
+                            </Button>
+
+                            {/* Show detection result */}
+                            {aiDetectionResult && (
+                              <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs">
+                                <p>
+                                  <strong>Result:</strong>{" "}
+                                  {aiDetectionResult.is_ai_generated
+                                    ? "AI-Generated"
+                                    : "Human-Made"}
+                                </p>
+                                <p>
+                                  <strong>Confidence:</strong>{" "}
+                                  {Math.round(
+                                    aiDetectionResult.confidence * 100
+                                  )}
+                                  %
+                                </p>
+                                <p>
+                                  <strong>Reasoning:</strong>{" "}
+                                  {aiDetectionResult.reasoning}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* AI Generated Checkbox - Now auto-updated by detection */}
+                        <div className="flex items-center space-x-3 p-3 border border-border rounded-lg">
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              id="aiGenerated"
+                              checked={nftData.isAiGenerated}
+                              onChange={(e) =>
+                                setNftData((prev) => ({
+                                  ...prev,
+                                  isAiGenerated: e.target.checked,
+                                }))
+                              }
+                              className="sr-only"
+                            />
+                            <label
+                              htmlFor="aiGenerated"
+                              className="flex items-center cursor-pointer"
+                            >
+                              <div
+                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                  nftData.isAiGenerated
+                                    ? "bg-purple-600 border-purple-600"
+                                    : "border-gray-300 hover:border-purple-400"
+                                }`}
+                              >
+                                {nftData.isAiGenerated && (
+                                  <svg
+                                    className="w-3 h-3 text-white"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                )}
+                              </div>
+                              <span className="ml-3 text-sm font-medium">
+                                This image was generated using AI
+                                {aiDetectionPerformed && (
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    (Auto-detected)
+                                  </span>
+                                )}
+                              </span>
+                            </label>
+                          </div>
                         </div>
                       </div>
                     )}

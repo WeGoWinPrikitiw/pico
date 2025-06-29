@@ -87,6 +87,53 @@ module {
         };
     };
 
+    // AI Detection types
+    public type AIDetectionRequest = {
+        image_url : Text;
+        detail : Text; // "low", "high", or "auto"
+    };
+
+    public type AIDetectionResponse = {
+        is_ai_generated : Bool;
+        confidence : Float;
+        reasoning : Text;
+    };
+
+    public type ChatMessage = {
+        role : Text; // "user", "assistant", "system"
+        content : [ChatContent];
+    };
+
+    public type ChatContent = {
+        #text : { text : Text };
+        #image_url : { image_url : { url : Text; detail : ?Text } };
+    };
+
+    public type ChatCompletionRequest = {
+        model : Text;
+        messages : [ChatMessage];
+        max_tokens : ?Nat;
+        temperature : ?Float;
+    };
+
+    public type ChatCompletionResponse = {
+        choices : [ChatChoice];
+        usage : ?{
+            prompt_tokens : Nat;
+            completion_tokens : Nat;
+            total_tokens : Nat;
+        };
+    };
+
+    public type ChatChoice = {
+        message : {
+            role : Text;
+            content : Text;
+        };
+        finish_reason : ?Text;
+        index : Nat;
+    };
+
     // HTTP outcall actor reference
     public let ic : actor {
         http_request : HttpRequestArgs -> async HttpResponsePayload;
@@ -116,6 +163,56 @@ module {
                     };
                 } else {
                     #err("No URL found in response");
+                };
+            };
+        };
+    };
+
+    // Parse AI detection response from GPT-4 Vision
+    private func parseAIDetectionResponse(responseText : Text) : Result.Result<AIDetectionResponse, Text> {
+        // Look for the content in the JSON response
+        switch (Text.split(responseText, #text "\"content\":")) {
+            case (parts) {
+                let partsArray = Iter.toArray(parts);
+                if (partsArray.size() >= 2) {
+                    let contentPart = partsArray[1];
+                    // Extract the actual content between quotes
+                    switch (Text.split(contentPart, #text "\"")) {
+                        case (contentParts) {
+                            let contentPartsArray = Iter.toArray(contentParts);
+                            if (contentPartsArray.size() >= 2) {
+                                let content = contentPartsArray[1];
+                                
+                                // Parse the response content to determine if AI-generated
+                                let isAI = Text.contains(content, #text "AI-generated") or 
+                                          Text.contains(content, #text "artificial") or
+                                          Text.contains(content, #text "synthetic") or
+                                          Text.contains(content, #text "generated") or
+                                          Text.contains(content, #text "digital art");
+                                
+                                // Determine confidence based on response certainty
+                                let confidence : Float = if (Text.contains(content, #text "definitely") or Text.contains(content, #text "clearly")) {
+                                    0.9
+                                } else if (Text.contains(content, #text "likely") or Text.contains(content, #text "probably")) {
+                                    0.7
+                                } else if (Text.contains(content, #text "possibly") or Text.contains(content, #text "might")) {
+                                    0.5
+                                } else {
+                                    0.6
+                                };
+
+                                #ok({
+                                    is_ai_generated = isAI;
+                                    confidence = confidence;
+                                    reasoning = content;
+                                });
+                            } else {
+                                #err("Could not parse content from response");
+                            };
+                        };
+                    };
+                } else {
+                    #err("No content found in response");
                 };
             };
         };
@@ -196,6 +293,101 @@ module {
     public func generateImageMock(prompt : Text) : async Text {
         // Return a mock image URL for testing
         "https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=1024&h=1024&fit=crop&q=80&prompt=" # prompt;
+    };
+
+    // Detect AI-generated images using GPT-4 Vision
+    public func detectAIGenerated(apiKey : Text, imageUrl : Text) : async Result.Result<AIDetectionResponse, Text> {
+        
+        // Create the system prompt for AI detection
+        let systemPrompt = "You are an expert at detecting AI-generated images. Analyze the provided image and determine if it was created by an AI image generator (like DALL-E, Midjourney, Stable Diffusion, etc.) or if it's a natural photograph/traditional artwork. Look for telltale signs of AI generation such as: unrealistic details, inconsistent lighting, strange artifacts, uncanny valley effects, or overly perfect compositions. Respond with a clear assessment.";
+        
+        let userPrompt = "Is this image AI-generated? Please provide a definitive yes or no answer followed by your reasoning.";
+
+        // Prepare the chat completion request
+        let requestBody = "{" #
+        "\"model\":\"gpt-4o\"," #
+        "\"messages\":[" #
+        "{\"role\":\"system\",\"content\":\"" # systemPrompt # "\"}," #
+        "{\"role\":\"user\",\"content\":[" #
+        "{\"type\":\"text\",\"text\":\"" # userPrompt # "\"}," #
+        "{\"type\":\"image_url\",\"image_url\":{\"url\":\"" # imageUrl # "\",\"detail\":\"high\"}}" #
+        "]}" #
+        "]," #
+        "\"max_tokens\":300," #
+        "\"temperature\":0.1" #
+        "}";
+
+        let requestBodyBytes = Blob.toArray(Text.encodeUtf8(requestBody));
+
+        // Prepare headers
+        let headers : [HttpHeader] = [
+            { name = "Content-Type"; value = "application/json" },
+            { name = "Authorization"; value = "Bearer " # apiKey },
+            { name = "User-Agent"; value = "PiCO-NFT/1.0" },
+        ];
+
+        // Prepare HTTP request
+        let httpRequest : HttpRequestArgs = {
+            url = "https://api.openai.com/v1/chat/completions";
+            max_response_bytes = ?Nat64.fromNat(Config.HTTP_MAX_RESPONSE_BYTES);
+            headers = headers;
+            body = ?requestBodyBytes;
+            method = #post;
+            transform = null;
+        };
+
+        try {
+            // Make the HTTP outcall
+            let httpResponse = await (with cycles = Config.HTTP_OUTCALL_CYCLES) ic.http_request(httpRequest);
+
+            // Convert response body to text
+            let responseText = switch (Text.decodeUtf8(Blob.fromArray(httpResponse.body))) {
+                case (?text) text;
+                case null { return #err("Invalid UTF-8 response") };
+            };
+
+            // Handle different HTTP status codes
+            if (httpResponse.status == 200) {
+                // Parse the AI detection response
+                switch (parseAIDetectionResponse(responseText)) {
+                    case (#ok(detection)) #ok(detection);
+                    case (#err(parseError)) {
+                        #err("Failed to parse AI detection response: " # parseError # ". Response: " # responseText);
+                    };
+                };
+            } else if (httpResponse.status == 401) {
+                #err("Authentication failed: Invalid API key");
+            } else if (httpResponse.status == 429) {
+                #err("Rate limit exceeded: Too many requests");
+            } else if (httpResponse.status >= 400 and httpResponse.status < 500) {
+                #err("Client error (HTTP " # Nat.toText(httpResponse.status) # "): " # responseText);
+            } else if (httpResponse.status >= 500) {
+                #err("Server error (HTTP " # Nat.toText(httpResponse.status) # "): OpenAI service unavailable");
+            } else {
+                #err("Unexpected response (HTTP " # Nat.toText(httpResponse.status) # "): " # responseText);
+            };
+        } catch (error) {
+            #err("HTTP request failed: " # Error.message(error));
+        };
+    };
+
+    // Mock AI detection for testing (returns random result)
+    public func detectAIGeneratedMock(imageUrl : Text) : async AIDetectionResponse {
+        // Simple heuristic: if URL contains "ai", "generated", or "dall-e", mark as AI
+        let isAI = Text.contains(imageUrl, #text "ai") or 
+                  Text.contains(imageUrl, #text "generated") or
+                  Text.contains(imageUrl, #text "dall-e") or
+                  Text.contains(imageUrl, #text "midjourney");
+        
+        {
+            is_ai_generated = isAI;
+            confidence = if (isAI) 0.85 else 0.75;
+            reasoning = if (isAI) {
+                "The image URL suggests this is an AI-generated image based on naming patterns."
+            } else {
+                "The image appears to be a natural photograph or traditional artwork."
+            };
+        };
     };
 
     // Helper function to create OpenAI request
