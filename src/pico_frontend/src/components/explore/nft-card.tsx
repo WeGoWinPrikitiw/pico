@@ -74,17 +74,17 @@ interface NFTCardInternalProps {
 }
 
 function NFTGridCard({ nft, isNew, onLike, onShare }: NFTCardInternalProps) {
-  return (
-    <Link to={`/nft/${nft.nft_id}`} className="block">
-      <Card className="group hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 overflow-hidden border-0 shadow-md py-0">
-        <CardContent className="p-0">
-          <div className="relative aspect-square overflow-hidden">
-            <img
-              src={nft.image_url || "/placeholder-nft.png"}
-              alt={nft.name}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
+    return (
+        <Link to={`/nft/${nft.nft_id}`} className="block">
+            <Card className="group hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 overflow-hidden border-0 shadow-md py-0 h-full flex flex-col">
+                <CardContent className="p-0 flex flex-col h-full">
+                    <div className="relative aspect-square overflow-hidden">
+                        <img
+                            src={nft.image_url || "/placeholder-nft.png"}
+                            alt={nft.name}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
 
             {/* Badges */}
             <div className="absolute top-3 left-3 flex flex-col gap-2">
@@ -111,7 +111,7 @@ function NFTGridCard({ nft, isNew, onLike, onShare }: NFTCardInternalProps) {
             </div>
           </div>
 
-          <div className="p-4 space-y-3">
+          <div className="p-4 flex flex-col flex-1">
             {/* Owner */}
             <div className="flex items-center gap-2">
               <UserAvatar principalId={nft.owner} size="sm" />
