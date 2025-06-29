@@ -148,9 +148,9 @@ const trendingData: TrendingItem[] = [
 
 function TrendingCard({ item }: { item: TrendingItem }) {
   return (
-    <div className="bg-gray-900/60 rounded-xl overflow-hidden backdrop-blur-sm border border-gray-800/50 hover:border-purple-500/50 transition-all duration-300 hover:scale-105 min-w-[250px] max-w-[400px]">
+    <div className="bg-gray-900/60 rounded-xl overflow-hidden backdrop-blur-sm border border-gray-800/50 hover:border-purple-500/50 transition-all duration-300 hover:scale-105 min-w-[250px] max-w-[400px] h-[360px] flex flex-col">
       {/* Image Container */}
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden flex-shrink-0">
         <img
           src={item.imageUrl}
           alt={item.title}
@@ -185,9 +185,11 @@ function TrendingCard({ item }: { item: TrendingItem }) {
       </div>
 
       {/* Content */}
-      <div className="p-4">
-        <h3 className="text-white font-semibold text-lg mb-2">{item.title}</h3>
-        <p className="text-gray-400 text-sm leading-relaxed line-clamp-2">
+      <div className="p-4 flex-1 flex flex-col">
+        <h3 className="text-white font-semibold text-lg mb-2 line-clamp-1">
+          {item.title}
+        </h3>
+        <p className="text-gray-400 text-sm leading-relaxed line-clamp-2 flex-1">
           {item.description}
         </p>
       </div>
@@ -223,44 +225,42 @@ export function TrendingSection() {
         {/* Top Row - Scroll Left */}
         <div className="mb-6 lg:mb-8 py-6">
           <div
-            className="flex items-start"
+            className="flex items-start animate-scroll-left"
             style={{
-              animation: "scroll-left 20s linear infinite",
+              width: `${topRowData.length * 2 * (250 + 32)}px`, // 250px card width + 32px margin
             }}
           >
-            {/* Duplicate items for seamless loop */}
-            {[...topRowData, ...topRowData, ...topRowData].map(
-              (item, index) => (
-                <div
-                  key={`top-${index}`}
-                  className="flex-shrink-0 mr-6 lg:mr-8"
-                >
-                  <TrendingCard item={item} />
-                </div>
-              )
-            )}
+            {/* Double the items for seamless loop */}
+            {[...topRowData, ...topRowData].map((item, index) => (
+              <div
+                key={`top-${index}`}
+                className="flex-shrink-0 mr-6 lg:mr-8"
+                style={{ width: "250px" }}
+              >
+                <TrendingCard item={item} />
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Bottom Row - Scroll Right */}
         <div className="py-6">
           <div
-            className="flex items-start"
+            className="flex items-start animate-scroll-right"
             style={{
-              animation: "scroll-right 20s linear infinite",
+              width: `${bottomRowData.length * 2 * (250 + 32)}px`, // 250px card width + 32px margin
             }}
           >
-            {/* Duplicate items for seamless loop */}
-            {[...bottomRowData, ...bottomRowData, ...bottomRowData].map(
-              (item, index) => (
-                <div
-                  key={`bottom-${index}`}
-                  className="flex-shrink-0 mr-6 lg:mr-8"
-                >
-                  <TrendingCard item={item} />
-                </div>
-              )
-            )}
+            {/* Double the items for seamless loop */}
+            {[...bottomRowData, ...bottomRowData].map((item, index) => (
+              <div
+                key={`bottom-${index}`}
+                className="flex-shrink-0 mr-6 lg:mr-8"
+                style={{ width: "250px" }}
+              >
+                <TrendingCard item={item} />
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -269,22 +269,36 @@ export function TrendingSection() {
       <style
         dangerouslySetInnerHTML={{
           __html: `
+                    .animate-scroll-left {
+                        animation: scroll-left 40s linear infinite;
+                    }
+                    
+                    .animate-scroll-right {
+                        animation: scroll-right 40s linear infinite;
+                    }
+                    
                     @keyframes scroll-left {
                         0% {
                             transform: translateX(0);
                         }
                         100% {
-                            transform: translateX(-33.333%);
+                            transform: translateX(-50%);
                         }
                     }
 
                     @keyframes scroll-right {
                         0% {
-                            transform: translateX(-33.333%);
+                            transform: translateX(-50%);
                         }
                         100% {
                             transform: translateX(0);
                         }
+                    }
+                    
+                    /* Pause animation on hover */
+                    .animate-scroll-left:hover,
+                    .animate-scroll-right:hover {
+                        animation-play-state: paused;
                     }
                 `,
         }}
