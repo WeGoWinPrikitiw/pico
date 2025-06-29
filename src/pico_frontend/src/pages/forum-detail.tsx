@@ -5,21 +5,17 @@ import {
   Card,
   CardHeader,
   CardContent,
-  CardTitle,
-  Avatar,
+  CardTitle, Avatar,
   AvatarImage,
   AvatarFallback,
-  Textarea,
-  Badge,
+  Textarea, Badge,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  Input,
+  DialogTitle, DialogFooter,
+  Input
 } from "@/components/ui";
-import { UserAvatar, UserName } from "@/components/ui/user-avatar";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAuth } from "@/context/auth-context";
 import {
@@ -40,11 +36,10 @@ import {
   Trash2,
   ExternalLink,
   Calendar,
-  User,
-  Image as ImageIcon,
+  User, Image as ImageIcon,
   AlertCircle,
   Eye,
-  Clock,
+  Clock
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -58,11 +53,7 @@ export function ForumDetailPage() {
   const [editForm, setEditForm] = useState({ title: "", description: "" });
 
   const forumId = id ? parseInt(id) : 0;
-  const {
-    data: forum,
-    isLoading: isLoadingForum,
-    error: forumError,
-  } = useForum(forumId);
+  const { data: forum, isLoading: isLoadingForum, error: forumError } = useForum(forumId);
   const { data: nft, isLoading: isLoadingNFT } = useNFT(Number(forum?.nft_id));
 
   const likeMutation = useLikeForum();
@@ -77,8 +68,7 @@ export function ForumDetailPage() {
   }, [forum]);
 
   const handleLikeForum = () => {
-    if (!principal || !forum)
-      return toast.error("Please connect your wallet first");
+    if (!principal || !forum) return toast.error("Please connect your wallet first");
     likeMutation.mutate({ forumId: Number(forum.forum_id), userId: principal });
   };
 
@@ -86,57 +76,44 @@ export function ForumDetailPage() {
     if (!principal || !forum || !newComment.trim()) {
       return toast.error("Comment cannot be empty.");
     }
-    commentMutation.mutate(
-      {
-        forumId: Number(forum.forum_id),
-        comment: newComment.trim(),
-        userId: principal,
+    commentMutation.mutate({
+      forumId: Number(forum.forum_id),
+      comment: newComment.trim(),
+      userId: principal,
+    }, {
+      onSuccess: () => {
+        setNewComment("");
+        toast.success("Comment added successfully!");
       },
-      {
-        onSuccess: () => {
-          setNewComment("");
-          toast.success("Comment added successfully!");
-        },
-        onError: () => {
-          toast.error("Failed to add comment. Please try again.");
-        },
+      onError: () => {
+        toast.error("Failed to add comment. Please try again.");
       }
-    );
+    });
   };
 
   const handleUpdateForum = () => {
-    if (
-      !forum ||
-      !principal ||
-      !editForm.title.trim() ||
-      !editForm.description.trim()
-    ) {
+    if (!forum || !principal || !editForm.title.trim() || !editForm.description.trim()) {
       return toast.error("Please fill in all fields.");
     }
-    updateMutation.mutate(
-      {
-        forumId: Number(forum.forum_id),
-        title: editForm.title.trim(),
-        description: editForm.description.trim(),
+    updateMutation.mutate({
+      forumId: Number(forum.forum_id),
+      title: editForm.title.trim(),
+      description: editForm.description.trim(),
+    }, {
+      onSuccess: () => {
+        setIsEditing(false);
+        toast.success("Forum updated successfully!");
       },
-      {
-        onSuccess: () => {
-          setIsEditing(false);
-          toast.success("Forum updated successfully!");
-        },
-        onError: () => {
-          toast.error("Failed to update forum. Please try again.");
-        },
+      onError: () => {
+        toast.error("Failed to update forum. Please try again.");
       }
-    );
+    });
   };
 
   const handleDeleteForum = () => {
     if (!forum || !principal) return;
 
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this forum? This action cannot be undone."
-    );
+    const confirmDelete = window.confirm("Are you sure you want to delete this forum? This action cannot be undone.");
     if (!confirmDelete) return;
 
     deleteMutation.mutate(Number(forum.forum_id), {
@@ -151,20 +128,20 @@ export function ForumDetailPage() {
   };
 
   const formatDate = (timestamp: string | number) => {
-    return new Date(Number(timestamp) / 1000000).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+    return new Date(Number(timestamp) / 1000000).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
   };
 
   const formatDateTime = (timestamp: string | number) => {
-    return new Date(Number(timestamp) / 1000000).toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+    return new Date(Number(timestamp) / 1000000).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
@@ -230,21 +207,18 @@ export function ForumDetailPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <UserAvatar
-                      principalId={forum.principal_id}
-                      size="lg"
-                      className="border-2 border-background shadow-sm"
-                    />
+                    <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
+                      <AvatarImage src={`https://avatar.vercel.sh/${forum.principal_id}.png`} />
+                      <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                        {forum.principal_id.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <div>
-                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight">
-                        {forum.title}
-                      </h1>
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight">{forum.title}</h1>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
                         <span className="flex items-center gap-1.5">
                           <User className="h-4 w-4" />
-                          {isOwner
-                            ? "You"
-                            : truncateAddress(forum.principal_id)}
+                          {isOwner ? "You" : truncateAddress(forum.principal_id)}
                         </span>
                         <span className="flex items-center gap-1.5">
                           <Calendar className="h-4 w-4" />
@@ -290,18 +264,12 @@ export function ForumDetailPage() {
                   disabled={likeMutation.isPending}
                   className="hover:text-red-500 hover:bg-red-50 transition-colors"
                 >
-                  <Heart
-                    className={`mr-2 h-4 w-4 ${
-                      forum.likes > 0 ? "text-red-500 fill-red-500" : ""
-                    }`}
-                  />
-                  {Number(forum.likes)}{" "}
-                  {Number(forum.likes) === 1 ? "Like" : "Likes"}
+                  <Heart className={`mr-2 h-4 w-4 ${forum.likes > 0 ? 'text-red-500 fill-red-500' : ''}`} />
+                  {Number(forum.likes)} {Number(forum.likes) === 1 ? 'Like' : 'Likes'}
                 </Button>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <MessageCircle className="h-4 w-4" />
-                  {forum.comments.length}{" "}
-                  {forum.comments.length === 1 ? "Comment" : "Comments"}
+                  {forum.comments.length} {forum.comments.length === 1 ? 'Comment' : 'Comments'}
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Eye className="h-4 w-4" />
@@ -319,17 +287,16 @@ export function ForumDetailPage() {
             {isAuthenticated && (
               <Card className="shadow-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-semibold">
-                    Join the Discussion
-                  </CardTitle>
+                  <CardTitle className="text-lg font-semibold">Join the Discussion</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex gap-4">
-                    <UserAvatar
-                      principalId={principal}
-                      size="lg"
-                      className="border"
-                    />
+                    <Avatar className="h-10 w-10 border">
+                      <AvatarImage src={`https://avatar.vercel.sh/${principal}.png`} />
+                      <AvatarFallback className="bg-primary text-primary-foreground font-medium">
+                        {principal?.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1 space-y-3">
                       <Textarea
                         value={newComment}
@@ -344,9 +311,7 @@ export function ForumDetailPage() {
                         </p>
                         <Button
                           onClick={handleAddComment}
-                          disabled={
-                            commentMutation.isPending || !newComment.trim()
-                          }
+                          disabled={commentMutation.isPending || !newComment.trim()}
                           size="sm"
                           className="px-4"
                         >
@@ -355,9 +320,7 @@ export function ForumDetailPage() {
                           ) : (
                             <Send className="mr-2 h-4 w-4" />
                           )}
-                          <span className="text-sm font-medium">
-                            Post Comment
-                          </span>
+                          <span className="text-sm font-medium">Post Comment</span>
                         </Button>
                       </div>
                     </div>
@@ -380,9 +343,7 @@ export function ForumDetailPage() {
                     {forum.comments.map((comment, i) => (
                       <div key={i} className="flex gap-4 group">
                         <Avatar className="h-10 w-10 border">
-                          <AvatarImage
-                            src={`https://avatar.vercel.sh/${comment.user_id}.png`}
-                          />
+                          <AvatarImage src={`https://avatar.vercel.sh/${comment.user_id}.png`} />
                           <AvatarFallback className="bg-muted text-muted-foreground">
                             {comment.user_id.slice(0, 2).toUpperCase()}
                           </AvatarFallback>
@@ -392,24 +353,17 @@ export function ForumDetailPage() {
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-semibold text-foreground">
-                                  {comment.user_id === principal
-                                    ? "You"
-                                    : truncateAddress(comment.user_id)}
+                                  {comment.user_id === principal ? "You" : truncateAddress(comment.user_id)}
                                 </span>
-                                {comment.user_id === principal && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs px-2 py-0.5 font-medium"
-                                  >
+                                {comment.user_id === forum.principal_id && (
+                                  <Badge variant="secondary" className="text-xs px-2 py-0.5 font-medium">
                                     Author
                                   </Badge>
                                 )}
                               </div>
                               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <Clock className="h-3 w-3" />
-                                <span className="font-medium">
-                                  {formatDateTime(Number(comment.created_at))}
-                                </span>
+                                <span className="font-medium">{formatDateTime(Number(comment.created_at))}</span>
                               </div>
                             </div>
                             <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
@@ -448,9 +402,7 @@ export function ForumDetailPage() {
               {/* NFT Card */}
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-base font-semibold">
-                    Discussion Topic
-                  </CardTitle>
+                  <CardTitle className="text-base font-semibold">Discussion Topic</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {isLoadingNFT ? (
@@ -467,24 +419,15 @@ export function ForumDetailPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <h4 className="text-sm font-semibold text-center">
-                          {nft.name}
-                        </h4>
+                        <h4 className="text-sm font-semibold text-center">{nft.name}</h4>
                         <p className="text-xs text-muted-foreground text-center line-clamp-2 leading-relaxed">
                           {nft.description}
                         </p>
                       </div>
-                      <Button
-                        asChild
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                      >
+                      <Button asChild variant="outline" size="sm" className="w-full">
                         <Link to={`/nft/${nft.nft_id}`}>
                           <ExternalLink className="mr-2 h-4 w-4" />
-                          <span className="text-sm font-medium">
-                            View NFT Details
-                          </span>
+                          <span className="text-sm font-medium">View NFT Details</span>
                         </Link>
                       </Button>
                     </div>
@@ -494,9 +437,7 @@ export function ForumDetailPage() {
                         <ImageIcon className="h-6 w-6 text-muted-foreground" />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-xs font-semibold">
-                          General Discussion
-                        </h4>
+                        <h4 className="text-xs font-semibold">General Discussion</h4>
                         <p className="text-xs text-muted-foreground leading-relaxed">
                           This forum is not linked to a specific NFT.
                         </p>
@@ -527,9 +468,7 @@ export function ForumDetailPage() {
               <Input
                 id="edit-title"
                 value={editForm.title}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, title: e.target.value })
-                }
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                 placeholder="Forum Title"
                 className="w-full"
               />
@@ -541,9 +480,7 @@ export function ForumDetailPage() {
               <Textarea
                 id="edit-description"
                 value={editForm.description}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, description: e.target.value })
-                }
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                 placeholder="Forum Description"
                 rows={4}
                 className="w-full resize-none"
@@ -556,11 +493,7 @@ export function ForumDetailPage() {
             </Button>
             <Button
               onClick={handleUpdateForum}
-              disabled={
-                updateMutation.isPending ||
-                !editForm.title.trim() ||
-                !editForm.description.trim()
-              }
+              disabled={updateMutation.isPending || !editForm.title.trim() || !editForm.description.trim()}
             >
               {updateMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

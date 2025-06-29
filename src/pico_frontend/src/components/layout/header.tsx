@@ -193,7 +193,9 @@ export function Header() {
                       className="size-8"
                       alt="PiCO"
                     />
-                    <span>{userBalance}</span>
+                    <span>{(userBalance !== undefined
+                      ? (userBalance / 1e8).toFixed(2)
+                      : "0.00")} PiCO</span>
                     <PlusIcon className="h-4 w-4" />
                   </button>
                 </PopoverTrigger>
@@ -215,7 +217,9 @@ export function Header() {
 
                           <div className="text-left">
                             <div className="text-4xl font-bold text-white">
-                              {userBalance}
+                              {(userBalance !== undefined
+                                ? (userBalance / 1e8).toFixed(2)
+                                : "0.00")}
                             </div>
                             <div className="text-lg font-medium text-purple-200">
                               Pico Coins
@@ -378,7 +382,9 @@ export function Header() {
                               <div>
                                 <div className="flex items-center gap-2">
                                   <p className="text-2xl font-bold text-foreground">
-                                    {userBalance}
+                                    {(userBalance !== undefined
+                                      ? (userBalance / 1e8).toFixed(2)
+                                      : "0.00")}
                                   </p>
                                   <PlusIcon className="h-4 w-4 text-muted-foreground" />
                                 </div>
@@ -423,7 +429,9 @@ export function Header() {
 
                                 <div className="text-left">
                                   <div className="text-4xl font-bold text-white">
-                                    {userBalance}
+                                    {(userBalance !== undefined
+                                      ? (userBalance / 1e8).toFixed(2)
+                                      : "0.00")}
                                   </div>
                                   <div className="text-lg font-medium text-purple-200">
                                     Pico Coins
