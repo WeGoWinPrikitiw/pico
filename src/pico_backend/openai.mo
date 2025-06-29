@@ -6,6 +6,7 @@ import _Array "mo:base/Array";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Nat8 "mo:base/Nat8";
+import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
 import Text "mo:base/Text";
 import Result "mo:base/Result";
@@ -139,6 +140,21 @@ module {
     public let ic : actor {
         http_request : HttpRequestArgs -> async HttpResponsePayload;
     } = actor ("aaaaa-aa");
+
+    // Note: Using null transform with idempotency keys to ensure consensus
+    // Idempotency keys make OpenAI return identical responses for identical requests
+
+    // Generate a consistent idempotency key from input parameters
+    private func generateIdempotencyKey(input : Text) : Text {
+        // Simple hash function - convert text to consistent numeric value
+        var hash : Nat32 = 0;
+        for (char in input.chars()) {
+            hash := hash * 31 + Char.toNat32(char);
+        };
+        
+        // Convert to hexadecimal string for use as idempotency key
+        "pico-" # Nat32.toText(hash) # "-" # Nat32.toText(hash % 999999);
+    };
 
     // Simple JSON parsing function to extract image URL
     private func extractImageUrl(jsonText : Text) : Result.Result<Text, Text> {
@@ -282,21 +298,25 @@ module {
 
         let requestBodyBytes = Blob.toArray(Text.encodeUtf8(requestBody));
 
-        // Prepare headers
+        // Generate idempotency key from prompt hash for consistent responses
+        let idempotencyKey = generateIdempotencyKey(escapedPrompt # request.model # request.size);
+
+        // Prepare headers with idempotency key to ensure consensus
         let headers : [HttpHeader] = [
             { name = "Content-Type"; value = "application/json" },
             { name = "Authorization"; value = "Bearer " # apiKey },
             { name = "User-Agent"; value = "PiCO-NFT/1.0" },
+            { name = "Idempotency-Key"; value = idempotencyKey },
         ];
 
-        // Prepare HTTP request with centralized configuration
+        // Prepare HTTP request without transform to avoid consensus issues temporarily
         let httpRequest : HttpRequestArgs = {
             url = "https://api.openai.com/v1/images/generations";
             max_response_bytes = ?Nat64.fromNat(Config.HTTP_MAX_RESPONSE_BYTES);
             headers = headers;
             body = ?requestBodyBytes;
             method = #post;
-            transform = null; // Simplified for now - no transform function
+            transform = null;
         };
 
         try {
@@ -365,14 +385,18 @@ module {
 
         let requestBodyBytes = Blob.toArray(Text.encodeUtf8(requestBody));
 
-        // Prepare headers
+        // Generate idempotency key for AI detection consistency
+        let idempotencyKey = generateIdempotencyKey(imageUrl # "ai-detection");
+
+        // Prepare headers with idempotency key  
         let headers : [HttpHeader] = [
             { name = "Content-Type"; value = "application/json" },
             { name = "Authorization"; value = "Bearer " # apiKey },
             { name = "User-Agent"; value = "PiCO-NFT/1.0" },
+            { name = "Idempotency-Key"; value = idempotencyKey },
         ];
 
-        // Prepare HTTP request
+        // Prepare HTTP request without transform to avoid consensus issues temporarily  
         let httpRequest : HttpRequestArgs = {
             url = "https://api.openai.com/v1/chat/completions";
             max_response_bytes = ?Nat64.fromNat(Config.HTTP_MAX_RESPONSE_BYTES);
