@@ -2,7 +2,11 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNFTs, useSetNFTForSale } from "@/hooks/useNFT";
-import { usePreferences, useUpdatePreferences } from "@/hooks/usePreferences";
+import {
+  usePreferences,
+  useCreateOrUpdatePreferences,
+  useHasPreferences,
+} from "@/hooks/usePreferences";
 import {
   useUserProfile,
   useHasProfile,
@@ -121,11 +125,11 @@ export function ProfilePage() {
     totalSales: "0",
     joinDate: userProfileData?.created_at
       ? new Date(
-        Number(userProfileData.created_at) / 1000000
-      ).toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
-      })
+          Number(userProfileData.created_at) / 1000000
+        ).toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        })
       : "Recently",
     website: userProfileData?.social?.website,
     social: {
@@ -173,7 +177,8 @@ export function ProfilePage() {
   // Query for user NFTs
   const { data: nftData } = useNFTs();
   const { data: preferencesData } = usePreferences(principal || "");
-  const updatePreferencesMutation = useUpdatePreferences();
+  const { data: hasPreferences } = useHasPreferences(principal || "");
+  const createOrUpdatePreferencesMutation = useCreateOrUpdatePreferences();
   const setNFTForSaleMutation = useSetNFTForSale();
 
   // Format NFT data
@@ -329,13 +334,17 @@ export function ProfilePage() {
 
   const handleSaveChanges = async () => {
     if (!principal) return;
+
     try {
-      await updatePreferencesMutation.mutateAsync({
+      const preferencesInput = {
         principal_id: principal,
         preferences: userPreferences,
-      });
+      };
+
+      await createOrUpdatePreferencesMutation.mutateAsync(preferencesInput);
     } catch (error) {
       console.error("Failed to save preferences", error);
+      // Error toast is handled by the hook
     }
   };
 
@@ -740,9 +749,10 @@ export function ProfilePage() {
                                   Wallet Connected
                                 </p>
                                 <p className="text-2xl font-bold text-primary">
-                                  {(userBalance !== undefined
+                                  {userBalance !== undefined
                                     ? (userBalance / 100000000).toFixed(2)
-                                    : "0.00")} PiCO
+                                    : "0.00"}{" "}
+                                  PiCO
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   Available Balance
@@ -877,10 +887,11 @@ export function ProfilePage() {
                                 <button
                                   key={pref}
                                   onClick={() => handleTogglePreference(pref)}
-                                  className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-colors ${userPreferences.includes(pref)
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "bg-transparent hover:bg-muted"
-                                    }`}
+                                  className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-colors ${
+                                    userPreferences.includes(pref)
+                                      ? "bg-primary text-primary-foreground border-primary"
+                                      : "bg-transparent hover:bg-muted"
+                                  }`}
                                 >
                                   {userPreferences.includes(pref) && (
                                     <Check className="h-4 w-4" />
@@ -894,9 +905,11 @@ export function ProfilePage() {
 
                             <Button
                               onClick={handleSaveChanges}
-                              disabled={updatePreferencesMutation.isPending}
+                              disabled={
+                                createOrUpdatePreferencesMutation.isPending
+                              }
                             >
-                              {updatePreferencesMutation.isPending ? (
+                              {createOrUpdatePreferencesMutation.isPending ? (
                                 <LoadingSpinner size="sm" className="mr-2" />
                               ) : null}
                               Save Changes
@@ -911,13 +924,14 @@ export function ProfilePage() {
                             }
                           >
                             {getCurrentNFTs().map((nft) => (
-
-                              <Card
-                                className="py-0 group overflow-hidden border-2 border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
-                              >
+                              <Card className="py-0 group overflow-hidden border-2 border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
                                 {viewMode === "grid" ? (
                                   <>
-                                    <Link to={`/nft/${nft.id}`} key={nft.id} className="block group">
+                                    <Link
+                                      to={`/nft/${nft.id}`}
+                                      key={nft.id}
+                                      className="block group"
+                                    >
                                       <div className="aspect-square relative overflow-hidden">
                                         <img
                                           src={nft.image}
@@ -928,9 +942,13 @@ export function ProfilePage() {
                                         {/* Always show sale status badge */}
                                         <div className="absolute top-3 left-3 flex gap-2">
                                           {nft.isForSale ? (
-                                            <Badge className="bg-green-500/90 text-white border-0">For Sale</Badge>
+                                            <Badge className="bg-green-500/90 text-white border-0">
+                                              For Sale
+                                            </Badge>
                                           ) : (
-                                            <Badge className="bg-gray-400/90 text-white border-0">Not For Sale</Badge>
+                                            <Badge className="bg-gray-400/90 text-white border-0">
+                                              Not For Sale
+                                            </Badge>
                                           )}
                                         </div>
                                         {/* Stats Overlay */}
@@ -951,11 +969,18 @@ export function ProfilePage() {
 
                                     <CardContent className="p-4 space-y-3">
                                       <div>
-                                        <h3 className="font-semibold truncate">{nft.title}</h3>
-                                        <p className="text-sm text-muted-foreground">by {nft.creator || userProfile.username}</p>
+                                        <h3 className="font-semibold truncate">
+                                          {nft.title}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">
+                                          by{" "}
+                                          {nft.creator || userProfile.username}
+                                        </p>
                                       </div>
                                       <div className="flex items-center justify-between">
-                                        <span className="font-bold text-primary">{nft.price} PiCO</span>
+                                        <span className="font-bold text-primary">
+                                          {nft.price} PiCO
+                                        </span>
                                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                           <Heart className="h-4 w-4" />
                                           {nft.likes}
@@ -966,9 +991,15 @@ export function ProfilePage() {
                                         <div className="pt-2 grid grid-cols-2 gap-2">
                                           <Button
                                             size="sm"
-                                            variant={nft.isForSale ? "outline" : "secondary"}
-                                            disabled={setNFTForSaleMutation.isPending}
-                                            onClick={e => {
+                                            variant={
+                                              nft.isForSale
+                                                ? "outline"
+                                                : "secondary"
+                                            }
+                                            disabled={
+                                              setNFTForSaleMutation.isPending
+                                            }
+                                            onClick={(e) => {
                                               e.preventDefault();
                                               setNFTForSaleMutation.mutate({
                                                 tokenId: Number(nft.id),
@@ -978,16 +1009,23 @@ export function ProfilePage() {
                                             className="flex items-center gap-1 w-full"
                                           >
                                             {setNFTForSaleMutation.isPending ? (
-                                              <LoadingSpinner size="sm" className="mr-1" />
+                                              <LoadingSpinner
+                                                size="sm"
+                                                className="mr-1"
+                                              />
                                             ) : null}
-                                            {nft.isForSale ? "Unlist" : "List Sale"}
+                                            {nft.isForSale
+                                              ? "Unlist"
+                                              : "List Sale"}
                                           </Button>
                                           <Popover>
                                             <PopoverTrigger asChild>
                                               <Button
                                                 size="sm"
                                                 variant="outline"
-                                                disabled={setNFTForSaleMutation.isPending}
+                                                disabled={
+                                                  setNFTForSaleMutation.isPending
+                                                }
                                                 className="w-full flex items-center"
                                               >
                                                 Change Price
@@ -997,9 +1035,12 @@ export function ProfilePage() {
                                               <div className="flex flex-col space-y-2">
                                                 <Input
                                                   type="number"
-                                                  value={priceInputs[nft.id] ?? nft.price}
-                                                  onChange={e =>
-                                                    setPriceInputs(prev => ({
+                                                  value={
+                                                    priceInputs[nft.id] ??
+                                                    nft.price
+                                                  }
+                                                  onChange={(e) =>
+                                                    setPriceInputs((prev) => ({
                                                       ...prev,
                                                       [nft.id]: e.target.value,
                                                     }))
@@ -1007,20 +1048,28 @@ export function ProfilePage() {
                                                 />
                                                 <Button
                                                   size="sm"
-                                                  onClick={e => {
+                                                  onClick={(e) => {
                                                     e.preventDefault();
-                                                    setNFTForSaleMutation.mutate({
-                                                      tokenId: Number(nft.id),
-                                                      forSale: true,
-                                                      newPrice: Number(
-                                                        priceInputs[nft.id] ?? nft.price
-                                                      ),
-                                                    });
+                                                    setNFTForSaleMutation.mutate(
+                                                      {
+                                                        tokenId: Number(nft.id),
+                                                        forSale: true,
+                                                        newPrice: Number(
+                                                          priceInputs[nft.id] ??
+                                                            nft.price
+                                                        ),
+                                                      }
+                                                    );
                                                   }}
-                                                  disabled={setNFTForSaleMutation.isPending}
+                                                  disabled={
+                                                    setNFTForSaleMutation.isPending
+                                                  }
                                                 >
                                                   {setNFTForSaleMutation.isPending ? (
-                                                    <LoadingSpinner size="sm" className="mr-1" />
+                                                    <LoadingSpinner
+                                                      size="sm"
+                                                      className="mr-1"
+                                                    />
                                                   ) : null}
                                                   Update
                                                 </Button>
@@ -1041,8 +1090,13 @@ export function ProfilePage() {
                                         className="w-16 h-16 rounded-lg object-cover"
                                       />
                                       <div className="flex-1">
-                                        <h3 className="font-semibold">{nft.title}</h3>
-                                        <p className="text-sm text-muted-foreground">by {nft.creator || userProfile.username}</p>
+                                        <h3 className="font-semibold">
+                                          {nft.title}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">
+                                          by{" "}
+                                          {nft.creator || userProfile.username}
+                                        </p>
                                         <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                                           <span className="flex items-center gap-1">
                                             <Eye className="h-3 w-3" />
@@ -1055,12 +1109,24 @@ export function ProfilePage() {
                                         </div>
                                       </div>
                                       <div className="text-right">
-                                        <p className="font-bold text-primary">{nft.price} PiCO</p>
+                                        <p className="font-bold text-primary">
+                                          {nft.price} PiCO
+                                        </p>
                                         {/* Always show sale status badge */}
                                         {nft.isForSale ? (
-                                          <Badge variant="outline" className="mt-1">For Sale</Badge>
+                                          <Badge
+                                            variant="outline"
+                                            className="mt-1"
+                                          >
+                                            For Sale
+                                          </Badge>
                                         ) : (
-                                          <Badge variant="outline" className="mt-1">Not For Sale</Badge>
+                                          <Badge
+                                            variant="outline"
+                                            className="mt-1"
+                                          >
+                                            Not For Sale
+                                          </Badge>
                                         )}
                                       </div>
                                       {/* Only show sale toggle and price change popover in 'created' tab */}
@@ -1068,9 +1134,15 @@ export function ProfilePage() {
                                         <div className="flex items-center space-x-2">
                                           <Button
                                             size="sm"
-                                            variant={nft.isForSale ? "outline" : "secondary"}
-                                            disabled={setNFTForSaleMutation.isPending}
-                                            onClick={e => {
+                                            variant={
+                                              nft.isForSale
+                                                ? "outline"
+                                                : "secondary"
+                                            }
+                                            disabled={
+                                              setNFTForSaleMutation.isPending
+                                            }
+                                            onClick={(e) => {
                                               e.preventDefault();
                                               setNFTForSaleMutation.mutate({
                                                 tokenId: Number(nft.id),
@@ -1080,18 +1152,23 @@ export function ProfilePage() {
                                             className="flex items-center gap-1"
                                           >
                                             {setNFTForSaleMutation.isPending ? (
-                                              <LoadingSpinner size="sm" className="mr-1" />
+                                              <LoadingSpinner
+                                                size="sm"
+                                                className="mr-1"
+                                              />
                                             ) : null}
-                                            {nft.isForSale ?
-                                              "Remove from Sale" :
-                                              "List for Sale"}
+                                            {nft.isForSale
+                                              ? "Remove from Sale"
+                                              : "List for Sale"}
                                           </Button>
                                           <Popover>
                                             <PopoverTrigger asChild>
                                               <Button
                                                 size="sm"
                                                 variant="outline"
-                                                disabled={setNFTForSaleMutation.isPending}
+                                                disabled={
+                                                  setNFTForSaleMutation.isPending
+                                                }
                                               >
                                                 Change Price
                                               </Button>
@@ -1100,9 +1177,12 @@ export function ProfilePage() {
                                               <div className="flex flex-col space-y-2">
                                                 <Input
                                                   type="number"
-                                                  value={priceInputs[nft.id] ?? nft.price}
-                                                  onChange={e =>
-                                                    setPriceInputs(prev => ({
+                                                  value={
+                                                    priceInputs[nft.id] ??
+                                                    nft.price
+                                                  }
+                                                  onChange={(e) =>
+                                                    setPriceInputs((prev) => ({
                                                       ...prev,
                                                       [nft.id]: e.target.value,
                                                     }))
@@ -1110,20 +1190,28 @@ export function ProfilePage() {
                                                 />
                                                 <Button
                                                   size="sm"
-                                                  onClick={e => {
+                                                  onClick={(e) => {
                                                     e.preventDefault();
-                                                    setNFTForSaleMutation.mutate({
-                                                      tokenId: Number(nft.id),
-                                                      forSale: true,
-                                                      newPrice: Number(
-                                                        priceInputs[nft.id] ?? nft.price
-                                                      ),
-                                                    });
+                                                    setNFTForSaleMutation.mutate(
+                                                      {
+                                                        tokenId: Number(nft.id),
+                                                        forSale: true,
+                                                        newPrice: Number(
+                                                          priceInputs[nft.id] ??
+                                                            nft.price
+                                                        ),
+                                                      }
+                                                    );
                                                   }}
-                                                  disabled={setNFTForSaleMutation.isPending}
+                                                  disabled={
+                                                    setNFTForSaleMutation.isPending
+                                                  }
                                                 >
                                                   {setNFTForSaleMutation.isPending ? (
-                                                    <LoadingSpinner size="sm" className="mr-1" />
+                                                    <LoadingSpinner
+                                                      size="sm"
+                                                      className="mr-1"
+                                                    />
                                                   ) : null}
                                                   Update
                                                 </Button>
