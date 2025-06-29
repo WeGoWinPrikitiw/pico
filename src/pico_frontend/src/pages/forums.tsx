@@ -264,64 +264,67 @@ export function ForumsPage() {
                                 ) : forumsToDisplay.length > 0 ? (
                                     <div className="space-y-0">
                                         {forumsToDisplay.map((forum, index) => (
-                                            <div
-                                                key={String(forum.forum_id)}
-                                                className={`group p-6 hover:bg-muted/30 transition-all duration-200 ${index !== forumsToDisplay.length - 1 ? 'border-b' : ''
-                                                    }`}
+                                            <Link
+                                                to={`/forums/${forum.forum_id}`}
                                             >
-                                                <div className="flex items-start gap-4">
-                                                    {/* Avatar */}
-                                                    <Avatar className="h-10 w-10 flex-shrink-0">
-                                                        <AvatarImage src={`https://avatar.vercel.sh/${forum.principal_id}.png`} />
-                                                        <AvatarFallback className="text-sm font-medium">
-                                                            {forum.principal_id.slice(0, 2).toUpperCase()}
-                                                        </AvatarFallback>
-                                                    </Avatar>
+                                                <div
+                                                    key={String(forum.forum_id)}
+                                                    className={`group p-6 hover:bg-muted/30 rounded-xl transition-all duration-200 ${index !== forumsToDisplay.length - 1 ? 'border-b' : ''
+                                                        }`}
+                                                >
+                                                    <div className="flex items-start gap-4">
+                                                        {/* Avatar */}
+                                                        <Avatar className="h-10 w-10 flex-shrink-0">
+                                                            <AvatarImage src={`https://avatar.vercel.sh/${forum.principal_id}.png`} />
+                                                            <AvatarFallback className="text-sm font-medium">
+                                                                {forum.principal_id.slice(0, 2).toUpperCase()}
+                                                            </AvatarFallback>
+                                                        </Avatar>
 
-                                                    {/* Content */}
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-start justify-between gap-4">
-                                                            <div className="flex-1 min-w-0">
-                                                                <Link
-                                                                    to={`/forums/${forum.forum_id}`}
-                                                                    className="block group-hover:text-primary transition-colors"
-                                                                >
-                                                                    <h3 className="text-xl font-semibold leading-tight mb-2 line-clamp-2">
-                                                                        {forum.title}
-                                                                    </h3>
-                                                                </Link>
-                                                                <p className="text-muted-foreground leading-relaxed line-clamp-2 mb-3">
-                                                                    {forum.description}
-                                                                </p>
-
-                                                                {/* Meta Information */}
-                                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <Users className="h-4 w-4" />
-                                                                        <span className="font-medium">
-                                                                            {principal === forum.principal_id ? "You" : `${forum.principal_id.slice(0, 8)}...`}
-                                                                        </span>
+                                                        {/* Content */}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-start justify-between gap-4">
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="block group-hover:text-primary transition-colors">
+                                                                        <h3 className="text-xl font-semibold leading-tight mb-2 line-clamp-2">
+                                                                            {forum.title}
+                                                                        </h3>
+                                                                        <p className="text-muted-foreground leading-relaxed line-clamp-2 mb-3">
+                                                                            {forum.description}
+                                                                        </p>
                                                                     </div>
-                                                                    <span className="text-muted-foreground/60">•</span>
-                                                                    <span>{formatRelativeTime(forum.created_at)}</span>
-                                                                </div>
-                                                            </div>
+                                                                    <p className="text-muted-foreground leading-relaxed line-clamp-2 mb-3">
+                                                                    </p>
 
-                                                            {/* Engagement Stats */}
-                                                            <div className="flex items-center gap-6 text-sm text-muted-foreground flex-shrink-0">
-                                                                <div className="flex items-center gap-1.5 hover:text-red-500 transition-colors">
-                                                                    <Heart className="h-4 w-4" />
-                                                                    <span className="font-medium">{Number(forum.likes)}</span>
+                                                                    {/* Meta Information */}
+                                                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <Users className="h-4 w-4" />
+                                                                            <span className="font-medium">
+                                                                                {principal === forum.principal_id ? "You" : `${forum.principal_id.slice(0, 8)}...`}
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className="text-muted-foreground/60">•</span>
+                                                                        <span>{formatRelativeTime(forum.created_at)}</span>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="flex items-center gap-1.5 hover:text-blue-500 transition-colors">
-                                                                    <MessageSquare className="h-4 w-4" />
-                                                                    <span className="font-medium">{forum.comments.length}</span>
+
+                                                                {/* Engagement Stats */}
+                                                                <div className="flex items-center gap-6 text-sm text-muted-foreground flex-shrink-0">
+                                                                    <div className="flex items-center gap-1.5 hover:text-red-500 transition-colors">
+                                                                        <Heart className="h-4 w-4" />
+                                                                        <span className="font-medium">{Number(forum.likes)}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1.5 hover:text-blue-500 transition-colors">
+                                                                        <MessageSquare className="h-4 w-4" />
+                                                                        <span className="font-medium">{forum.comments.length}</span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
+                                            </Link>
                                         ))}
                                     </div>
                                 ) : (

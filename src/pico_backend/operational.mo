@@ -405,6 +405,58 @@ const result = await ledger.approve({
       let sellerPrincipalObj = Principal.fromText(sellerPrincipal);
       let contractPrincipalObj = Principal.fromText(MINTER_PRINCIPAL);
       
+      // STEP 1: Validate NFT purchase through NFT contract
+      let nftContract : actor {
+        validate_purchase: (Nat, Principal) -> async Result.Result<{price: Nat; seller: Principal}, {#Unauthorized; #NonExistentTokenId; #NotForSale; #SelfPurchase; #AlreadyOwned; #GenericError: { error_code: Nat; message: Text }}>;
+        complete_nft_purchase: (Nat, Principal) -> async Result.Result<{}, {#Unauthorized; #NonExistentTokenId; #NotForSale; #SelfPurchase; #AlreadyOwned; #GenericError: { error_code: Nat; message: Text }}>;
+      } = actor(Config.NFT_CONTRACT_CANISTER);
+      
+      let validationResult = await nftContract.validate_purchase(nftId, buyerPrincipalObj);
+      switch (validationResult) {
+        case (#err(#NotForSale)) {
+          let failedTransaction = { transaction with status = #Failed; };
+          transactions.put(transactionId, failedTransaction);
+          return #err("❌ NFT #" # Nat.toText(nftId) # " is not for sale");
+        };
+        case (#err(#SelfPurchase)) {
+          let failedTransaction = { transaction with status = #Failed; };
+          transactions.put(transactionId, failedTransaction);
+          return #err("❌ You cannot purchase your own NFT");
+        };
+        case (#err(#NonExistentTokenId)) {
+          let failedTransaction = { transaction with status = #Failed; };
+          transactions.put(transactionId, failedTransaction);
+          return #err("❌ NFT #" # Nat.toText(nftId) # " does not exist");
+        };
+        case (#err(#AlreadyOwned)) {
+          let failedTransaction = { transaction with status = #Failed; };
+          transactions.put(transactionId, failedTransaction);
+          return #err("❌ You already own this NFT");
+        };
+        case (#err(_)) {
+          let failedTransaction = { transaction with status = #Failed; };
+          transactions.put(transactionId, failedTransaction);
+          return #err("❌ NFT purchase validation failed");
+        };
+        case (#ok(nftInfo)) {
+          // Validation passed, continue with purchase
+          
+          // Verify the price matches
+          if (nftInfo.price != price) {
+            let failedTransaction = { transaction with status = #Failed; };
+            transactions.put(transactionId, failedTransaction);
+            return #err("❌ Price mismatch. Expected: " # Nat.toText(nftInfo.price) # " PiCO, Provided: " # Nat.toText(price) # " PiCO");
+          };
+          
+          // Verify the seller matches
+          if (Principal.toText(nftInfo.seller) != sellerPrincipal) {
+            let failedTransaction = { transaction with status = #Failed; };
+            transactions.put(transactionId, failedTransaction);
+            return #err("❌ Seller mismatch. Expected: " # Principal.toText(nftInfo.seller) # ", Provided: " # sellerPrincipal);
+          };
+        };
+      };
+      
       // Create accounts
       let buyerAccount = { owner = buyerPrincipalObj; subaccount = null : ?[Nat8] };
       let sellerAccount = { owner = sellerPrincipalObj; subaccount = null : ?[Nat8] };
@@ -413,7 +465,7 @@ const result = await ledger.approve({
       // Convert price to units using centralized function
       let amountInUnits = picoToUnits(price);
       
-      // STEP 1: Check if buyer has approved this contract to spend the required amount
+      // STEP 2: Check if buyer has approved this contract to spend the required amount
       let allowanceArgs = {
         account = buyerAccount;
         spender = contractAccount;
@@ -432,7 +484,7 @@ const result = await ledger.approve({
         return #err("❌ Insufficient approval! Please approve the contract to spend " # Nat.toText(price) # " PiCO tokens first. Current allowance: " # Nat.toText(unitsToPico(currentAllowance)) # " PiCO. Use the 'Approve Contract' function in the Admin tab.");
       };
       
-      // STEP 2: Check if buyer has sufficient balance
+      // STEP 3: Check if buyer has sufficient balance
       let buyerBalance = await ledger.icrc1_balance_of(buyerAccount);
       if (buyerBalance < amountInUnits) {
         let failedTransaction = {
@@ -444,7 +496,7 @@ const result = await ledger.approve({
         return #err("❌ Insufficient balance! Required: " # Nat.toText(price) # " PiCO, Available: " # Nat.toText(unitsToPico(buyerBalance)) # " PiCO");
       };
       
-      // STEP 3: Perform ICRC-2 transfer_from (now safe to do)
+      // STEP 4: Perform ICRC-2 transfer_from (now safe to do)
       let transferArgs = {
         spender_subaccount = null : ?[Nat8];
         from = buyerAccount;
@@ -459,49 +511,67 @@ const result = await ledger.approve({
       
       switch (transferResult) {
         case (#Ok(blockIndex)) {
-          // Update transaction to completed
-          let completedTransaction = {
-            transaction with
-            status = #Completed;
-          };
-          transactions.put(transactionId, completedTransaction);
-          
-          // Add both buyer and seller to token holders
-          tokenHolders.put(buyerPrincipal, true);
-          tokenHolders.put(sellerPrincipal, true);
-          
-          #ok({
-            transaction_id = transactionId;
-            message = "🎉 NFT #" # Nat.toText(nftId) # " purchased successfully! " # Nat.toText(price) # " PiCO transferred from " # buyerPrincipal # " to " # sellerPrincipal # ". Block: " # Nat.toText(blockIndex);
-          })
+          // STEP 5: Complete NFT ownership transfer through NFT contract
+          let purchaseResult = await nftContract.complete_nft_purchase(nftId, buyerPrincipalObj);
+          switch (purchaseResult) {
+            case (#ok(_)) {
+              // Both token transfer and NFT transfer successful
+              let completedTransaction = {
+                transaction with
+                status = #Completed;
+              };
+              transactions.put(transactionId, completedTransaction);
+              
+              #ok({
+                transaction_id = transactionId;
+                message = "✅ NFT purchase completed! Successfully purchased NFT #" # Nat.toText(nftId) # " for " # Nat.toText(price) # " PiCO. Transaction block: " # Nat.toText(blockIndex);
+              })
+            };
+            case (#err(nftError)) {
+              // Token transfer succeeded but NFT transfer failed - this shouldn't happen due to pre-validation
+              let failedTransaction = {
+                transaction with
+                status = #Failed;
+              };
+              transactions.put(transactionId, failedTransaction);
+              
+              #err("❌ Critical error: Token transfer succeeded but NFT transfer failed. Please contact support. Transaction ID: " # Nat.toText(transactionId))
+            };
+          }
         };
-        case (#Err(error)) {
-          // Update transaction to failed
+        case (#Err(transferError)) {
           let failedTransaction = {
             transaction with
             status = #Failed;
           };
           transactions.put(transactionId, failedTransaction);
           
-          let errorMsg = switch (error) {
-            case (#InsufficientFunds({ balance })) { "❌ Insufficient funds. Balance: " # Nat.toText(unitsToPico(balance)) # " PiCO" };
-            case (#InsufficientAllowance({ allowance })) { "❌ Insufficient allowance. Approved: " # Nat.toText(unitsToPico(allowance)) # " PiCO. Please approve more tokens." };
-            case (#BadFee({ expected_fee })) { "❌ Bad fee. Expected: " # Nat.toText(expected_fee) };
-            case (#GenericError({ error_code; message })) { "❌ Error " # Nat.toText(error_code) # ": " # message };
-            case (_) { "❌ Transfer failed" };
+          let errorMessage = switch (transferError) {
+            case (#InsufficientFunds { balance }) {
+              "❌ Insufficient funds. Your balance: " # Nat.toText(unitsToPico(balance)) # " PiCO"
+            };
+            case (#InsufficientAllowance { allowance }) {
+              "❌ Insufficient allowance. Current allowance: " # Nat.toText(unitsToPico(allowance)) # " PiCO"
+            };
+            case (#TooOld) "❌ Transaction too old";
+            case (#CreatedInFuture { ledger_time }) "❌ Transaction created in future";
+            case (#Duplicate { duplicate_of }) "❌ Duplicate transaction";
+            case (#TemporarilyUnavailable) "❌ Service temporarily unavailable";
+            case (#GenericError { error_code; message }) "❌ Transfer error: " # message;
+            case (_) "❌ Unknown transfer error";
           };
-          #err(errorMsg)
+          
+          #err(errorMessage)
         };
-      }
+      };
+      
     } catch (e) {
-      // Update transaction to failed
       let failedTransaction = {
         transaction with
         status = #Failed;
       };
       transactions.put(transactionId, failedTransaction);
-      
-      #err("❌ Purchase failed: " # Error.message(e))
+      #err("❌ Error processing NFT purchase: " # Error.message(e))
     }
   };
   

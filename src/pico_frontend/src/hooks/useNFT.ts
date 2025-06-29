@@ -119,6 +119,7 @@ export function useMintNFT() {
       imageUrl: string;
       isAiGenerated: boolean;
       traits: Trait[];
+      forSale?: boolean;
     }) => {
       if (!nftService) {
         throw new Error("NFT service not available");
@@ -130,7 +131,8 @@ export function useMintNFT() {
         params.price,
         params.imageUrl,
         params.isAiGenerated,
-        params.traits
+        params.traits,
+        params.forSale
       );
     },
     onSuccess: (tokenId, variables) => {
@@ -308,8 +310,7 @@ export function useMintNFTWithAIDetection() {
     onSuccess: (result) => {
       console.log("NFT minted with AI detection:", result);
       toast.success(
-        `NFT #${result.nft_id} minted successfully! AI detected: ${
-          result.ai_detection.is_ai_generated ? "Yes" : "No"
+        `NFT #${result.nft_id} minted successfully! AI detected: ${result.ai_detection.is_ai_generated ? "Yes" : "No"
         } (${Math.round(result.ai_detection.confidence * 100)}% confidence)`
       );
 
@@ -339,6 +340,178 @@ export function useSetOpenAIAPIKey() {
     onError: (error: Error) => {
       console.error("Failed to set OpenAI API key:", error);
       toast.error("Failed to set OpenAI API key. Please try again.");
+    },
+  });
+}
+
+// NEW HOOKS FOR ENHANCED NFT FUNCTIONALITY
+
+// Hook to check if a principal owns a specific NFT
+export function useNFTOwnership(tokenId: number, principalId?: string) {
+  const { nftService } = useServices();
+
+  return useQuery({
+    queryKey: ["nft-ownership", tokenId, principalId],
+    queryFn: async () => {
+      if (!principalId) return false;
+      return await nftService.checkOwnership(tokenId, principalId);
+    },
+    enabled: !!tokenId && !!principalId && !!nftService,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+}
+
+// Hook to get all NFTs owned by a specific principal
+export function useNFTsByOwner(ownerPrincipal?: string) {
+  const { nftService } = useServices();
+
+  return useQuery({
+    queryKey: createQueryKey.nftsByOwner(ownerPrincipal || ""),
+    queryFn: async () => {
+      if (!ownerPrincipal) return [];
+      return await nftService.getNFTsByOwner(ownerPrincipal);
+    },
+    enabled: !!ownerPrincipal && !!nftService,
+    staleTime: 1000 * 60 * 3, // 3 minutes
+  });
+}
+
+// Hook to get only NFTs that are for sale
+export function useNFTsForSale() {
+  const { nftService } = useServices();
+
+  return useQuery({
+    queryKey: ["nfts-for-sale"],
+    queryFn: () => nftService?.getNFTsForSale() ?? Promise.resolve([]),
+    enabled: !!nftService,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+}
+
+// Hook to set NFT for sale status
+export function useSetNFTForSale() {
+  const { nftService } = useServices();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      tokenId: number;
+      forSale: boolean;
+      newPrice?: number;
+    }) => {
+      if (!nftService) {
+        throw new Error("NFT service not available");
+      }
+      return await nftService.setNFTForSale(
+        params.tokenId,
+        params.forSale,
+        params.newPrice
+      );
+    },
+    onSuccess: (updatedNft, variables) => {
+      toast.success(
+        variables.forSale
+          ? `NFT #${variables.tokenId} is now for sale!`
+          : `NFT #${variables.tokenId} removed from sale`
+      );
+
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({
+        queryKey: createQueryKey.nft(variables.tokenId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: createQueryKey.nfts(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["nfts-for-sale"],
+      });
+    },
+    onError: (error: Error) => {
+      console.error("Failed to update NFT sale status:", error);
+      toast.error("Failed to update sale status. Please try again.");
+    },
+  });
+}
+
+// Hook to validate NFT purchase before attempting
+export function useValidateNFTPurchase() {
+  const { nftService } = useServices();
+
+  return useMutation({
+    mutationFn: async (params: {
+      tokenId: number;
+      buyerPrincipal: string;
+    }) => {
+      if (!nftService) {
+        throw new Error("NFT service not available");
+      }
+      return await nftService.validatePurchase(
+        params.tokenId,
+        params.buyerPrincipal
+      );
+    },
+    onError: (error: Error) => {
+      console.error("Failed to validate NFT purchase:", error);
+    },
+  });
+}
+
+// Enhanced buy NFT hook with validation
+export function useBuyNFTWithValidation() {
+  const { operationalService } = useServices();
+  const validatePurchase = useValidateNFTPurchase();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      buyer: string;
+      seller: string;
+      nftId: number;
+      price: number;
+      forumId?: number;
+    }) => {
+      if (!operationalService) {
+        throw new Error("Operational service not available");
+      }
+
+      // First validate the purchase
+      const validation = await validatePurchase.mutateAsync({
+        tokenId: params.nftId,
+        buyerPrincipal: params.buyer,
+      });
+
+      if (!validation.isValid) {
+        throw new Error(validation.error || "Purchase validation failed");
+      }
+
+      // Proceed with the purchase
+      return await operationalService.buyNFT(
+        params.buyer,
+        params.seller,
+        params.nftId,
+        params.price,
+        params.forumId
+      );
+    },
+    onSuccess: (_, variables) => {
+      toast.success(`Successfully purchased NFT #${variables.nftId}!`);
+
+      // Invalidate relevant queries
+      invalidateQueries.operational();
+      invalidateQueries.nfts();
+      queryClient.invalidateQueries({
+        queryKey: createQueryKey.nft(variables.nftId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["nft-ownership", variables.nftId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["nfts-for-sale"],
+      });
+    },
+    onError: (error: Error) => {
+      console.error("NFT purchase failed:", error);
+      toast.error(`Purchase failed: ${error.message}`);
     },
   });
 }
