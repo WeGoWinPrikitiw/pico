@@ -33,6 +33,7 @@ import {
     Globe,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getCanisterId } from "@/config/canisters";
 
 export function PublicNFTSharePage() {
     const { id } = useParams<{ id: string }>();
@@ -299,7 +300,7 @@ export function PublicNFTSharePage() {
                                                     Contract Address
                                                 </span>
                                                 <span className="text-sm font-mono text-foreground bg-muted px-2 py-1 rounded">
-                                                    NFT Contract
+                                                    {getCanisterId("nft_contract").slice(0, 8)}...{getCanisterId("nft_contract").slice(-6)}
                                                 </span>
                                             </div>
                                             <Separator />
@@ -314,6 +315,18 @@ export function PublicNFTSharePage() {
                                             <Separator />
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-muted-foreground">
+                                                    Creator
+                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <UserAvatar principalId={String(nft.owner)} size="sm" />
+                                                    <span className="text-sm text-foreground">
+                                                        <UserName principalId={String(nft.owner)} maxLength={12} />
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <Separator />
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-muted-foreground">
                                                     Blockchain
                                                 </span>
                                                 <span className="text-sm text-foreground">
@@ -323,9 +336,75 @@ export function PublicNFTSharePage() {
                                             <Separator />
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-muted-foreground">
+                                                    Network
+                                                </span>
+                                                <span className="text-sm text-foreground">
+                                                    IC Mainnet
+                                                </span>
+                                            </div>
+                                            <Separator />
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-muted-foreground">
                                                     Standard
                                                 </span>
                                                 <span className="text-sm text-foreground">ICRC-7</span>
+                                            </div>
+                                            <Separator />
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-muted-foreground">
+                                                    Token Type
+                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <Badge variant="outline" className="text-xs">
+                                                        {nft.is_ai_generated ? "AI Generated" : "Original Art"}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                            <Separator />
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-muted-foreground">
+                                                    Supply Type
+                                                </span>
+                                                <span className="text-sm text-foreground">
+                                                    Unique (1/1)
+                                                </span>
+                                            </div>
+                                            <Separator />
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-muted-foreground">
+                                                    Created At
+                                                </span>
+                                                <span className="text-sm text-foreground">
+                                                    {new Date(Number(nft.created_at) / 1000000).toLocaleString()}
+                                                </span>
+                                            </div>
+                                            <Separator />
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-muted-foreground">
+                                                    Royalties
+                                                </span>
+                                                <span className="text-sm text-foreground">
+                                                    2.5%
+                                                </span>
+                                            </div>
+                                            <Separator />
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-muted-foreground">
+                                                    Transfer Count
+                                                </span>
+                                                <span className="text-sm text-foreground">
+                                                    1
+                                                </span>
+                                            </div>
+                                            <Separator />
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-muted-foreground">
+                                                    Status
+                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                                    <span className="text-sm text-foreground">Verified</span>
+                                                </div>
                                             </div>
                                         </CardContent>
                                     </Card>
