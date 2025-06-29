@@ -878,8 +878,8 @@ export function ProfilePage() {
                                   key={pref}
                                   onClick={() => handleTogglePreference(pref)}
                                   className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-colors ${userPreferences.includes(pref)
-                                      ? "bg-primary text-primary-foreground border-primary"
-                                      : "bg-transparent hover:bg-muted"
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-transparent hover:bg-muted"
                                     }`}
                                 >
                                   {userPreferences.includes(pref) && (
@@ -1176,6 +1176,8 @@ export function ProfilePage() {
               </Card>
             </div>
           </div>
-        </div >
-      );
+        </>
+      )}
+    </div>
+  );
 }
