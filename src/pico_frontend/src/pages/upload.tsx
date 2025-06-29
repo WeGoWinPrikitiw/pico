@@ -205,8 +205,8 @@ export function UploadPage() {
     }
 
     try {
-      // Convert price to nearest integer (backend expects Nat)
-      const priceAsInteger = Math.round(parseFloat(nftData.price));
+      // Convert PiCO units to minimal units (1 PiCO = 1e8 minimal units)
+      const priceAsInteger = Math.round(parseFloat(nftData.price) * 100000000);
 
       // Use regular minting with AI detection result
       const mintResult = await mintNftMutation.mutateAsync({
@@ -452,8 +452,8 @@ export function UploadPage() {
                     ) : (
                       <div
                         className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer ${dragOver
-                            ? "border-primary bg-primary/5"
-                            : "border-muted-foreground/25 hover:border-muted-foreground/50"
+                          ? "border-primary bg-primary/5"
+                          : "border-muted-foreground/25 hover:border-muted-foreground/50"
                           }`}
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
@@ -611,8 +611,8 @@ export function UploadPage() {
                             >
                               <div
                                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.isAiGenerated
-                                    ? "bg-purple-600 border-purple-600"
-                                    : "border-gray-300 hover:border-purple-400"
+                                  ? "bg-purple-600 border-purple-600"
+                                  : "border-gray-300 hover:border-purple-400"
                                   }`}
                               >
                                 {nftData.isAiGenerated && (

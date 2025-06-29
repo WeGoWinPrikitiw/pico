@@ -17,6 +17,9 @@ import {
   TabsTrigger,
   TabsContent,
   Separator,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
 } from "@/components/ui";
 import { useAuth, useServices } from "@/context/auth-context";
 import {
@@ -120,6 +123,7 @@ export function ProfilePage() {
     "memes",
     "collectibles",
   ]);
+  const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
 
   // Query for user NFTs
   const { data: nftData } = useNFTs();
@@ -509,7 +513,9 @@ export function ProfilePage() {
                               Wallet Connected
                             </p>
                             <p className="text-2xl font-bold text-primary">
-                              {userBalance} PiCO
+                              {(userBalance !== undefined
+                                ? (userBalance / 100000000).toFixed(2)
+                                : "0.00")} PiCO
                             </p>
                             <p className="text-xs text-muted-foreground">
                               Available Balance
@@ -676,12 +682,13 @@ export function ProfilePage() {
                         }
                       >
                         {getCurrentNFTs().map((nft) => (
-                          <Link to={`/nft/${nft.id}`} key={nft.id} className="block group">
-                            <Card
-                              className="py-0 group overflow-hidden border-2 border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
-                            >
-                              {viewMode === "grid" ? (
-                                <>
+
+                          <Card
+                            className="py-0 group overflow-hidden border-2 border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                          >
+                            {viewMode === "grid" ? (
+                              <>
+                                <Link to={`/nft/${nft.id}`} key={nft.id} className="block group">
                                   <div className="aspect-square relative overflow-hidden">
                                     <img
                                       src={nft.image}
@@ -711,77 +718,125 @@ export function ProfilePage() {
                                       </div>
                                     </div>
                                   </div>
-                                  <CardContent className="p-4 space-y-3">
-                                    <div>
-                                      <h3 className="font-semibold truncate">{nft.title}</h3>
-                                      <p className="text-sm text-muted-foreground">by {nft.creator || userProfile.username}</p>
+                                </Link>
+
+                                <CardContent className="p-4 space-y-3">
+                                  <div>
+                                    <h3 className="font-semibold truncate">{nft.title}</h3>
+                                    <p className="text-sm text-muted-foreground">by {nft.creator || userProfile.username}</p>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-bold text-primary">{nft.price} PiCO</span>
+                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                      <Heart className="h-4 w-4" />
+                                      {nft.likes}
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="font-bold text-primary">{nft.price} PiCO</span>
-                                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                        <Heart className="h-4 w-4" />
+                                  </div>
+                                  {/* Only show sale toggle and price change popover in 'created' tab */}
+                                  {activeTab === "created" && (
+                                    <div className="pt-2 grid grid-cols-2 gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant={nft.isForSale ? "outline" : "secondary"}
+                                        disabled={setNFTForSaleMutation.isPending}
+                                        onClick={e => {
+                                          e.preventDefault();
+                                          setNFTForSaleMutation.mutate({
+                                            tokenId: Number(nft.id),
+                                            forSale: !nft.isForSale,
+                                          });
+                                        }}
+                                        className="flex items-center gap-1 w-full"
+                                      >
+                                        {setNFTForSaleMutation.isPending ? (
+                                          <LoadingSpinner size="sm" className="mr-1" />
+                                        ) : null}
+                                        {nft.isForSale ? "Unlist" : "List Sale"}
+                                      </Button>
+                                      <Popover>
+                                        <PopoverTrigger asChild>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled={setNFTForSaleMutation.isPending}
+                                            className="w-full flex items-center"
+                                          >
+                                            Change Price
+                                          </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent>
+                                          <div className="flex flex-col space-y-2">
+                                            <Input
+                                              type="number"
+                                              value={priceInputs[nft.id] ?? nft.price}
+                                              onChange={e =>
+                                                setPriceInputs(prev => ({
+                                                  ...prev,
+                                                  [nft.id]: e.target.value,
+                                                }))
+                                              }
+                                            />
+                                            <Button
+                                              size="sm"
+                                              onClick={e => {
+                                                e.preventDefault();
+                                                setNFTForSaleMutation.mutate({
+                                                  tokenId: Number(nft.id),
+                                                  forSale: true,
+                                                  newPrice: Number(
+                                                    priceInputs[nft.id] ?? nft.price
+                                                  ),
+                                                });
+                                              }}
+                                              disabled={setNFTForSaleMutation.isPending}
+                                            >
+                                              {setNFTForSaleMutation.isPending ? (
+                                                <LoadingSpinner size="sm" className="mr-1" />
+                                              ) : null}
+                                              Update
+                                            </Button>
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </>
+                            ) : (
+                              // List view
+                              <CardContent className="p-4">
+                                <div className="flex items-center gap-4">
+                                  <img
+                                    src={nft.image}
+                                    alt={nft.title}
+                                    className="w-16 h-16 rounded-lg object-cover"
+                                  />
+                                  <div className="flex-1">
+                                    <h3 className="font-semibold">{nft.title}</h3>
+                                    <p className="text-sm text-muted-foreground">by {nft.creator || userProfile.username}</p>
+                                    <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                                      <span className="flex items-center gap-1">
+                                        <Eye className="h-3 w-3" />
+                                        {nft.views}
+                                      </span>
+                                      <span className="flex items-center gap-1">
+                                        <Heart className="h-3 w-3" />
                                         {nft.likes}
-                                      </div>
+                                      </span>
                                     </div>
-                                    {/* Only show sale toggle in 'created' tab, at the bottom */}
-                                    {activeTab === "created" && (
-                                      <div className="pt-2">
-                                        <Button
-                                          size="sm"
-                                          variant={nft.isForSale ? "outline" : "secondary"}
-                                          disabled={setNFTForSaleMutation.isPending}
-                                          onClick={e => {
-                                            e.preventDefault();
-                                            setNFTForSaleMutation.mutate({
-                                              tokenId: Number(nft.id),
-                                              forSale: !nft.isForSale,
-                                            });
-                                          }}
-                                          className="flex items-center gap-1 w-full"
-                                        >
-                                          {setNFTForSaleMutation.isPending ? (
-                                            <LoadingSpinner size="sm" className="mr-1" />
-                                          ) : null}
-                                          {nft.isForSale ? "Remove from Sale" : "List for Sale"}
-                                        </Button>
-                                      </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-bold text-primary">{nft.price} PiCO</p>
+                                    {/* Always show sale status badge */}
+                                    {nft.isForSale ? (
+                                      <Badge variant="outline" className="mt-1">For Sale</Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="mt-1">Not For Sale</Badge>
                                     )}
-                                  </CardContent>
-                                </>
-                              ) : (
-                                // List view
-                                <CardContent className="p-4">
-                                  <div className="flex items-center gap-4">
-                                    <img
-                                      src={nft.image}
-                                      alt={nft.title}
-                                      className="w-16 h-16 rounded-lg object-cover"
-                                    />
-                                    <div className="flex-1">
-                                      <h3 className="font-semibold">{nft.title}</h3>
-                                      <p className="text-sm text-muted-foreground">by {nft.creator || userProfile.username}</p>
-                                      <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                                        <span className="flex items-center gap-1">
-                                          <Eye className="h-3 w-3" />
-                                          {nft.views}
-                                        </span>
-                                        <span className="flex items-center gap-1">
-                                          <Heart className="h-3 w-3" />
-                                          {nft.likes}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="font-bold text-primary">{nft.price} PiCO</p>
-                                      {/* Always show sale status badge */}
-                                      {nft.isForSale ? (
-                                        <Badge variant="outline" className="mt-1">For Sale</Badge>
-                                      ) : (
-                                        <Badge variant="outline" className="mt-1">Not For Sale</Badge>
-                                      )}
-                                    </div>
-                                    {/* Only show sale toggle in 'created' tab */}
-                                    {activeTab === "created" && (
+                                  </div>
+                                  {/* Only show sale toggle and price change popover in 'created' tab */}
+                                  {activeTab === "created" && (
+                                    <div className="flex items-center space-x-2">
                                       <Button
                                         size="sm"
                                         variant={nft.isForSale ? "outline" : "secondary"}
@@ -798,14 +853,60 @@ export function ProfilePage() {
                                         {setNFTForSaleMutation.isPending ? (
                                           <LoadingSpinner size="sm" className="mr-1" />
                                         ) : null}
-                                        {nft.isForSale ? "Remove from Sale" : "List for Sale"}
+                                        {nft.isForSale ?
+                                          "Remove from Sale" :
+                                          "List for Sale"}
                                       </Button>
-                                    )}
-                                  </div>
-                                </CardContent>
-                              )}
-                            </Card>
-                          </Link>
+                                      <Popover>
+                                        <PopoverTrigger asChild>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled={setNFTForSaleMutation.isPending}
+                                          >
+                                            Change Price
+                                          </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent>
+                                          <div className="flex flex-col space-y-2">
+                                            <Input
+                                              type="number"
+                                              value={priceInputs[nft.id] ?? nft.price}
+                                              onChange={e =>
+                                                setPriceInputs(prev => ({
+                                                  ...prev,
+                                                  [nft.id]: e.target.value,
+                                                }))
+                                              }
+                                            />
+                                            <Button
+                                              size="sm"
+                                              onClick={e => {
+                                                e.preventDefault();
+                                                setNFTForSaleMutation.mutate({
+                                                  tokenId: Number(nft.id),
+                                                  forSale: true,
+                                                  newPrice: Number(
+                                                    priceInputs[nft.id] ?? nft.price
+                                                  ),
+                                                });
+                                              }}
+                                              disabled={setNFTForSaleMutation.isPending}
+                                            >
+                                              {setNFTForSaleMutation.isPending ? (
+                                                <LoadingSpinner size="sm" className="mr-1" />
+                                              ) : null}
+                                              Update
+                                            </Button>
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
+                                    </div>
+                                  )}
+                                </div>
+                              </CardContent>
+                            )}
+                          </Card>
                         ))}
                       </div>
                     ) : (
@@ -846,6 +947,6 @@ export function ProfilePage() {
           </Card>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

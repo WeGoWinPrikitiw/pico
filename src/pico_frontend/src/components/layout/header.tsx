@@ -185,7 +185,7 @@ export function Header() {
                     onClick={() => setIsTopUpOpen(!isTopUpOpen)}
                   >
                     <img src="/brand/pico-glow.png" className="size-8" alt="PiCO" />
-                    <span>{userBalance}</span>
+                    <span>{userBalance !== undefined ? (userBalance / 100000000).toFixed(2) : "0.00"}</span>
                     <PlusIcon className="h-4 w-4" />
                   </button>
                 </PopoverTrigger>
@@ -200,7 +200,7 @@ export function Header() {
                           <img src="/brand/pico-glow.png" className="size-16 relative z-10" alt="PiCO" />
 
                           <div className="text-left">
-                            <div className="text-4xl font-bold text-white">{userBalance}</div>
+                            <div className="text-4xl font-bold text-white">{userBalance !== undefined ? (userBalance / 100000000).toFixed(2) : "0.00"}</div>
                             <div className="text-lg font-medium text-purple-200">Pico Coins</div>
                           </div>
                         </div>
@@ -356,7 +356,7 @@ export function Header() {
                               <img src="/brand/pico-glow.png" className="size-10" alt="PiCO" />
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <p className="text-2xl font-bold text-foreground">{userBalance}</p>
+                                  <p className="text-2xl font-bold text-foreground">{userBalance !== undefined ? (userBalance / 100000000).toFixed(2) : "0.00"}</p>
                                   <PlusIcon className="h-4 w-4 text-muted-foreground" />
                                 </div>
                                 <p className="text-sm text-muted-foreground">Pico Coins • Tap to top up</p>
@@ -387,7 +387,7 @@ export function Header() {
                                 <img src="/brand/pico-glow.png" className="size-16 relative z-10" alt="PiCO" />
 
                                 <div className="text-left">
-                                  <div className="text-4xl font-bold text-white">{userBalance}</div>
+                                  <div className="text-4xl font-bold text-white">{userBalance !== undefined ? (userBalance / 100000000).toFixed(2) : "0.00"}</div>
                                   <div className="text-lg font-medium text-purple-200">Pico Coins</div>
                                 </div>
                               </div>

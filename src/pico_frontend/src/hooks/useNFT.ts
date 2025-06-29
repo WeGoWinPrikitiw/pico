@@ -402,10 +402,14 @@ export function useSetNFTForSale() {
       if (!nftService) {
         throw new Error("NFT service not available");
       }
+      // Convert PiCO units to minimal units (1 PiCO = 1e8 minimal units)
+      const minimalPrice = params.newPrice !== undefined
+        ? Math.round(params.newPrice * 100000000)
+        : undefined;
       return await nftService.setNFTForSale(
         params.tokenId,
         params.forSale,
-        params.newPrice
+        minimalPrice
       );
     },
     onSuccess: (updatedNft, variables) => {

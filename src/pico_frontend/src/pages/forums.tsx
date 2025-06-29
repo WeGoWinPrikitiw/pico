@@ -262,7 +262,7 @@ export function ForumsPage() {
                                         <LoadingSpinner size="lg" />
                                     </div>
                                 ) : forumsToDisplay.length > 0 ? (
-                                    <div className="space-y-0">
+                                    <div className="flex flex-col gap-2">
                                         {forumsToDisplay.map((forum, index) => (
                                             <Link
                                                 to={`/forums/${forum.forum_id}`}

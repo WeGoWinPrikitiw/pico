@@ -243,7 +243,7 @@ actor Operational {
           
           #ok({
             transaction_id = transactionId;
-            message = "✅ Successfully minted " # Nat.toText(amount) # " PiCO tokens to " # userPrincipal # ". Block: " # Nat.toText(blockIndex);
+            message = "Successfully minted " # Nat.toText(amount) # " PiCO tokens to " # userPrincipal # ". Block: " # Nat.toText(blockIndex);
           })
         };
         case (#Err(error)) {
@@ -279,7 +279,7 @@ actor Operational {
       };
       transactions.put(transactionId, updatedTransaction);
       
-      #err("❌ Error processing top-up: " # Error.message(e))
+      #err("Error processing top-up: " # Error.message(e))
     }
   };
   
@@ -311,7 +311,7 @@ actor Operational {
   // 
   // RECOMMENDED: Use @dfinity/ledger-icrc library in frontend instead
   public func approve_contract_BROKEN(_ : Nat) : async Result.Result<Text, Text> {
-    #err("❌ This function doesn't work! Use frontend to call ledger directly. Call get_approval_info() for details.")
+    #err("This function doesn't work! Use frontend to call ledger directly. Call get_approval_info() for details.")
   };
   
   // Get info for frontend to approve ledger directly (CORRECT WAY)
@@ -443,14 +443,20 @@ const result = await ledger.approve({
           
           // Verify the price matches
           if (nftInfo.price != price) {
-            let failedTransaction = { transaction with status = #Failed; };
+            let failedTransaction = {
+              transaction with
+              status = #Failed;
+            };
             transactions.put(transactionId, failedTransaction);
-            return #err("❌ Price mismatch. Expected: " # Nat.toText(nftInfo.price) # " PiCO, Provided: " # Nat.toText(price) # " PiCO");
+            return #err("Price mismatch. Expected: " # Nat.toText(unitsToPico(nftInfo.price)) # " PiCO, Provided: " # Nat.toText(unitsToPico(price)) # " PiCO");
           };
           
           // Verify the seller matches
           if (Principal.toText(nftInfo.seller) != sellerPrincipal) {
-            let failedTransaction = { transaction with status = #Failed; };
+            let failedTransaction = {
+              transaction with
+              status = #Failed;
+            };
             transactions.put(transactionId, failedTransaction);
             return #err("❌ Seller mismatch. Expected: " # Principal.toText(nftInfo.seller) # ", Provided: " # sellerPrincipal);
           };
@@ -481,7 +487,7 @@ const result = await ledger.approve({
         };
         transactions.put(transactionId, failedTransaction);
         
-        return #err("❌ Insufficient approval! Please approve the contract to spend " # Nat.toText(price) # " PiCO tokens first. Current allowance: " # Nat.toText(unitsToPico(currentAllowance)) # " PiCO. Use the 'Approve Contract' function in the Admin tab.");
+        return #err("Insufficient approval! Please approve the contract to spend " # Nat.toText(unitsToPico(price)) # " PiCO tokens first. Current allowance: " # Nat.toText(unitsToPico(currentAllowance)) # " PiCO. Use the 'Approve Contract' function in the Admin tab.");
       };
       
       // STEP 3: Check if buyer has sufficient balance
@@ -493,7 +499,7 @@ const result = await ledger.approve({
         };
         transactions.put(transactionId, failedTransaction);
         
-        return #err("❌ Insufficient balance! Required: " # Nat.toText(price) # " PiCO, Available: " # Nat.toText(unitsToPico(buyerBalance)) # " PiCO");
+        return #err("Insufficient balance! Required: " # Nat.toText(unitsToPico(price)) # " PiCO, Available: " # Nat.toText(unitsToPico(buyerBalance)) # " PiCO");
       };
       
       // STEP 4: Perform ICRC-2 transfer_from (now safe to do)
@@ -524,7 +530,7 @@ const result = await ledger.approve({
               
               #ok({
                 transaction_id = transactionId;
-                message = "✅ NFT purchase completed! Successfully purchased NFT #" # Nat.toText(nftId) # " for " # Nat.toText(price) # " PiCO. Transaction block: " # Nat.toText(blockIndex);
+                message = "NFT purchase completed! Successfully purchased NFT #" # Nat.toText(nftId) # " for " # Nat.toText(unitsToPico(price)) # " PiCO. Transaction block: " # Nat.toText(blockIndex);
               })
             };
             case (#err(nftError)) {
@@ -535,7 +541,7 @@ const result = await ledger.approve({
               };
               transactions.put(transactionId, failedTransaction);
               
-              #err("❌ Critical error: Token transfer succeeded but NFT transfer failed. Please contact support. Transaction ID: " # Nat.toText(transactionId))
+              #err("Critical error: Token transfer succeeded but NFT transfer failed. Please contact support. Transaction ID: " # Nat.toText(transactionId))
             };
           }
         };
@@ -601,9 +607,9 @@ const result = await ledger.approve({
       let hasSufficientApproval = currentAllowancePico >= requiredAmountPico;
       
       let approvalMessage = if (hasSufficientApproval) {
-        "✅ Sufficient approval! You can purchase this NFT."
+        "Sufficient approval! You can purchase this NFT."
       } else {
-        "❌ Need to approve " # Nat.toText(requiredAmountPico - currentAllowancePico) # " more PiCO tokens before purchase."
+        "Need to approve " # Nat.toText(requiredAmountPico - currentAllowancePico) # " more PiCO tokens before purchase."
       };
       
       #ok({

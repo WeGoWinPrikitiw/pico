@@ -140,7 +140,7 @@ function NFTGridCard({ nft, isNew, onLike, onShare }: NFTCardInternalProps) {
                                     Current Price
                                 </p>
                                 <p className="font-bold text-base text-primary">
-                                    {nft.price} PiCO
+                                    {(nft.price / 100000000).toFixed(2)} PiCO
                                 </p>
                             </div>
                         </div>
@@ -231,7 +231,7 @@ function NFTListCard({ nft, isNew, onLike, onShare }: NFTCardInternalProps) {
                                 <div className="space-y-1">
                                     <p className="text-sm text-muted-foreground">Current Price</p>
                                     <p className="font-bold text-lg text-primary">
-                                        {nft.price} PiCO
+                                        {(nft.price / 100000000).toFixed(2)} PiCO
                                     </p>
                                 </div>
                             </div>
