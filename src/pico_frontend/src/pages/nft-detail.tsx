@@ -72,8 +72,7 @@ export function NFTDetailPage() {
     const [isApproving, setIsApproving] = useState(false);
 
     const nftId = id ? parseInt(id) : 0;
-
-    const { data: nft, isLoading: isLoadingNFT, error: nftError } = useNFT(nftId);
+    const { data: nft, isLoading: isLoadingNFT, error: nftError, refetch: refetchNFT } = useNFT(nftId);
     const { data: nftForums = [], isLoading: isLoadingForums, refetch: refetchForums } = useNFTForums(nftId);
     const { data: userBalance = 0, isLoading: isLoadingBalance } = useUserBalance(principal);
     const { data: tokenInfo } = useTokenInfo();
@@ -85,13 +84,13 @@ export function NFTDetailPage() {
         isLoading: isLoadingApproval,
         refetch: refetchApproval
     } = useNFTPurchaseApproval(principal, nft?.price);
-
     const mainForum = nftForums.length > 0 ? nftForums[0] : null;
 
     const likeMutation = useLikeForum();
     const commentMutation = useCommentForum();
     const purchaseMutation = useBuyNFT();
     const approveMutation = useApprove();
+
 
     const handleLike = () => {
         if (!isAuthenticated) return toast.error("Please login to like.");
@@ -173,20 +172,17 @@ export function NFTDetailPage() {
     const handlePurchase = () => {
         if (!isAuthenticated) return login();
         if (!nft || !principal) return toast.error("NFT data not available.");
+        if (principal === String(nft.owner)) return toast.error("You already own this NFT.");
+        if (!nft.is_for_sale) return toast.error("This NFT is not for sale.");
 
+        // The 'mutate' function now correctly uses the centralized logic from the useBuyNFT hook
         purchaseMutation.mutate({
             buyer: principal,
             seller: String(nft.owner),
             nftId: nftId,
             price: Number(nft.price),
             forumId: mainForum ? Number(mainForum.forum_id) : undefined
-        }, {
-            onSuccess: () => {
-                toast.success("Purchase successful!");
-                refetchApproval(); // Refresh approval status
-            },
-            onError: (err) => toast.error(`Purchase failed: ${err.message}`),
-        });
+        })
     };
 
     const handleShare = async () => {
@@ -225,6 +221,7 @@ export function NFTDetailPage() {
 
     const isOwner = principal === String(nft.owner);
     const hasInsufficientFunds = isAuthenticated && !isOwner && userBalance < Number(nft.price);
+    const isNotForSale = !nft.is_for_sale;
     const needsApproval = isAuthenticated && !isOwner && !isLoadingApproval &&
         approvalStatus && !approvalStatus.hasSufficientApproval;
 
@@ -351,6 +348,8 @@ export function NFTDetailPage() {
                                         <div className="p-3 bg-background rounded-lg text-center text-sm text-muted-foreground">You own this NFT.</div>
                                     ) : !isAuthenticated ? (
                                         <Button size="lg" className="w-full" onClick={login}><User className="mr-2 h-4 w-4" />Connect Wallet to Purchase</Button>
+                                    ) : isNotForSale ? (
+                                        <Button size="lg" className="w-full" disabled><Tag className="mr-2 h-4 w-4" />Not For Sale</Button>
                                     ) : hasInsufficientFunds ? (
                                         <Button size="lg" className="w-full" disabled><AlertCircle className="mr-2 h-4 w-4" />Insufficient Funds</Button>
                                     ) : needsApproval ? (

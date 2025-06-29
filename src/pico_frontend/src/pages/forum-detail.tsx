@@ -202,7 +202,7 @@ export function ForumDetailPage() {
                     </Button>
 
                     {/* Forum Header Card */}
-                    <Card className="bg-gradient-to-r from-card to-card/80 border-0 shadow-lg">
+                    <Card className="bg-gradient-to-r from-card to-card/80 border-0 shadow-lg py-0">
                         <CardContent className="p-8">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div className="space-y-3">

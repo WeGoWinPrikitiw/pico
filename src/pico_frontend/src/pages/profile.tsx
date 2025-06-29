@@ -109,18 +109,6 @@ export function ProfilePage() {
 
   const [createdNFTs, setCreatedNFTs] = useState<NFTItem[]>([]);
   const [collectedNFTs, setCollectedNFTs] = useState<NFTItem[]>([]);
-  const [wishlistNFTs] = useState<NFTItem[]>([
-    {
-      id: "6",
-      title: "Future Landscape",
-      image: "/brand/pico-logo.svg",
-      price: "55.0",
-      likes: 312,
-      isForSale: false,
-      views: 4500,
-      creator: "visionary_art",
-    },
-  ]);
   const [userPreferences, setUserPreferences] = useState<string[]>([]);
   const [availablePreferences] = useState([
     "art",
@@ -140,27 +128,44 @@ export function ProfilePage() {
 
   // Format NFT data
   useEffect(() => {
-    if (nftData) {
-      const formattedNfts: NFTItem[] = nftData.map((nft) => ({
-        id: nft.nft_id.toString(),
-        title: nft.name,
-        image: nft.image_url,
-        price: (Number(nft.price) / 100000000).toFixed(2),
-        likes: Math.floor(Math.random() * 100),
-        isForSale: true,
-        views: Math.floor(Math.random() * 1000),
-        creator: nft.owner,
-      }));
+    if (nftData && principal) {
+      // NFTs created by me (owner === principal)
+      const created: NFTItem[] = nftData
+        .filter((nft) => nft.owner === principal)
+        .map((nft) => ({
+          id: nft.nft_id.toString(),
+          title: nft.name,
+          image: nft.image_url,
+          price: (Number(nft.price) / 100000000).toFixed(2),
+          likes: Math.floor(Math.random() * 100),
+          isForSale: nft.is_for_sale,
+          views: Math.floor(Math.random() * 1000),
+          creator: nft.owner,
+        }));
 
-      setCreatedNFTs(formattedNfts);
-      setCollectedNFTs(formattedNfts);
+      // NFTs I own (collected) - for now, same as created, unless you have a separate "creator" field
+      const collected: NFTItem[] = nftData
+        .filter((nft) => nft.owner === principal)
+        .map((nft) => ({
+          id: nft.nft_id.toString(),
+          title: nft.name,
+          image: nft.image_url,
+          price: (Number(nft.price) / 100000000).toFixed(2),
+          likes: Math.floor(Math.random() * 100),
+          isForSale: nft.is_for_sale,
+          views: Math.floor(Math.random() * 1000),
+          creator: nft.owner,
+        }));
+
+      setCreatedNFTs(created);
+      setCollectedNFTs(collected);
 
       setUserProfile((prev) => ({
         ...prev,
-        totalNFTs: formattedNfts.length,
+        totalNFTs: created.length,
       }));
     }
-  }, [nftData]);
+  }, [nftData, principal]);
 
   // Set preferences from query data
   useEffect(() => {
@@ -183,12 +188,6 @@ export function ProfilePage() {
       icon: Star,
     },
     {
-      id: "wishlist",
-      label: "Wishlist",
-      count: wishlistNFTs.length,
-      icon: Heart,
-    },
-    {
       id: "settings",
       label: "Settings",
       count: 0, // or some other indicator
@@ -202,8 +201,6 @@ export function ProfilePage() {
         return createdNFTs;
       case "collected":
         return collectedNFTs;
-      case "wishlist":
-        return wishlistNFTs;
       default:
         return [];
     }
@@ -442,7 +439,7 @@ export function ProfilePage() {
                             fill="currentColor"
                             viewBox="0 0 24 24"
                           >
-                            <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987c6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.49-3.341-1.297-.734-.646-1.297-1.297-1.297-2.448c0-1.297.49-2.448 1.297-3.341.646-.734 1.297-1.297 2.448-1.297c1.297 0 2.448.49 3.341 1.297.734.646 1.297 1.297 1.297 2.448c0 1.297-.49 2.448-1.297 3.341-.646.734-1.297 1.297-2.448 1.297z" />
+                            <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987c6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.49-3.341-1.297-.734-.646-1.297-1.297-1.297-2.448c0-1.297.49-2.448 1.297-3.341.646-.734 1.297-1.297 2.448-1.297c1.297 0 2.448.49 3.341 1.297.734.646 1.297 1.297 2.448 1.297z" />
                           </svg>
                         </a>
                       )}
@@ -762,7 +759,7 @@ export function ProfilePage() {
                                         <Edit3 className="h-4 w-4" />
                                       </Button>
                                     )}
-                                    {activeTab === "wishlist" &&
+                                    {activeTab === "collected" &&
                                       nft.isForSale && (
                                         <Button
                                           size="sm"
@@ -840,8 +837,6 @@ export function ProfilePage() {
                             "Start your NFT journey by creating your first digital artwork"}
                           {tab.id === "collected" &&
                             "Discover and collect amazing NFTs from talented creators"}
-                          {tab.id === "wishlist" &&
-                            "Save NFTs you love to your wishlist for later"}
                         </p>
                         {tab.id === "created" && (
                           <Link to="/upload">

@@ -71,6 +71,11 @@ function NFTGridCard({ nft, isNew, onLike, onShare }: NFTCardInternalProps) {
 
                         {/* Badges */}
                         <div className="absolute top-3 left-3 flex flex-col gap-2">
+                            {nft.is_for_sale && (
+                                <Badge className="bg-gradient-to-r from-blue-600 to-blue-700 text-white border-0 shadow-lg">
+                                    For Sale
+                                </Badge>
+                            )}
                             {nft.is_ai_generated && (
                                 <Badge className="bg-gradient-to-r from-purple-600 to-purple-700 text-white border-0 shadow-lg">
                                     <Sparkles className="h-3 w-3 mr-1" />
@@ -155,6 +160,11 @@ function NFTListCard({ nft, isNew, onLike, onShare }: NFTCardInternalProps) {
                                 className="w-full h-full object-cover"
                             />
                             <div className="absolute top-2 left-2 flex flex-col gap-1">
+                                {nft.is_for_sale && (
+                                    <Badge className="bg-gradient-to-r from-blue-600 to-blue-700 text-white border-0">
+                                        For Sale
+                                    </Badge>
+                                )}
                                 {nft.is_ai_generated && (
                                     <Badge className="bg-gradient-to-r from-purple-600 to-purple-700 text-white border-0">
                                         <Sparkles className="h-3 w-3 mr-1" />

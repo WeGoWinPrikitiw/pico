@@ -103,21 +103,27 @@ export function useBuyNFT() {
         params.nftId,
         params.price,
         params.forumId,
+
       );
     },
     onSuccess: (_, variables) => {
       toast.success(`Successfully purchased NFT #${variables.nftId}!`);
 
-      // Invalidate relevant queries
-      invalidateQueries.operational();
-      invalidateQueries.nfts();
+      // Invalidate relevant queries to trigger refetch
+      invalidateQueries.operational(); // Refetches user balance
+      invalidateQueries.nfts(); // Refetches the list of all NFTs
       queryClient.invalidateQueries({
-        queryKey: createQueryKey.nft(variables.nftId),
+        queryKey: createQueryKey.nft(variables.nftId), // Refetches the specific NFT's details (new owner)
+      });
+      // Invalidate the approval status since the balance has changed
+      queryClient.invalidateQueries({
+        queryKey: ["nft-purchase-approval", variables.buyer],
       });
     },
     onError: (error: Error) => {
       console.error("NFT purchase failed:", error);
-      toast.error("Failed to purchase NFT. Please try again.");
+      toast.error(`Purchase failed: ${error.message || "Please try again."}`);
+
     },
   });
 }

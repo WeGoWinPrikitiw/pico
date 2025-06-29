@@ -355,6 +355,7 @@ export interface FrontendNFTInfo {
   price: number;
   created_at: number;
   is_ai_generated: boolean;
+  is_for_sale: boolean;
   image_url: string;
   owner: string;
   traits: Array<{ trait_type: string; value: string; rarity?: string }>;
