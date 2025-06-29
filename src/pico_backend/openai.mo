@@ -1,5 +1,6 @@
 import _Debug "mo:base/Debug";
 import Blob "mo:base/Blob";
+import Char "mo:base/Char";
 import Error "mo:base/Error";
 import _Array "mo:base/Array";
 import Iter "mo:base/Iter";
@@ -183,22 +184,67 @@ module {
                             if (contentPartsArray.size() >= 2) {
                                 let content = contentPartsArray[1];
                                 
-                                // Parse the response content to determine if AI-generated
-                                let isAI = Text.contains(content, #text "AI-generated") or 
-                                          Text.contains(content, #text "artificial") or
-                                          Text.contains(content, #text "synthetic") or
-                                          Text.contains(content, #text "generated") or
-                                          Text.contains(content, #text "digital art");
+                                // Convert to lowercase for case-insensitive matching
+                                let contentLower = Text.map(content, func(c : Char) : Char {
+                                    if (c >= 'A' and c <= 'Z') {
+                                        Char.fromNat32(Char.toNat32(c) + 32)
+                                    } else {
+                                        c
+                                    }
+                                });
+                                
+                                // Look for the structured response format first
+                                let isAI = if (Text.contains(contentLower, #text "yes - this image is ai-generated")) {
+                                    true
+                                } else if (Text.contains(contentLower, #text "no - this image is not ai-generated")) {
+                                    false
+                                } else if (Text.contains(contentLower, #text "yes") and 
+                                          (Text.contains(contentLower, #text "ai-generated") or 
+                                           Text.contains(contentLower, #text "ai generated"))) {
+                                    true
+                                } else if (Text.contains(contentLower, #text "no") and 
+                                          (Text.contains(contentLower, #text "ai-generated") or 
+                                           Text.contains(contentLower, #text "ai generated"))) {
+                                    false
+                                } else if (Text.contains(contentLower, #text "this is definitely an ai-generated") or
+                                          Text.contains(contentLower, #text "this is clearly an ai-generated") or
+                                          Text.contains(contentLower, #text "definitely ai-generated") or
+                                          Text.contains(contentLower, #text "clearly ai-generated")) {
+                                    true
+                                } else if (Text.contains(contentLower, #text "this image is ai-generated") or
+                                          Text.contains(contentLower, #text "this is an ai-generated") or
+                                          Text.contains(contentLower, #text "appears to be ai-generated")) {
+                                    true
+                                } else if (Text.contains(contentLower, #text "this image is not ai-generated") or
+                                          Text.contains(contentLower, #text "this is not an ai-generated") or
+                                          Text.contains(contentLower, #text "appears to be a natural") or
+                                          Text.contains(contentLower, #text "real photograph") or
+                                          Text.contains(contentLower, #text "natural photograph") or
+                                          Text.contains(contentLower, #text "clearly a real")) {
+                                    false
+                                } else {
+                                    // Default fallback - be conservative and assume not AI if unclear
+                                    false
+                                };
                                 
                                 // Determine confidence based on response certainty
-                                let confidence : Float = if (Text.contains(content, #text "definitely") or Text.contains(content, #text "clearly")) {
+                                let confidence : Float = if (Text.contains(contentLower, #text "definitely") or 
+                                                           Text.contains(contentLower, #text "clearly") or
+                                                           Text.contains(contentLower, #text "certainly") or
+                                                           Text.contains(contentLower, #text "obvious")) {
                                     0.9
-                                } else if (Text.contains(content, #text "likely") or Text.contains(content, #text "probably")) {
-                                    0.7
-                                } else if (Text.contains(content, #text "possibly") or Text.contains(content, #text "might")) {
+                                } else if (Text.contains(contentLower, #text "likely") or 
+                                          Text.contains(contentLower, #text "probably") or
+                                          Text.contains(contentLower, #text "appears") or
+                                          Text.contains(contentLower, #text "strong")) {
+                                    0.75
+                                } else if (Text.contains(contentLower, #text "possibly") or 
+                                          Text.contains(contentLower, #text "might") or
+                                          Text.contains(contentLower, #text "could be") or
+                                          Text.contains(contentLower, #text "somewhat")) {
                                     0.5
                                 } else {
-                                    0.6
+                                    0.65
                                 };
 
                                 #ok({
@@ -299,9 +345,9 @@ module {
     public func detectAIGenerated(apiKey : Text, imageUrl : Text) : async Result.Result<AIDetectionResponse, Text> {
         
         // Create the system prompt for AI detection
-        let systemPrompt = "You are an expert at detecting AI-generated images. Analyze the provided image and determine if it was created by an AI image generator (like DALL-E, Midjourney, Stable Diffusion, etc.) or if it's a natural photograph/traditional artwork. Look for telltale signs of AI generation such as: unrealistic details, inconsistent lighting, strange artifacts, uncanny valley effects, or overly perfect compositions. Respond with a clear assessment.";
+        let systemPrompt = "You are an expert at detecting AI-generated images. Analyze the provided image carefully and determine if it was created by an AI image generator or if it's a natural photograph/traditional artwork. Look for AI generation indicators like unrealistic details, inconsistent lighting, artifacts, or unnatural compositions. Always start your response with either 'YES - this image is AI-generated' or 'NO - this image is not AI-generated' followed by detailed reasoning.";
         
-        let userPrompt = "Is this image AI-generated? Please provide a definitive yes or no answer followed by your reasoning.";
+        let userPrompt = "Is this image AI-generated? Start your answer with either 'YES - this image is AI-generated' or 'NO - this image is not AI-generated' then explain your reasoning.";
 
         // Prepare the chat completion request
         let requestBody = "{" #
