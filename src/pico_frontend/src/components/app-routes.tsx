@@ -9,6 +9,7 @@ import {
   ForumsPage,
   ForumDetailPage,
   NFTDetailPage,
+  PublicNFTSharePage,
 } from "@/pages";
 import { useAuth } from "@/context/auth-context";
 
@@ -30,88 +31,99 @@ export function AppRoutes() {
   }
 
   return (
-    <Layout>
-      <Routes>
-        {/* Landing page - only show if user is NOT authenticated */}
-        <Route
-          path="/"
-          element={
-            isAuthenticated ? (
-              <Navigate to="/explore" replace />
-            ) : (
-              <LandingPage />
-            )
-          }
-        />
+    <Routes>
+      {/* Public routes without layout */}
+      <Route path="/share/nft/:id" element={<PublicNFTSharePage />} />
 
-        {/* Main application routes - require authentication */}
-        <Route
-          path="/explore"
-          element={
-            isAuthenticated ? <ExplorePage /> : <Navigate to="/" replace />
-          }
-        />
+      {/* All other routes with layout */}
+      <Route
+        path="/*"
+        element={
+          <Layout>
+            <Routes>
+              {/* Landing page - only show if user is NOT authenticated */}
+              <Route
+                path="/"
+                element={
+                  isAuthenticated ? (
+                    <Navigate to="/explore" replace />
+                  ) : (
+                    <LandingPage />
+                  )
+                }
+              />
 
-        <Route
-          path="/nft/:id"
-          element={<NFTDetailPage />}
-        />
+              {/* Main application routes - require authentication */}
+              <Route
+                path="/explore"
+                element={
+                  isAuthenticated ? <ExplorePage /> : <Navigate to="/" replace />
+                }
+              />
 
-        <Route
-          path="/profile"
-          element={
-            isAuthenticated ? <ProfilePage /> : <Navigate to="/" replace />
-          }
-        />
+              <Route
+                path="/nft/:id"
+                element={<NFTDetailPage />}
+              />
 
-        <Route
-          path="/upload"
-          element={
-            isAuthenticated ? <UploadPage /> : <Navigate to="/" replace />
-          }
-        />
+              <Route
+                path="/profile"
+                element={
+                  isAuthenticated ? <ProfilePage /> : <Navigate to="/" replace />
+                }
+              />
 
-        <Route
-          path="/forums"
-          element={
-            isAuthenticated ? <ForumsPage /> : <Navigate to="/" replace />
-          }
-        />
+              <Route
+                path="/upload"
+                element={
+                  isAuthenticated ? <UploadPage /> : <Navigate to="/" replace />
+                }
+              />
 
-        <Route
-          path="/forums/:id"
-          element={
-            isAuthenticated ? <ForumDetailPage /> : <Navigate to="/" replace />
-          }
-        />
+              <Route
+                path="/forums"
+                element={
+                  isAuthenticated ? <ForumsPage /> : <Navigate to="/" replace />
+                }
+              />
 
-        {/* Operational dashboard - admin/testing features */}
-        <Route
-          path="/admin"
-          element={
-            isAuthenticated ? (
-              <OperationalDashboard />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
+              <Route
+                path="/forums/:id"
+                element={
+                  isAuthenticated ? <ForumDetailPage /> : <Navigate to="/" replace />
+                }
+              />
 
-        {/* Legacy app route - redirect to explore if authenticated */}
-        <Route
-          path="/app"
-          element={
-            isAuthenticated ? (
-              <Navigate to="/explore" replace />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
+              {/* Operational dashboard - admin/testing features */}
+              <Route
+                path="/admin"
+                element={
+                  isAuthenticated ? (
+                    <OperationalDashboard />
+                  ) : (
+                    <Navigate to="/" replace />
+                  )
+                }
+              />
 
-        {/* Catch all - redirect to landing */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Layout>
+              {/* Legacy app route - redirect to explore if authenticated */}
+              <Route
+                path="/app"
+                element={
+                  isAuthenticated ? (
+                    <Navigate to="/explore" replace />
+                  ) : (
+                    <Navigate to="/" replace />
+                  )
+                }
+              />
+
+              {/* Catch all - redirect to landing */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Layout>
+        }
+      />
+    </Routes>
   );
 }

@@ -5,5 +5,6 @@ export { UploadPage } from "./upload";
 export { ForumsPage } from "./forums";
 export { ForumDetailPage } from "./forum-detail";
 export { NFTDetailPage } from "./nft-detail";
+export { PublicNFTSharePage } from "./public-nft-share";
 export { ProfilePage } from "./profile";
 export { OperationalDashboard } from "./operational-dashboard";
