@@ -82,7 +82,6 @@ export function UploadPage() {
     { value: "cyberpunk", label: "Cyberpunk" },
     { value: "fantasy", label: "Fantasy" },
   ];
-
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
@@ -98,18 +97,23 @@ export function UploadPage() {
       return;
     }
 
-    // Validate file size (50MB max)
-    if (file.size > 50 * 1024 * 1024) {
-      toast.error("File size must be less than 50MB");
+    // Validate file size (10MB max for better upload experience)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must be less than 10MB for optimal performance");
       return;
     }
 
     try {
-      // Show a loading toast
-      toast.loading("Uploading image...");
-
       // Upload the image
-      const imageUrl = await uploadImageMutation.mutateAsync(file);
+      const uploadPromise = uploadImageMutation.mutateAsync(file);
+
+      toast.promise(uploadPromise, {
+        loading: "Uploading image...",
+        success: "Image uploaded successfully!",
+        error: "Failed to upload image. Please try again.",
+      });
+
+      const imageUrl = await uploadPromise;
 
       setNftData((prev) => ({
         ...prev,
@@ -118,11 +122,8 @@ export function UploadPage() {
         isAiGenerated: false,
         traits: [],
       }));
-
-      toast.success("Image uploaded successfully!");
     } catch (error) {
       console.error("Upload failed:", error);
-      toast.error("Failed to upload image. Please try again.");
     }
   };
 
@@ -399,7 +400,7 @@ export function UploadPage() {
                           </p>
                           <div className="text-xs text-muted-foreground space-y-1">
                             <p>PNG, JPG, GIF, MP4, MP3</p>
-                            <p>Max size: 50MB</p>
+                            <p>Max size: 10MB (Images auto-compressed)</p>
                           </div>
                         </div>
                       </div>

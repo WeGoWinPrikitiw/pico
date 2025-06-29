@@ -1,6 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
 import { serviceFactory } from "@/services";
-import { toast } from "sonner";
 
 export function useUploadImage() {
   return useMutation({
@@ -14,10 +13,6 @@ export function useUploadImage() {
       }
 
       return uploadService.uploadImage(file);
-    },
-    onError: (error) => {
-      console.error("Image upload failed:", error);
-      toast.error("Failed to upload image. Please try again.");
     },
   });
 }
