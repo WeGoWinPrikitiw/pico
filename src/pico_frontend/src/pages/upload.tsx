@@ -229,8 +229,8 @@ export function UploadPage() {
     }
 
     try {
-      // Convert price to nearest integer (backend expects Nat)
-      const priceAsInteger = Math.round(parseFloat(nftData.price));
+      // Convert PiCO units to minimal units (1 PiCO = 1e8 minimal units)
+      const priceAsInteger = Math.round(parseFloat(nftData.price) * 100000000);
 
       // Use regular minting with AI detection result
       const mintResult = await mintNftMutation.mutateAsync({
@@ -387,18 +387,18 @@ export function UploadPage() {
                 className="bg-gradient-to-r from-primary to-primary/90 shadow-lg sm:size-lg"
               >
                 {mintNftMutation.isPending ||
-                generateAiImageMutation.isPending ||
-                uploadImageMutation.isPending ? (
+                  generateAiImageMutation.isPending ||
+                  uploadImageMutation.isPending ? (
                   <LoadingSpinner size="sm" className="mr-1 sm:mr-2" />
                 ) : null}
                 <span className="text-xs sm:text-sm">
                   {mintNftMutation.isPending
                     ? "Minting..."
                     : uploadImageMutation.isPending
-                    ? "Uploading..."
-                    : createForumMutation.isPending
-                    ? "Creating..."
-                    : "Mint"}
+                      ? "Uploading..."
+                      : createForumMutation.isPending
+                        ? "Creating..."
+                        : "Mint"}
                 </span>
               </Button>
             </div>
@@ -475,11 +475,10 @@ export function UploadPage() {
                       </div>
                     ) : (
                       <div
-                        className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer ${
-                          dragOver
+                        className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer ${dragOver
                             ? "border-primary bg-primary/5"
                             : "border-muted-foreground/25 hover:border-muted-foreground/50"
-                        }`}
+                          }`}
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
@@ -581,10 +580,9 @@ export function UploadPage() {
                                   });
 
                                   toast.success(
-                                    `AI Detection: ${
-                                      result.is_ai_generated
-                                        ? "AI-Generated"
-                                        : "Human-Made"
+                                    `AI Detection: ${result.is_ai_generated
+                                      ? "AI-Generated"
+                                      : "Human-Made"
                                     } (${Math.round(
                                       result.confidence * 100
                                     )}% confidence)`
@@ -682,11 +680,10 @@ export function UploadPage() {
                               className="flex items-center cursor-pointer"
                             >
                               <div
-                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                  nftData.isAiGenerated
+                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.isAiGenerated
                                     ? "bg-purple-600 border-purple-600"
                                     : "border-gray-300 hover:border-purple-400"
-                                }`}
+                                  }`}
                               >
                                 {nftData.isAiGenerated && (
                                   <svg
@@ -735,11 +732,10 @@ export function UploadPage() {
                                 className="flex items-center cursor-pointer"
                               >
                                 <div
-                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                    nftData.isAiGenerated
+                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.isAiGenerated
                                       ? "bg-purple-600 border-purple-600"
                                       : "border-gray-300 hover:border-purple-400"
-                                  }`}
+                                    }`}
                                 >
                                   {nftData.isAiGenerated && (
                                     <svg
@@ -931,11 +927,10 @@ export function UploadPage() {
                           className="flex items-center cursor-pointer"
                         >
                           <div
-                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                              nftData.forSale
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.forSale
                                 ? "bg-blue-600 border-blue-600"
                                 : "border-gray-300 hover:border-blue-400"
-                            }`}
+                              }`}
                           >
                             {nftData.forSale && (
                               <svg
@@ -1221,11 +1216,10 @@ export function UploadPage() {
                           className="flex items-center cursor-pointer"
                         >
                           <div
-                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                              nftData.forSale
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.forSale
                                 ? "bg-blue-600 border-blue-600"
                                 : "border-gray-300 hover:border-blue-400"
-                            }`}
+                              }`}
                           >
                             {nftData.forSale && (
                               <svg

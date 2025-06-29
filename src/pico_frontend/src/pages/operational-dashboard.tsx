@@ -125,9 +125,11 @@ export function OperationalDashboard() {
       toast.error("Please enter top-up amount");
       return;
     }
+    // Convert PiCO units to minimal units (1 PiCO = 1e8 minimal units)
+    const minimalAmount = Math.round(Number(selfTopUpAmount) * 100000000);
     selfTopUpMutation.mutate({
       userPrincipal: principal || "",
-      amount: Number(selfTopUpAmount),
+      amount: minimalAmount,
     });
     setSelfTopUpAmount("");
   };

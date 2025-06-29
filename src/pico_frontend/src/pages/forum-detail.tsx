@@ -355,7 +355,7 @@ export function ForumDetailPage() {
                                                                 <span className="text-sm font-semibold text-foreground">
                                                                     {comment.user_id === principal ? "You" : truncateAddress(comment.user_id)}
                                                                 </span>
-                                                                {comment.user_id === principal && (
+                                                                {comment.user_id === forum.principal_id && (
                                                                     <Badge variant="secondary" className="text-xs px-2 py-0.5 font-medium">
                                                                         Author
                                                                     </Badge>
