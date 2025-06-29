@@ -237,7 +237,7 @@ export function NFTDetailPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-5 lg:gap-12">
                     {/* Left Column (Image) */}
                     <div className="lg:col-span-2 mb-8 lg:mb-0">
-                        <Card className="sticky top-24 overflow-hidden border-2 border-border shadow-lg">
+                        <Card className="sticky top-24 overflow-hidden border-2 border-border shadow-lg py-0">
                             <CardContent className="p-0">
                                 <div className="relative aspect-square">
                                     <img
