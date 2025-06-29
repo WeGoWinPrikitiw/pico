@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMintNFT, useGenerateAIImage } from "@/hooks/useNFT";
+import { useUploadImage } from "@/hooks/useUpload";
 import { useCreateForum } from "@/hooks";
 import {
   Button,
@@ -63,6 +64,7 @@ export function UploadPage() {
   // Mutations for NFT operations
   const mintNftMutation = useMintNFT();
   const generateAiImageMutation = useGenerateAIImage();
+  const uploadImageMutation = useUploadImage();
   const createForumMutation = useCreateForum();
 
   const [aiPrompt, setAiPrompt] = useState({
@@ -81,7 +83,7 @@ export function UploadPage() {
     { value: "fantasy", label: "Fantasy" },
   ];
 
-  const handleFileSelect = (files: FileList | null) => {
+  const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     const file = files[0];
@@ -92,25 +94,36 @@ export function UploadPage() {
       !file.type.startsWith("video/") &&
       !file.type.startsWith("audio/")
     ) {
-      alert("Please select an image, video, or audio file");
+      toast.error("Please select an image, video, or audio file");
       return;
     }
 
     // Validate file size (50MB max)
     if (file.size > 50 * 1024 * 1024) {
-      alert("File size must be less than 50MB");
+      toast.error("File size must be less than 50MB");
       return;
     }
 
-    const previewUrl = URL.createObjectURL(file);
+    try {
+      // Show a loading toast
+      toast.loading("Uploading image...");
 
-    setNftData((prev) => ({
-      ...prev,
-      file,
-      previewUrl,
-      isAiGenerated: false,
-      traits: [],
-    }));
+      // Upload the image
+      const imageUrl = await uploadImageMutation.mutateAsync(file);
+
+      setNftData((prev) => ({
+        ...prev,
+        file,
+        previewUrl: imageUrl,
+        isAiGenerated: false,
+        traits: [],
+      }));
+
+      toast.success("Image uploaded successfully!");
+    } catch (error) {
+      console.error("Upload failed:", error);
+      toast.error("Failed to upload image. Please try again.");
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -268,17 +281,24 @@ export function UploadPage() {
                   !isFormValid ||
                   mintNftMutation.isPending ||
                   generateAiImageMutation.isPending ||
+                  uploadImageMutation.isPending ||
                   createForumMutation.isPending
                 }
                 className="bg-gradient-to-r from-primary to-primary/90 shadow-lg"
               >
                 {mintNftMutation.isPending ||
-                  generateAiImageMutation.isPending ? (
+                generateAiImageMutation.isPending ||
+                uploadImageMutation.isPending ? (
                   <LoadingSpinner size="sm" className="mr-2" />
                 ) : (
                   <span className="mr-2">
-                    {mintNftMutation.isPending ? "Minting..." :
-                      createForumMutation.isPending ? "Creating forum..." : "Mint NFT"}
+                    {mintNftMutation.isPending
+                      ? "Minting..."
+                      : uploadImageMutation.isPending
+                      ? "Uploading..."
+                      : createForumMutation.isPending
+                      ? "Creating forum..."
+                      : "Mint NFT"}
                   </span>
                 )}
               </Button>
@@ -348,10 +368,11 @@ export function UploadPage() {
                       </div>
                     ) : (
                       <div
-                        className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer ${dragOver
+                        className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer ${
+                          dragOver
                             ? "border-primary bg-primary/5"
                             : "border-muted-foreground/25 hover:border-muted-foreground/50"
-                          }`}
+                        }`}
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
@@ -361,7 +382,9 @@ export function UploadPage() {
                           ref={fileInputRef}
                           type="file"
                           accept="image/*,video/*,audio/*"
-                          onChange={(e) => handleFileSelect(e.target.files)}
+                          onChange={(e) => {
+                            handleFileSelect(e.target.files);
+                          }}
                           className="sr-only"
                         />
                         <div className="aspect-square flex flex-col items-center justify-center p-8 text-center">
@@ -403,10 +426,11 @@ export function UploadPage() {
                             className="flex items-center cursor-pointer"
                           >
                             <div
-                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.isAiGenerated
+                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                nftData.isAiGenerated
                                   ? "bg-purple-600 border-purple-600"
                                   : "border-gray-300 hover:border-purple-400"
-                                }`}
+                              }`}
                             >
                               {nftData.isAiGenerated && (
                                 <svg

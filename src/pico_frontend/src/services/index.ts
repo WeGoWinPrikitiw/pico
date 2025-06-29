@@ -6,6 +6,7 @@ export { OperationalService } from "./operational.service";
 export { ForumsService } from "./forums.service";
 export { PreferencesService } from "./preferences.service";
 export { ICRC1Service } from "./icrc1.service";
+export { UploadService } from "./upload.service";
 
 // Export base service and error handling
 export { BaseService, ApiError } from "./base.service";
@@ -18,6 +19,7 @@ import { OperationalService } from "./operational.service";
 import { ForumsService } from "./forums.service";
 import { PreferencesService } from "./preferences.service";
 import { ICRC1Service } from "./icrc1.service";
+import { UploadService } from "./upload.service";
 
 import type { CanisterConfig } from "@/config/canisters";
 import generatedCanisterIds from "@/config/generated-canister-ids.json";
@@ -35,6 +37,7 @@ export class ServiceFactory {
   private forumsService?: ForumsService;
   private preferencesService?: PreferencesService;
   private icrc1Service?: ICRC1Service;
+  private uploadService?: UploadService;
 
   constructor() {
     this.authService = new AuthService();
@@ -61,7 +64,7 @@ export class ServiceFactory {
     this.nftService = new NFTService(
       this.canisterIds.nft_contract,
       agent,
-      identity!,
+      identity!
     );
 
     // Services that require a logged-in user
@@ -69,28 +72,31 @@ export class ServiceFactory {
       this.aiService = new AIService(
         this.canisterIds.ai_contract,
         agent,
-        identity,
+        identity
       );
       this.operationalService = new OperationalService(
         this.canisterIds.operational_contract,
         agent,
-        identity,
+        identity
       );
       this.forumsService = new ForumsService(
         this.canisterIds.forums_contract,
         agent,
-        identity,
+        identity
       );
       this.preferencesService = new PreferencesService(
         this.canisterIds.preferences_contract,
         agent,
-        identity,
+        identity
       );
       this.icrc1Service = new ICRC1Service(
         this.canisterIds.icrc1_ledger_canister,
         agent,
-        identity,
+        identity
       );
+
+      // Upload service doesn't require canister interaction, just needs agent/identity
+      this.uploadService = new UploadService(agent, identity);
     }
   }
 
@@ -142,6 +148,13 @@ export class ServiceFactory {
     return this.icrc1Service;
   }
 
+  getUploadService(): UploadService {
+    if (!this.uploadService) {
+      throw new Error("Upload service not available. Please log in.");
+    }
+    return this.uploadService;
+  }
+
   // --- Auth Methods ---
 
   async login() {
@@ -160,6 +173,7 @@ export class ServiceFactory {
     this.forumsService = undefined;
     this.preferencesService = undefined;
     this.icrc1Service = undefined;
+    this.uploadService = undefined;
     // Re-create services with anonymous agent
     this.createAllServices();
   }
