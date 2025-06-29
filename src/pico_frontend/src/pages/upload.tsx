@@ -49,6 +49,7 @@ interface NFTMetadata {
   previewUrl?: string; // maps to 'image_url' in contract
   isAiGenerated: boolean; // maps to 'is_ai_generated' in contract
   traits: Trait[]; // maps to 'traits' in contract
+  forSale: boolean; // maps to 'for_sale' in contract
 }
 
 export function UploadPage() {
@@ -69,6 +70,7 @@ export function UploadPage() {
     price: "",
     isAiGenerated: false,
     traits: [],
+    forSale: true,
   });
 
   // State for AI detection
@@ -182,6 +184,7 @@ export function UploadPage() {
         previewUrl: result.image_url,
         isAiGenerated: true,
         traits: result.suggested_traits,
+        // Preserve the current forSale status
       }));
     } catch (error) {
       console.error("AI generation failed:", error);
@@ -214,10 +217,26 @@ export function UploadPage() {
         imageUrl: nftData.previewUrl || "",
         isAiGenerated: nftData.isAiGenerated,
         traits: nftData.traits,
+        forSale: nftData.forSale,
       });
 
       // Show success message
       toast.success(`NFT #${mintResult} minted successfully!`);
+
+      // Always create a forum for the new NFT
+      try {
+        await createForumMutation.mutateAsync({
+          nftId: mintResult,
+          nftName: nftData.title,
+          principalId: principal,
+          title: nftData.title,
+          description: nftData.description,
+        });
+        toast.success("Forum created for your NFT!");
+      } catch (forumError) {
+        console.error("Failed to create forum for NFT:", forumError);
+        toast.error("Failed to create forum for NFT. You can add one later.");
+      }
 
       console.log("Starting query invalidation...");
 
@@ -259,6 +278,7 @@ export function UploadPage() {
       price: "",
       isAiGenerated: false,
       traits: [],
+      forSale: true, // Default to for sale
       previewUrl: undefined,
       file: undefined,
     });
@@ -343,18 +363,18 @@ export function UploadPage() {
                 className="bg-gradient-to-r from-primary to-primary/90 shadow-lg sm:size-lg"
               >
                 {mintNftMutation.isPending ||
-                generateAiImageMutation.isPending ||
-                uploadImageMutation.isPending ? (
+                  generateAiImageMutation.isPending ||
+                  uploadImageMutation.isPending ? (
                   <LoadingSpinner size="sm" className="mr-1 sm:mr-2" />
                 ) : null}
                 <span className="text-xs sm:text-sm">
                   {mintNftMutation.isPending
                     ? "Minting..."
                     : uploadImageMutation.isPending
-                    ? "Uploading..."
-                    : createForumMutation.isPending
-                    ? "Creating..."
-                    : "Mint"}
+                      ? "Uploading..."
+                      : createForumMutation.isPending
+                        ? "Creating..."
+                        : "Mint"}
                 </span>
               </Button>
             </div>
@@ -431,11 +451,10 @@ export function UploadPage() {
                       </div>
                     ) : (
                       <div
-                        className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer ${
-                          dragOver
+                        className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer ${dragOver
                             ? "border-primary bg-primary/5"
                             : "border-muted-foreground/25 hover:border-muted-foreground/50"
-                        }`}
+                          }`}
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
@@ -511,10 +530,9 @@ export function UploadPage() {
                                   }));
 
                                   toast.success(
-                                    `AI Detection: ${
-                                      result.is_ai_generated
-                                        ? "AI-Generated"
-                                        : "Human-Made"
+                                    `AI Detection: ${result.is_ai_generated
+                                      ? "AI-Generated"
+                                      : "Human-Made"
                                     } (${Math.round(
                                       result.confidence * 100
                                     )}% confidence)`
@@ -592,11 +610,10 @@ export function UploadPage() {
                               className="flex items-center cursor-pointer"
                             >
                               <div
-                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                  nftData.isAiGenerated
+                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.isAiGenerated
                                     ? "bg-purple-600 border-purple-600"
                                     : "border-gray-300 hover:border-purple-400"
-                                }`}
+                                  }`}
                               >
                                 {nftData.isAiGenerated && (
                                   <svg
@@ -655,6 +672,11 @@ export function UploadPage() {
                               {nftData.description || "No description provided"}
                             </p>
                             <div className="flex items-center gap-2 mt-2">
+                              {nftData.forSale && (
+                                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                                  For Sale
+                                </span>
+                              )}
                               {nftData.isAiGenerated && (
                                 <span className="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
                                   AI Generated
@@ -767,6 +789,58 @@ export function UploadPage() {
                         only)
                       </p>
                     </div>
+
+                    {/* For Sale Toggle */}
+                    <div className="flex items-center space-x-3 p-3 border border-border rounded-lg">
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          id="forSale"
+                          checked={nftData.forSale}
+                          onChange={(e) =>
+                            setNftData((prev) => ({
+                              ...prev,
+                              forSale: e.target.checked,
+                            }))
+                          }
+                          className="sr-only"
+                        />
+                        <label
+                          htmlFor="forSale"
+                          className="flex items-center cursor-pointer"
+                        >
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.forSale
+                              ? "bg-blue-600 border-blue-600"
+                              : "border-gray-300 hover:border-blue-400"
+                              }`}
+                          >
+                            {nftData.forSale && (
+                              <svg
+                                className="w-3 h-3 text-white"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            )}
+                          </div>
+                          <span className="ml-3 text-sm font-medium">
+                            List NFT for sale immediately
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {nftData.forSale
+                        ? "✅ Your NFT will be available for purchase immediately after minting"
+                        : "⏸️ Your NFT will be minted but not listed for sale (you can list it later)"
+                      }
+                    </p>
                   </CardContent>
                 </Card>
 
@@ -1005,6 +1079,58 @@ export function UploadPage() {
                         only)
                       </p>
                     </div>
+
+                    {/* For Sale Toggle */}
+                    <div className="flex items-center space-x-3 p-3 border border-border rounded-lg">
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          id="forSaleGen"
+                          checked={nftData.forSale}
+                          onChange={(e) =>
+                            setNftData((prev) => ({
+                              ...prev,
+                              forSale: e.target.checked,
+                            }))
+                          }
+                          className="sr-only"
+                        />
+                        <label
+                          htmlFor="forSaleGen"
+                          className="flex items-center cursor-pointer"
+                        >
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${nftData.forSale
+                              ? "bg-blue-600 border-blue-600"
+                              : "border-gray-300 hover:border-blue-400"
+                              }`}
+                          >
+                            {nftData.forSale && (
+                              <svg
+                                className="w-3 h-3 text-white"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            )}
+                          </div>
+                          <span className="ml-3 text-sm font-medium">
+                            List NFT for sale immediately
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {nftData.forSale
+                        ? "✅ Your NFT will be available for purchase immediately after minting"
+                        : "⏸️ Your NFT will be minted but not listed for sale (you can list it later)"
+                      }
+                    </p>
                   </CardContent>
                 </Card>
 

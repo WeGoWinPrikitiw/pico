@@ -6,6 +6,7 @@ export * from "./dialog";
 export * from "./dropdown-menu";
 export * from "./error-message";
 export * from "./input";
+export * from "./select"
 export { LoadingSpinner } from "./loading-spinner";
 export {
   Popover,
@@ -36,3 +37,7 @@ export {
   NavigationMenuIndicator,
 } from "./navigation-menu";
 export * from "./textarea";
+export * from "./checkbox"
+export * from "./slider"
+export * from "./switch"
+export * from "./label"

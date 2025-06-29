@@ -57,6 +57,7 @@ export class NFTService extends BaseService {
       price: this.convertBigIntToNumber(nft.price),
       created_at: this.convertBigIntToNumber(nft.created_at),
       owner: nft.owner.toString(),
+      is_for_sale: nft.is_for_sale,
       traits: nft.traits.map((trait) => ({
         trait_type: trait.trait_type,
         value: trait.value,
@@ -229,11 +230,12 @@ export class NFTService extends BaseService {
     price: number,
     imageUrl: string,
     isAiGenerated: boolean,
-    traits: Trait[]
+    traits: Trait[],
+    forSale?: boolean,
   ): Promise<number> {
     try {
       const toPrincipal = this.convertToPrincipal(to);
-      const actor = this.getActor();
+      const actor = this.getActor() as any;
       const result = await actor.mint_nft(
         toPrincipal,
         name,
@@ -241,7 +243,8 @@ export class NFTService extends BaseService {
         BigInt(price),
         imageUrl,
         isAiGenerated,
-        traits
+        traits,
+        forSale !== undefined ? [forSale] : [], // Pass as optional parameter
       );
       return this.convertBigIntToNumber(this.handleResult(result));
     } catch (error) {
@@ -353,5 +356,129 @@ export class NFTService extends BaseService {
       owner: this.convertToPrincipal(principal),
       subaccount: subaccount ? [subaccount] : [],
     };
+  }
+
+  // NEW OWNERSHIP AND SALE STATUS METHODS
+
+  // Check if a principal owns a specific NFT
+  async checkOwnership(tokenId: number, principalId: string): Promise<boolean> {
+    try {
+      const actor = this.getActor() as any;
+      const principal = this.convertToPrincipal(principalId);
+      return await actor.check_ownership(BigInt(tokenId), principal);
+    } catch (error) {
+      console.warn("checkOwnership method not available yet, falling back to owner comparison");
+      const nft = await this.getNFT(tokenId);
+      return nft?.owner === principalId;
+    }
+  }
+
+  // Get all NFTs owned by a specific principal
+  async getNFTsByOwner(ownerPrincipal: string): Promise<FrontendNFTInfo[]> {
+    try {
+      const actor = this.getActor() as any;
+      const principal = this.convertToPrincipal(ownerPrincipal);
+      const result = await actor.get_nfts_by_owner(principal);
+      return result.map((nft: any) => this.convertNFTInfo(nft));
+    } catch (error) {
+      console.warn("getNFTsByOwner method not available yet, falling back to filtering all NFTs");
+      const allNFTs = await this.getAllNFTs();
+      return allNFTs.filter(nft => nft.owner === ownerPrincipal);
+    }
+  }
+
+  // Get only NFTs that are for sale
+  async getNFTsForSale(): Promise<FrontendNFTInfo[]> {
+    try {
+      const actor = this.getActor() as any;
+      const result = await actor.get_nfts_for_sale();
+      return result.map((nft: any) => this.convertNFTInfo(nft));
+    } catch (error) {
+      console.warn("getNFTsForSale method not available yet, falling back to filtering all NFTs");
+      const allNFTs = await this.getAllNFTs();
+      return allNFTs.filter(nft => nft.is_for_sale);
+    }
+  }
+
+  // Set NFT for sale status (only owner can call this)
+  async setNFTForSale(
+    tokenId: number,
+    forSale: boolean,
+    newPrice?: number
+  ): Promise<FrontendNFTInfo> {
+    try {
+      const actor = this.getActor() as any;
+      const priceParam = newPrice ? [BigInt(newPrice)] : [];
+      const result = await actor.set_nft_for_sale(
+        BigInt(tokenId),
+        forSale,
+        priceParam
+      );
+      return this.convertNFTInfo(this.handleResult(result));
+    } catch (error) {
+      throw new Error("setNFTForSale method not available yet - contract needs to be updated");
+    }
+  }
+
+  // Validate if a purchase is allowed before attempting
+  async validatePurchase(
+    tokenId: number,
+    buyerPrincipal: string
+  ): Promise<{ isValid: boolean; price?: number; seller?: string; error?: string }> {
+    try {
+      const actor = this.getActor() as any;
+      const principal = this.convertToPrincipal(buyerPrincipal);
+      const result = await actor.validate_purchase(BigInt(tokenId), principal);
+
+      if ('ok' in result) {
+        return {
+          isValid: true,
+          price: this.convertBigIntToNumber(result.ok.price),
+          seller: result.ok.seller.toString(),
+        };
+      } else {
+        const errorMessage = this.mapSaleError(result.err);
+        return {
+          isValid: false,
+          error: errorMessage,
+        };
+      }
+    } catch (error) {
+      console.warn("validatePurchase method not available yet, performing basic validation");
+      const nft = await this.getNFT(tokenId);
+      if (!nft) {
+        return { isValid: false, error: "NFT does not exist" };
+      }
+      if (nft.owner === buyerPrincipal) {
+        return { isValid: false, error: "You cannot purchase your own NFT" };
+      }
+      if (!nft.is_for_sale) {
+        return { isValid: false, error: "This NFT is not for sale" };
+      }
+      return {
+        isValid: true,
+        price: nft.price,
+        seller: nft.owner,
+      };
+    }
+  }
+
+  // Helper method to map sale errors to user-friendly messages
+  private mapSaleError(error: any): string {
+    if ('NotForSale' in error) {
+      return "This NFT is not for sale";
+    } else if ('SelfPurchase' in error) {
+      return "You cannot purchase your own NFT";
+    } else if ('AlreadyOwned' in error) {
+      return "You already own this NFT";
+    } else if ('NonExistentTokenId' in error) {
+      return "NFT does not exist";
+    } else if ('Unauthorized' in error) {
+      return "Unauthorized access";
+    } else if ('GenericError' in error) {
+      return error.GenericError.message || "Generic error occurred";
+    } else {
+      return "Unknown error occurred";
+    }
   }
 }

@@ -60,6 +60,7 @@ actor class NFT() = {
         price: Nat;
         image_url: Text;
         is_ai_generated: Bool;
+        is_for_sale: Bool; // Add sale status tracking
         traits: [Trait];
         created_at: Int;
     };
@@ -72,6 +73,15 @@ actor class NFT() = {
     public type MintError = {
         #Unauthorized;
         #InvalidRecipient;
+        #GenericError: { error_code: Nat; message: Text };
+    };
+
+    public type SaleError = {
+        #Unauthorized;
+        #NonExistentTokenId;
+        #NotForSale;
+        #SelfPurchase;
+        #AlreadyOwned;
         #GenericError: { error_code: Nat; message: Text };
     };
 
@@ -370,6 +380,7 @@ actor class NFT() = {
                                 price = nft.price;
                                 image_url = nft.image_url;
                                 is_ai_generated = nft.is_ai_generated;
+                                is_for_sale = nft.is_for_sale;
                                 traits = nft.traits;
                                 created_at = nft.created_at;
                             };
@@ -451,11 +462,18 @@ actor class NFT() = {
         price: Nat, 
         image_url: Text, 
         is_ai_generated: Bool,
-        traits: [Trait]
+        traits: [Trait],
+        for_sale: ?Bool
     ): async Result.Result<Nat, Text> {
         let tokenId = nextTokenId;
         nextTokenId += 1;
         let account = principalToAccount(to);
+
+        // Default for_sale to true if not specified
+        let isForSale = switch (for_sale) {
+            case (?sale_status) sale_status;
+            case null true; // Default to true (for sale)
+        };
 
         let nft: NFTInfo = {
             nft_id = tokenId;
@@ -465,6 +483,7 @@ actor class NFT() = {
             price = price;
             image_url = image_url;
             is_ai_generated = is_ai_generated;
+            is_for_sale = isForSale;
             traits = traits;
             created_at = Time.now();
         };
@@ -654,7 +673,8 @@ actor class NFT() = {
                     price, 
                     image_url, 
                     aiDetection.is_ai_generated, 
-                    traits
+                    traits,
+                    ?true
                 );
                 
                 switch (mintResult) {
@@ -678,7 +698,8 @@ actor class NFT() = {
                     price, 
                     image_url, 
                     false, // Default to false if detection fails
-                    traits
+                    traits,
+                    ?true
                 );
                 
                 switch (mintResult) {
@@ -698,6 +719,147 @@ actor class NFT() = {
                 };
             };
         };
+    };
+
+    // NEW OWNERSHIP AND SALE STATUS METHODS
+
+    // Check if a principal owns a specific NFT
+    public query func check_ownership(token_id: Nat, principal_id: Principal): async Bool {
+        switch (owners.get(token_id)) {
+            case (?owner) {
+                Principal.equal(owner.owner, principal_id)
+            };
+            case null false;
+        }
+    };
+
+    // Get all NFTs owned by a specific principal
+    public query func get_nfts_by_owner(owner_principal: Principal): async [NFTInfo] {
+        var results: [NFTInfo] = [];
+        for ((tokenId, nft) in nfts.entries()) {
+            if (Principal.equal(nft.owner, owner_principal)) {
+                results := Array.append(results, [nft]);
+            };
+        };
+        results
+    };
+
+    // Get only NFTs that are for sale
+    public query func get_nfts_for_sale(): async [NFTInfo] {
+        var results: [NFTInfo] = [];
+        for ((tokenId, nft) in nfts.entries()) {
+            if (nft.is_for_sale) {
+                results := Array.append(results, [nft]);
+            };
+        };
+        results
+    };
+
+    // Toggle sale status of an NFT (only owner can call this)
+    public shared(msg) func set_nft_for_sale(token_id: Nat, for_sale: Bool, new_price: ?Nat): async Result.Result<NFTInfo, Text> {
+        let caller = msg.caller;
+        
+        switch (nfts.get(token_id)) {
+            case (?nft) {
+                // Check if caller owns the NFT
+                if (not Principal.equal(nft.owner, caller)) {
+                    return #err("❌ Unauthorized: Only the owner can change sale status");
+                };
+
+                let updatedPrice = switch (new_price) {
+                    case (?price) price;
+                    case null nft.price;
+                };
+
+                let updatedNft: NFTInfo = {
+                    nft_id = nft.nft_id;
+                    owner = nft.owner;
+                    name = nft.name;
+                    description = nft.description;
+                    price = updatedPrice;
+                    image_url = nft.image_url;
+                    is_ai_generated = nft.is_ai_generated;
+                    is_for_sale = for_sale;
+                    traits = nft.traits;
+                    created_at = nft.created_at;
+                };
+
+                nfts.put(token_id, updatedNft);
+                #ok(updatedNft)
+            };
+            case null {
+                #err("❌ NFT not found with ID: " # Nat.toText(token_id))
+            };
+        }
+    };
+
+    // Validate if a purchase is allowed
+    public query func validate_purchase(token_id: Nat, buyer_principal: Principal): async Result.Result<{price: Nat; seller: Principal}, SaleError> {
+        switch (nfts.get(token_id)) {
+            case (?nft) {
+                // Check if NFT is for sale
+                if (not nft.is_for_sale) {
+                    return #err(#NotForSale);
+                };
+
+                // Check if buyer is trying to buy their own NFT
+                if (Principal.equal(nft.owner, buyer_principal)) {
+                    return #err(#SelfPurchase);
+                };
+
+                #ok({
+                    price = nft.price;
+                    seller = nft.owner;
+                })
+            };
+            case null {
+                #err(#NonExistentTokenId)
+            };
+        }
+    };
+
+    // Complete NFT purchase (to be called by operational contract)
+    public func complete_nft_purchase(token_id: Nat, new_owner: Principal): async Result.Result<NFTInfo, SaleError> {
+        switch (nfts.get(token_id)) {
+            case (?nft) {
+                // Validate the purchase first
+                switch (await validate_purchase(token_id, new_owner)) {
+                    case (#ok(_)) {
+                        // Transfer ownership using ICRC-7 standard
+                        let newOwnerAccount = principalToAccount(new_owner);
+                        let currentOwnerAccount = principalToAccount(nft.owner);
+                        
+                        // Update ownership maps
+                        owners.put(token_id, newOwnerAccount);
+                        decrementBalance(currentOwnerAccount);
+                        incrementBalance(newOwnerAccount);
+
+                        // Update NFT record
+                        let updatedNft: NFTInfo = {
+                            nft_id = nft.nft_id;
+                            owner = new_owner;
+                            name = nft.name;
+                            description = nft.description;
+                            price = nft.price;
+                            image_url = nft.image_url;
+                            is_ai_generated = nft.is_ai_generated;
+                            is_for_sale = false; // Remove from sale after purchase
+                            traits = nft.traits;
+                            created_at = nft.created_at;
+                        };
+
+                        nfts.put(token_id, updatedNft);
+                        #ok(updatedNft)
+                    };
+                    case (#err(error)) {
+                        #err(error)
+                    };
+                }
+            };
+            case null {
+                #err(#NonExistentTokenId)
+            };
+        }
     };
 
     // Legacy greeting function for testing
