@@ -135,8 +135,8 @@ export function NFTDetailPage() {
         setIsApproving(true);
 
         try {
-            // Create approval for NFT price + 1 PICO buffer
-            const approvalAmount = Number(nft.price) + 1;
+            // Create approval amount in minimal units: NFT price + 1e6 PiCO buffer (1e8 minimal units)
+            const approvalAmount = Number(nft.price) + 1e6;
 
             // Get operational contract principal (spender)
             const operationalPrincipal = getCanisterId("operational_contract");
@@ -150,9 +150,11 @@ export function NFTDetailPage() {
 
             approveMutation.mutate(approveArgs, {
                 onSuccess: () => {
-                    toast.success("Approval successful! You can now purchase the NFT.");
+                    toast.success("Approval successful! Proceeding to purchase...");
                     setShowApprovalDialog(false);
                     refetchApproval();
+                    // Automatically initiate the purchase now that approval is done
+                    handlePurchase();
                 },
                 onError: (error) => {
                     console.error("Approval failed:", error);
@@ -237,7 +239,7 @@ export function NFTDetailPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-5 lg:gap-12">
                     {/* Left Column (Image) */}
                     <div className="lg:col-span-2 mb-8 lg:mb-0">
-                        <Card className="sticky top-24 overflow-hidden border-2 border-border shadow-lg">
+                        <Card className="sticky top-24 overflow-hidden border-2 border-border shadow-lg py-0">
                             <CardContent className="p-0">
                                 <div className="relative aspect-square">
                                     <img
@@ -313,13 +315,15 @@ export function NFTDetailPage() {
                                     <div className="flex items-center justify-between mb-4">
                                         <div>
                                             <p className="text-sm text-muted-foreground">Current Price</p>
-                                            <p className="text-3xl font-bold text-primary">{Number(nft.price)} PiCO</p>
+                                            <p className="text-3xl font-bold text-primary">{(nft.price / 100000000).toFixed(2)} PiCO</p>
                                         </div>
                                         {isAuthenticated && (
                                             <div className="text-right">
                                                 <p className="text-sm text-muted-foreground">Your Balance</p>
                                                 <p className={`text-lg font-semibold ${hasInsufficientFunds ? "text-destructive" : "text-foreground"}`}>
-                                                    {isLoadingBalance ? <Loader2 className="h-4 w-4 animate-spin" /> : `${userBalance} PiCO`}
+                                                    {isLoadingBalance
+                                                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                                                        : `${(userBalance / 100000000).toFixed(2)} PiCO`}
                                                 </p>
                                             </div>
                                         )}
@@ -355,7 +359,7 @@ export function NFTDetailPage() {
                                     ) : needsApproval ? (
                                         <Button size="lg" className="w-full" onClick={handleApprovalFlow} disabled={purchaseMutation.isPending || isLoadingApproval}>
                                             {isLoadingApproval ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shield className="mr-2 h-4 w-4" />}
-                                            Approve & Buy Now
+                                            Approve & Buy
                                         </Button>
                                     ) : (
                                         <Button size="lg" className="w-full" onClick={handlePurchase} disabled={purchaseMutation.isPending}>
@@ -381,19 +385,19 @@ export function NFTDetailPage() {
                                     <div className="py-4 space-y-4">
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-muted-foreground">NFT Price:</span>
-                                            <span className="font-medium">{Number(nft.price)} PiCO</span>
+                                            <span className="font-medium">{(nft.price / 100000000).toFixed(2)} PiCO</span>
                                         </div>
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-muted-foreground">Safety Buffer:</span>
-                                            <span className="font-medium">+1 PiCO</span>
+                                            <span className="font-medium">+0.01 PiCO</span>
                                         </div>
                                         <Separator />
                                         <div className="flex justify-between items-center text-sm font-semibold">
                                             <span>Total Approval:</span>
-                                            <span className="text-primary">{Number(nft.price) + 1} PiCO</span>
+                                            <span className="text-primary">{((nft.price + 1e6) / 100000000).toFixed(2)} PiCO</span>
                                         </div>
                                         <div className="p-3 bg-muted rounded-lg text-xs text-muted-foreground">
-                                            <p>This approval allows the contract to spend up to {Number(nft.price) + 1} PiCO tokens from your wallet. The extra 1 PiCO buffer ensures successful transactions.</p>
+                                            <p>This approval allows the contract to spend up to {((nft.price + 1e6) / 100000000).toFixed(2)} PiCO tokens from your wallet. The extra 0.01 PiCO buffer ensures successful transactions.</p>
                                         </div>
                                     </div>
                                     <DialogFooter>
@@ -409,7 +413,7 @@ export function NFTDetailPage() {
                                             ) : (
                                                 <>
                                                     <Shield className="mr-2 h-4 w-4" />
-                                                    Approve
+                                                    Approve & Buy
                                                 </>
                                             )}
                                         </Button>
