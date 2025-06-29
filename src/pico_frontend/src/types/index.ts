@@ -15,6 +15,7 @@ export type {
   NFTInfo,
   Trait,
   AIImageResult,
+  AIDetectionResponse,
   TransferArgs as NFTTransferArgs,
   TransferError as NFTTransferError,
   Metadata,
@@ -62,11 +63,11 @@ export type {
 // Generic Result type for contract interactions
 export type ContractResult<T> =
   | {
-    ok: T;
-  }
+      ok: T;
+    }
   | {
-    err: string;
-  };
+      err: string;
+    };
 
 // Core domain types
 export interface User {
@@ -141,14 +142,14 @@ export interface UserManagementService {
 export interface ContentService {
   uploadContent: (
     data: Uint8Array,
-    contentType: string,
+    contentType: string
   ) => Promise<ContractResult<string>>;
   getContent: (contentId: string) => Promise<ContractResult<ContentData>>;
   deleteContent: (contentId: string) => Promise<ContractResult<string>>;
   listUserContent: () => Promise<Array<ContentData>>;
   shareContent: (
     contentId: string,
-    targetUser: string,
+    targetUser: string
   ) => Promise<ContractResult<string>>;
 }
 
@@ -201,7 +202,7 @@ export const createQueryKey = {
   auth: () => ["auth"] as const,
   userBalance: (principal: string) => ["user", "balance", principal] as const,
 
-  // NFT  
+  // NFT
   nfts: () => ["nfts"] as const,
   nft: (id: string | number | bigint) => ["nft", id.toString()] as const,
   nftStats: () => ["nft", "stats"] as const,
@@ -292,16 +293,21 @@ export const QueryKeys = {
 // Query client helper to invalidate queries
 export const invalidateQueries = {
   forums: () => ({ queryKey: createQueryKey.forums() }),
-  forum: (id: string | number | bigint) => ({ queryKey: createQueryKey.forum(id) }),
-  userForums: (principal: string) => ({ queryKey: createQueryKey.userForums(principal) }),
-  nftForums: (nftId: number | bigint) => ({ queryKey: createQueryKey.nftForums(nftId) }),
+  forum: (id: string | number | bigint) => ({
+    queryKey: createQueryKey.forum(id),
+  }),
+  userForums: (principal: string) => ({
+    queryKey: createQueryKey.userForums(principal),
+  }),
+  nftForums: (nftId: number | bigint) => ({
+    queryKey: createQueryKey.nftForums(nftId),
+  }),
   forumStats: () => ({ queryKey: createQueryKey.forumStats() }),
   trendingForums: () => ({ queryKey: createQueryKey.trendingForums() }),
   latestForums: () => ({ queryKey: createQueryKey.latestForums() }),
   auth: () => ({ queryKey: createQueryKey.auth() }),
   all: () => ({ queryKey: ["all"] }),
 };
-
 
 // Mutation keys
 export const MutationKeys = {

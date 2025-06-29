@@ -36,10 +36,8 @@ export function ExplorePage() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Get AI recommendations for authenticated users
-  const {
-    data: aiRecommendations = [],
-    isLoading: isLoadingRecommendations,
-  } = useDetailedAIRecommendations(5);
+  const { data: aiRecommendations = [], isLoading: isLoadingRecommendations } =
+    useDetailedAIRecommendations(5);
 
   const {
     data: allNFTs = [],
@@ -251,11 +249,16 @@ export function ExplorePage() {
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-semibold">AI Recommendations for You</h2>
+              <h2 className="text-xl font-semibold">
+                AI Recommendations for You
+              </h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
               {aiRecommendations.map((nft) => (
-                <Link key={Number(nft.nft_id)} to={`/nft/${Number(nft.nft_id)}`}>
+                <Link
+                  key={Number(nft.nft_id)}
+                  to={`/nft/${Number(nft.nft_id)}`}
+                >
                   <Card className="group hover:shadow-lg transition-shadow">
                     <CardContent className="p-0">
                       <div className="relative aspect-square">
@@ -275,7 +278,9 @@ export function ExplorePage() {
                         </div>
                       </div>
                       <div className="p-3">
-                        <h3 className="font-semibold mb-1 text-sm truncate">{nft.name}</h3>
+                        <h3 className="font-semibold mb-1 text-sm truncate">
+                          {nft.name}
+                        </h3>
                         <p className="font-semibold text-primary text-xs">
                           {Number(nft.price)} PiCO
                         </p>
@@ -293,11 +298,15 @@ export function ExplorePage() {
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-semibold">AI Recommendations for You</h2>
+              <h2 className="text-xl font-semibold">
+                AI Recommendations for You
+              </h2>
             </div>
             <div className="flex justify-center py-8">
               <LoadingSpinner size="sm" />
-              <span className="ml-2 text-muted-foreground">Getting your recommendations...</span>
+              <span className="ml-2 text-muted-foreground">
+                Getting your recommendations...
+              </span>
             </div>
           </div>
         )}
@@ -316,8 +325,8 @@ export function ExplorePage() {
           {filteredNFTs.length > 0 ? (
             filteredNFTs.map((nft) => (
               <Link key={Number(nft.nft_id)} to={`/nft/${Number(nft.nft_id)}`}>
-                <Card className="group hover:shadow-lg transition-shadow">
-                  <CardContent className="p-0">
+                <Card className="group hover:shadow-lg transition-shadow h-full flex flex-col">
+                  <CardContent className="p-0 flex flex-col h-full">
                     {/* Image */}
                     <div className="relative aspect-square overflow-hidden rounded-t-lg">
                       <img

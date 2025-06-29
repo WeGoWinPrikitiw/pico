@@ -35,27 +35,70 @@ export function Footer() {
               </h3>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <a href="#" className="hover:text-gray-300 transition-colors">
+                  <a href="/" className="hover:text-gray-300 transition-colors">
                     Home
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gray-300 transition-colors">
-                    Navigation Item
+                  <a
+                    href="/explore"
+                    className="hover:text-gray-300 transition-colors"
+                  >
+                    Explore NFTs
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gray-300 transition-colors">
-                    Other Nav Item
+                  <a
+                    href="/upload"
+                    className="hover:text-gray-300 transition-colors"
+                  >
+                    Create NFT
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/forums"
+                    className="hover:text-gray-300 transition-colors"
+                  >
+                    Forums
                   </a>
                 </li>
               </ul>
             </div>
 
-            {/* Social media - First column */}
+            {/* Community */}
             <div>
               <h3 className={`text-lg font-bold mb-4 font-lexend`}>
-                Social media
+                Community
+              </h3>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a href="#" className="hover:text-gray-300 transition-colors">
+                    Discord
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-gray-300 transition-colors">
+                    Help Center
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-gray-300 transition-colors">
+                    Documentation
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-gray-300 transition-colors">
+                    Blog
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Social Media */}
+            <div>
+              <h3 className={`text-lg font-bold mb-4 font-lexend`}>
+                Follow Us
               </h3>
               <ul className="space-y-2 text-sm">
                 <li>
@@ -65,36 +108,17 @@ export function Footer() {
                 </li>
                 <li>
                   <a href="#" className="hover:text-gray-300 transition-colors">
-                    Facebook
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-gray-300 transition-colors">
                     Instagram
                   </a>
                 </li>
-              </ul>
-            </div>
-
-            {/* Social media - Second column */}
-            <div>
-              <h3 className={`text-lg font-bold mb-4 font-lexend`}>
-                Social media
-              </h3>
-              <ul className="space-y-2 text-sm">
                 <li>
                   <a href="#" className="hover:text-gray-300 transition-colors">
-                    Twitter
+                    LinkedIn
                   </a>
                 </li>
                 <li>
                   <a href="#" className="hover:text-gray-300 transition-colors">
-                    Facebook
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-gray-300 transition-colors">
-                    Instagram
+                    GitHub
                   </a>
                 </li>
               </ul>
