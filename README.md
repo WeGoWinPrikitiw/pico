@@ -82,13 +82,13 @@ The PiCO platform follows a modular, decentralized architecture built on the Int
 - **Internet Identity**: Decentralized authentication system for Web3 login
 
 ### Core Business Logic Layer
-- **operational_contract**: Central hub managing business operations, token minting, and cross-canister communication
-- **nft_contract**: ICRC-7 compliant NFT management with minting, metadata, and ownership tracking
+- **operational_contract**: Central hub managing business operations, token top-ups, NFT transactions, etc. This contract utilizes ICRC-1 and ICRC-2 approval ledger utilities
+- **nft_contract**: ICRC-7 compliant NFT management with minting, metadata, and ownership tracking. Integrates with external AI services for automated content generation and authenticity verification
 - **forums_contract**: Community engagement platform with posts, comments, likes, and marketplace functionality
 
 ### Token Infrastructure Layer
 - **icrc1_ledger_canister**: ICRC-1/ICRC-2 compliant ledger for PiCO token operations
-- **token_contract**: Token metadata and information management
+- **token_contract**: Simplifier Token metadata and information management
 
 ### User & AI Services Layer
 - **preferences_contract**: User settings and personalization data
