@@ -15,6 +15,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAuth } from "@/context/auth-context";
 import { createQueryKey } from "@/types";
 import { serviceFactory } from "@/services";
+import { useDetailedAIRecommendations } from "@/hooks";
 import {
   Search,
   Grid3X3,
@@ -28,11 +29,15 @@ import {
 } from "lucide-react";
 
 export function ExplorePage() {
-  const { isAuthenticated, isServicesReady, login } = useAuth();
+  const { isAuthenticated, login } = useAuth();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("trending");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+
+  // Get AI recommendations for authenticated users
+  const { data: aiRecommendations = [], isLoading: isLoadingRecommendations } =
+    useDetailedAIRecommendations(5);
 
   const {
     data: allNFTs = [],
@@ -42,6 +47,7 @@ export function ExplorePage() {
   } = useQuery({
     queryKey: createQueryKey.nfts(),
     queryFn: async () => {
+      console.log("Fetching NFTs from service...");
       // Ensure services are initialized
       await serviceFactory.initialize();
       const nftService = serviceFactory.getNFTService();
@@ -49,10 +55,15 @@ export function ExplorePage() {
         console.warn("NFT service not available");
         return [];
       }
-      return await nftService.getAllNFTs();
+      const nfts = await nftService.getAllNFTs();
+      console.log(`Fetched ${nfts.length} NFTs`);
+      return nfts;
     },
     enabled: true, // Enable even without authentication for public queries
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 0, // Always consider data stale to ensure fresh data
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchInterval: 30000, // Refetch every 30 seconds (reduced from 10)
   });
 
   const filteredNFTs = useMemo(() => {
@@ -64,7 +75,7 @@ export function ExplorePage() {
       filtered = filtered.filter(
         (nft) =>
           nft.name.toLowerCase().includes(query) ||
-          nft.description.toLowerCase().includes(query),
+          nft.description.toLowerCase().includes(query)
       );
     }
 
@@ -130,11 +141,7 @@ export function ExplorePage() {
             {/* Actions */}
             <div className="flex items-center gap-2">
               {!isAuthenticated && (
-                <Button
-                  onClick={login}
-                  size="sm"
-                  className="bg-primary"
-                >
+                <Button onClick={login} size="sm" className="bg-primary">
                   <User className="h-4 w-4 mr-2" />
                   Connect Wallet
                 </Button>
@@ -237,6 +244,77 @@ export function ExplorePage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* AI Recommendations Section */}
+        {isAuthenticated && aiRecommendations.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">
+                AI Recommendations for You
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {aiRecommendations.map((nft) => (
+                <Link
+                  key={Number(nft.nft_id)}
+                  to={`/nft/${Number(nft.nft_id)}`}
+                >
+                  <Card className="group hover:shadow-lg transition-shadow">
+                    <CardContent className="p-0">
+                      <div className="relative aspect-square">
+                        <img
+                          src={nft.image_url || "/placeholder-nft.png"}
+                          alt={nft.name}
+                          className="w-full h-full object-cover rounded-t-lg"
+                        />
+                        <div className="absolute top-2 left-2">
+                          <Badge
+                            variant="secondary"
+                            className="bg-primary/90 text-primary-foreground"
+                          >
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            AI Pick
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <h3 className="font-semibold mb-1 text-sm truncate">
+                          {nft.name}
+                        </h3>
+                        <p className="font-semibold text-primary text-xs">
+                          {Number(nft.price)} PiCO
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Loading state for recommendations */}
+        {isAuthenticated && isLoadingRecommendations && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">
+                AI Recommendations for You
+              </h2>
+            </div>
+            <div className="flex justify-center py-8">
+              <LoadingSpinner size="sm" />
+              <span className="ml-2 text-muted-foreground">
+                Getting your recommendations...
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* All NFTs Section */}
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold">All NFTs</h2>
+        </div>
         <div
           className={
             viewMode === "grid"
@@ -246,15 +324,15 @@ export function ExplorePage() {
         >
           {filteredNFTs.length > 0 ? (
             filteredNFTs.map((nft) => (
-              <Link key={nft.nft_id} to={`/nft/${nft.nft_id}`}>
-                <Card className="group hover:shadow-lg transition-shadow">
-                  <CardContent className="p-0">
+              <Link key={Number(nft.nft_id)} to={`/nft/${Number(nft.nft_id)}`}>
+                <Card className="group hover:shadow-lg transition-shadow h-full flex flex-col">
+                  <CardContent className="p-0 flex flex-col h-full">
                     {/* Image */}
-                    <div className="relative aspect-square">
+                    <div className="relative aspect-square overflow-hidden rounded-t-lg">
                       <img
                         src={nft.image_url || "/placeholder-nft.png"}
                         alt={nft.name}
-                        className="w-full h-full object-cover rounded-t-lg"
+                        className="w-full h-full object-cover"
                       />
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex gap-1">
@@ -278,7 +356,7 @@ export function ExplorePage() {
                         <div className="absolute top-2 left-2">
                           <Badge
                             variant="secondary"
-                            className="bg-primary/90 text-primary-foreground"
+                            className="bg-purple-600/90 text-white"
                           >
                             <Sparkles className="h-3 w-3 mr-1" />
                             AI Generated
@@ -288,7 +366,7 @@ export function ExplorePage() {
                     </div>
 
                     {/* Info */}
-                    <div className="p-4">
+                    <div className="p-4 flex flex-col flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <Avatar className="h-6 w-6">
                           <AvatarImage
@@ -303,15 +381,43 @@ export function ExplorePage() {
                         </span>
                       </div>
 
-                      <h3 className="font-semibold mb-2">{nft.name}</h3>
+                      <h3 className="font-semibold mb-2 truncate">
+                        {nft.name}
+                      </h3>
 
-                      <div className="flex items-center justify-between">
+                      {/* Traits */}
+                      {nft.traits && nft.traits.length > 0 && (
+                        <div className="mb-3">
+                          <div className="flex flex-wrap gap-1">
+                            {nft.traits.slice(0, 3).map((trait, index) => (
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                className="text-xs px-2 py-0.5"
+                              >
+                                {trait.trait_type}: {trait.value}
+                              </Badge>
+                            ))}
+                            {nft.traits.length > 3 && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs px-2 py-0.5"
+                              >
+                                +{nft.traits.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Price and Actions - pushed to bottom */}
+                      <div className="flex items-center justify-between mt-auto">
                         <div>
                           <p className="text-xs text-muted-foreground mb-1">
                             Current Price
                           </p>
                           <p className="font-semibold text-primary">
-                            {nft.price} PiCO
+                            {Number(nft.price)} PiCO
                           </p>
                         </div>
                         <div className="flex items-center gap-3 text-sm text-muted-foreground">

@@ -3,12 +3,12 @@ import { Layout } from "@/components/layout";
 import {
   LandingPage,
   ExplorePage,
-  PostsPage,
-  PostDetailPage,
   ProfilePage,
   UploadPage,
   OperationalDashboard,
   ForumsPage,
+  ForumDetailPage,
+  NFTDetailPage,
 } from "@/pages";
 import { useAuth } from "@/context/auth-context";
 
@@ -53,17 +53,8 @@ export function AppRoutes() {
         />
 
         <Route
-          path="/posts"
-          element={
-            isAuthenticated ? <PostsPage /> : <Navigate to="/" replace />
-          }
-        />
-
-        <Route
-          path="/posts/:id"
-          element={
-            isAuthenticated ? <PostDetailPage /> : <Navigate to="/" replace />
-          }
+          path="/nft/:id"
+          element={<NFTDetailPage />}
         />
 
         <Route
@@ -84,6 +75,13 @@ export function AppRoutes() {
           path="/forums"
           element={
             isAuthenticated ? <ForumsPage /> : <Navigate to="/" replace />
+          }
+        />
+
+        <Route
+          path="/forums/:id"
+          element={
+            isAuthenticated ? <ForumDetailPage /> : <Navigate to="/" replace />
           }
         />
 

@@ -16,7 +16,7 @@ const benefitsData: BenefitCard[] = [
     id: "1",
     title: "Create, Mint, Own.",
     description:
-      "Turn your creativity into verifiable digital assets. Whether it's AI-generated or hand-crafted, mint your art as NFTs — easily, securely, and transparently.",
+      "Turn your creativity into verifiable digital assets. Whether it's AI-generated or hand-crafted, mint your art as NFTs easily, securely, and transparently.",
     iconUrl: "/landing/create-mint-own.png.svg",
     backgroundColor: "bg-purple-500",
     textColor: "text-white",

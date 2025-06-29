@@ -1,17 +1,11 @@
-export { Avatar, AvatarImage, AvatarFallback } from "./avatar";
-export { Badge } from "./badge";
-export { Button } from "./button";
-export {
-  Card,
-  CardHeader,
-  CardContent,
-  CardTitle,
-  CardDescription,
-  CardAction,
-  CardFooter,
-} from "./card";
-export { ErrorMessage } from "./error-message";
-export { Input } from "./input";
+export * from "./avatar";
+export * from "./badge";
+export * from "./button";
+export * from "./card";
+export * from "./dialog";
+export * from "./dropdown-menu";
+export * from "./error-message";
+export * from "./input";
 export { LoadingSpinner } from "./loading-spinner";
 export {
   Popover,
@@ -31,6 +25,7 @@ export {
   SheetClose,
 } from "./sheet";
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
+export { TraitsEditor } from "./traits-editor";
 export {
   NavigationMenu,
   NavigationMenuList,

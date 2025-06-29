@@ -249,6 +249,7 @@ export function useServices() {
 
   return {
     nftService: serviceFactory.getNFTService(),
+    aiService: serviceFactory.getAIService(),
     operationalService: serviceFactory.getOperationalService(),
     forumsService: serviceFactory.getForumsService(),
     preferencesService: serviceFactory.getPreferencesService(),
