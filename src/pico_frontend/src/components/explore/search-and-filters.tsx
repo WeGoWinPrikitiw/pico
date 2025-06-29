@@ -79,28 +79,16 @@ export function SearchAndFilters({
                     </div>
 
                     <div className="flex items-center gap-3">
-                        {/* Connect Wallet Button */}
-                        {!isAuthenticated && (
-                            <Button
-                                onClick={onLogin}
-                                size="sm"
-                                className="bg-primary hover:bg-primary/90"
-                            >
-                                <User className="h-4 w-4 mr-2" />
-                                Connect Wallet
-                            </Button>
-                        )}
-
                         {/* Filters Popover */}
                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="relative h-10">
+                                {/* <Button variant="outline" size="sm" className="relative h-10">
                                     <Filter className="h-4 w-4 mr-2" />
                                     Filters
                                     {hasActiveFilters && (
                                         <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full" />
                                     )}
-                                </Button>
+                                </Button> */}
                             </PopoverTrigger>
                             <PopoverContent
                                 className="w-screen max-w-sm sm:max-w-md p-6"

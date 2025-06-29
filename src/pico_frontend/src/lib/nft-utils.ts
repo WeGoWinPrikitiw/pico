@@ -164,15 +164,3 @@ export const getAvailableCategories = (nfts: FrontendNFTInfo[]): string[] => {
 export const formatOwnerAddress = (owner: string): string => {
     return `${owner.slice(0, 6)}...${owner.slice(-4)}`;
 };
-
-/**
- * Get placeholder NFT stats (these would come from backend in real app)
- */
-export const getNFTStats = (nftId: string | number) => {
-    // In a real app, these would be fetched from the backend
-    return {
-        likes: Math.floor(Math.random() * 100) + 1,
-        views: Math.floor(Math.random() * 1000) + 100,
-        trending: Math.random() > 0.7,
-    };
-}; 

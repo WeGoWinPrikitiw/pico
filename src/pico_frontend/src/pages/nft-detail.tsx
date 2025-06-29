@@ -268,7 +268,7 @@ export function NFTDetailPage() {
 
                                 {/* Discussion Tab */}
                                 <TabsContent value="discussion" className="mt-4">
-                                    <Card>
+                                    <Card className="py-0">
                                         <CardContent className="p-6">
                                             {mainForum ? (
                                                 <div className="space-y-6">
@@ -335,7 +335,7 @@ export function NFTDetailPage() {
 
                                 {/* Traits Tab */}
                                 <TabsContent value="traits" className="mt-4">
-                                    <Card>
+                                    <Card className="py-0">
                                         <CardContent className="p-6">
                                             {nft.traits && nft.traits.length > 0 ? (
                                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -356,7 +356,7 @@ export function NFTDetailPage() {
 
                                 {/* Details Tab */}
                                 <TabsContent value="details" className="mt-4">
-                                    <Card>
+                                    <Card className="py-0">
                                         <CardContent className="p-6 space-y-4">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-muted-foreground">Contract Address</span>
@@ -383,7 +383,7 @@ export function NFTDetailPage() {
 
                                 {/* Activity Tab */}
                                 <TabsContent value="activity" className="mt-4">
-                                    <Card>
+                                    <Card className="py-0">
                                         <CardContent className="p-6">
                                             <div className="space-y-4">
                                                 <div className="flex items-center gap-4">
@@ -408,4 +408,3 @@ export function NFTDetailPage() {
         </div>
     );
 }
- 
