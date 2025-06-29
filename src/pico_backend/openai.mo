@@ -146,14 +146,16 @@ module {
 
     // Generate a consistent idempotency key from input parameters
     private func generateIdempotencyKey(input : Text) : Text {
-        // Simple hash function - convert text to consistent numeric value
-        var hash : Nat32 = 0;
+        // Safe hash function using modular arithmetic to prevent overflow
+        var hash : Nat = 0;
+        let modulus : Nat = 1000000007; // Large prime to avoid overflow
+        
         for (char in input.chars()) {
-            hash := hash * 31 + Char.toNat32(char);
+            hash := (hash * 31 + Nat32.toNat(Char.toNat32(char))) % modulus;
         };
         
-        // Convert to hexadecimal string for use as idempotency key
-        "pico-" # Nat32.toText(hash) # "-" # Nat32.toText(hash % 999999);
+        // Convert to string for use as idempotency key
+        "pico-" # Nat.toText(hash) # "-" # Nat.toText(hash % 999999);
     };
 
     // Simple JSON parsing function to extract image URL
