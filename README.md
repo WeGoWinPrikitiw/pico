@@ -215,7 +215,7 @@ URLs:
   - token_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=f6l2q-wyaaa-aaaap-qp4ma-cai
 
 # Need to Fix!
-1. Because of the problem with multiple HTTP outcals to OpenAI API on canister is limited, we still use a mock to generate AI images and detect AI uploaded by user. We need to deploy our own backend server that call OpenAI API to fix this issue.
+1. Because of the problem with multiple HTTP outcals to OpenAI API on canister is limited, we still use a mock to generate AI images and detect AI images uploaded by user. We need to deploy our own backend server that call OpenAI API to fix this issue.
 
 
 # Team Participants
