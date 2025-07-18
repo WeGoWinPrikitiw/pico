@@ -216,6 +216,12 @@ URLs:
 
 # Need to Fix!
 1. Because of the problem with multiple HTTP outcals to OpenAI API on canister is limited, we still use a mock to generate AI images and detect AI images uploaded by user. We need to deploy our own backend server that call OpenAI API to fix this issue.
+```
+index-C98JAHCv.js:482 AI generation failed: ApiError: HTTP request failed: No consensus could be reached. Replicas had different responses. Details: request_id: 300266, timeout: 1751208855866594028, hashes: [c2f25536c190cf57c47facc4c061dab0594847bf0cd7ae24ece8c1f837e26141: 1], [a3024b568b787f998fc53535484e27747c7405d8373543ea365c348d3e63cf46: 1], [9941f9e356d4858f5ec52c8ba118b3addc784c2139d5b570bd89bd06be6faee8: 1], [6923568c5482c792fabe97e57ae6b5174596c07661ee14cbf444b0aff1baeacb: 1], [626a6c3ea32f555b35302e4b4de72514a0547686570d2a98a0f06191dc837a01: 1], [57fa7e05b431edc5b043cb138d93b790ada3a36bb232ea5dc90261ab6d82f81a: 1], [34f24edfdaab6e1b4dcc4e5da79db2eae2afa7740857c819b3a2a6d7367bd2a0: 1]
+    at M5.handleResult (index-C98JAHCv.js:98:15340)
+    at M5.generateAIImage (index-C98JAHCv.js:98:27007)
+    at async Object.mutationFn (index-C98JAHCv.js:482:19186)
+```
 
 
 # Team Participants
