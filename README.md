@@ -51,26 +51,30 @@ That’s why we built PiCO, a platform where your art stays yours. It keeps the 
     - pico_frontend — Frontend assets canister
   
 # Features
-- Admin token minting capabilities with full control over token distribution
-- Manual NFT upload and minting with metadata preservation
-- AI-powered text-to-image NFT generation using HTTP outcalls to Sora AI
-- Automated authenticity verification for manual uploads using AI detection
-- Intelligent recommendation system powered by AI algorithms
-- Comprehensive NFT marketplace with buy and sell functionality via forums
-- Secure Web3 authentication using Internet Identity
-- Real-time PICO token balance checking and monitoring
-- Seamless NFT upload directly to community forums
-- Interactive forum engagement with like and reaction systems
-- Threaded comment system for community discussions
-- Comprehensive user profiles showcasing NFT collections and forum activity
-- Flexible token top-up system for enhanced platform participation
-- Advanced explore page with latest posts and AI-driven content recommendations
-- Complete transaction history tracking for all marketplace activities
-- Detailed forum interaction history and engagement analytics
-- Personalized wishlist functionality based on user likes and preferences
-- Automatic NFT labeling system that identifies and tags whether content was AI-generated or manually created
-- Recommendation System Forum Post using AI Agent
-- Multi Agent Pattern: Recommendation Agent, Judger Agent, Formatter Agent.
+1. Core Features
+   - Automatic NFT labeling system that identifies and tags whether content was AI-generated or manually created
+   - Automated authenticity verification for manual uploads using AI detection
+   - Personalized wishlist functionality based on user likes and preferences
+   - Recommendation System Forum Post using AI Agent
+   - Multi Agent Pattern: Recommendation Agent, Judger Agent, Formatter Agent.
+   - Integrated NFT marketplace with buy/sell via community forums
+   - Secure Web3 authentication using Internet Identity
+2. AI Integration
+   - AI text-to-image NFT generation using HTTP outcalls to Sora AI
+   - AI-powered content recommendation across explore and forums
+   - AI-based authenticity verification for manual uploads
+3. NFT Creation & Management
+   - Direct NFT uploads to forums with minting support
+   - Metadata-preserving manual NFT minting
+   - Admin-controlled token minting and distribution
+   - Real-time PICO token balance and transaction checking
+   - Flexible token top-up system for platform engagement
+   - Complete transaction history across marketplace activities
+4. Community & Social
+   - Forum engagement tools: likes, reactions, threaded comments
+   - User profiles featuring NFT collections and activity
+   - Forum interaction analytics and engagement tracking
+
 
 
 # Architecture Diagram
@@ -95,7 +99,7 @@ The PiCO platform follows a modular, decentralized architecture built on the Int
 
 ### User & AI Services Layer
 - **preferences_contract**: User settings and personalization data
-- **ai_contract**: AI-powered features using Ollama for intelligent recommendation systems. The contract employs two specialized agents: a recommendation agent that analyzes user preferences and behavior patterns, and a formatter/judge agent that structures responses into appropriate formats (JSON, arrays) for frontend consumption.
+- **ai_contract**: AI-powered features using Ollama for intelligent recommendation systems. The contract employs two specialized agents: a recommendation agent that analyzes user preferences and behavior patterns, and a formatter/judge agent that structures responses into appropriate formats (JSON, arrays) for frontend consumption. Multi AI Agent - Recommendation System: Recommendation Agent, Judger, Formatter Agent.
 
 ### External Integrations
 - **OpenAI/Sora API**: Text-to-image generation and AI reasoning via HTTP outcalls
@@ -179,11 +183,15 @@ This architecture ensures scalability, security, and true decentralization while
 - You can open the backend canister to try the functions.
 - You can open frontend from here as well.
 
-6. If you want `hot reload` frontend development, you can run this on terminal
+7. Run this function to set your Open AI Api Key by running this in terminal:
+   ```
+   dfx canister call pico_backend init_openai_api_key '("YOUR_OPEN_AI_API_KEY")
+   ```
+8. If you want `hot reload` frontend development, you can run this on terminal
     ```
     npm run start
     ```
-7. Open localhost that show up in terminal, example: `localhost:3000`
+9. Open localhost that show up in terminal, example: `localhost:3000`
     ```
     4:30:43 AM [vite] (client) Re-optimizing dependencies because lockfile has changed
 
@@ -217,14 +225,19 @@ URLs:
   - preferences_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=etf66-zqaaa-aaaap-qp4lq-cai
   - token_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=f6l2q-wyaaa-aaaap-qp4ma-cai
 
-# Need to Fix!
-1. Because of the problem with multiple HTTP outcals to OpenAI API on canister is limited, we still use a mock to generate AI images and detect AI images uploaded by user. We need to deploy our own backend server that call OpenAI API to fix this issue.
+# Note
+- We really suggest you to use it locally to get all functionality that we created. Some of feature has a bug.
+- Http outcalls to open AI sora in production is a dummy due to errors http outcalls. Local server run perfectly fine.
+
+# Bug / Fix
+1. In Production, http outcalls to open AI Sora still error because ICP consists of a subnet consisting of several nodes so that when we request http outcalls to 3rd parties, what happens is that all nodes do the hit API to other servers and the results we get different responses, can be seen from the following errors:
 ```
 index-C98JAHCv.js:482 AI generation failed: ApiError: HTTP request failed: No consensus could be reached. Replicas had different responses. Details: request_id: 300266, timeout: 1751208855866594028, hashes: [c2f25536c190cf57c47facc4c061dab0594847bf0cd7ae24ece8c1f837e26141: 1], [a3024b568b787f998fc53535484e27747c7405d8373543ea365c348d3e63cf46: 1], [9941f9e356d4858f5ec52c8ba118b3addc784c2139d5b570bd89bd06be6faee8: 1], [6923568c5482c792fabe97e57ae6b5174596c07661ee14cbf444b0aff1baeacb: 1], [626a6c3ea32f555b35302e4b4de72514a0547686570d2a98a0f06191dc837a01: 1], [57fa7e05b431edc5b043cb138d93b790ada3a36bb232ea5dc90261ab6d82f81a: 1], [34f24edfdaab6e1b4dcc4e5da79db2eae2afa7740857c819b3a2a6d7367bd2a0: 1]
     at M5.handleResult (index-C98JAHCv.js:98:15340)
     at M5.generateAIImage (index-C98JAHCv.js:98:27007)
     at async Object.mutationFn (index-C98JAHCv.js:482:19186)
 ```
+- Idea to fix: Create an off-chain backend for handling request to 3rd party with some key for identification that the request is the same so give the requests same responses. Make the icp http outcalls to our backend and our backend process it to 3rd party.
 
 
 # Team Participants
