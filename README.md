@@ -33,6 +33,7 @@ That’s why we built PiCO, a platform where your art stays yours. It keeps the 
   - Internet Identity — Web3 Authentication
   - World HTTP Outcalls — Enables canisters to call external services like OpenAI and Sora
   - Decentralized AI with LLM Canister (Ollama) — On-chain execution of large language models, we use as recommendation system.
+  - Multi AI Agent - Recommendation System: Recommendation Agent, Judger, Formatter Agent.
   - OpenAI Sora via HTTP Outcalls — Video generation and AI reasoning capabilities directly from smart contracts
   - Token Infrastructure based on ICRC standards:
     - ICRC-1 (icrc1_ledger_canister) — Fungible token ledger for PiCO token
@@ -69,6 +70,7 @@ That’s why we built PiCO, a platform where your art stays yours. It keeps the 
 - Personalized wishlist functionality based on user likes and preferences
 - Automatic NFT labeling system that identifies and tags whether content was AI-generated or manually created
 - Recommendation System Forum Post using AI Agent
+- Multi Agent Pattern: Recommendation Agent, Judger Agent, Formatter Agent.
 
 
 # Architecture Diagram
