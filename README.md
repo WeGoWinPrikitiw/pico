@@ -68,6 +68,7 @@ That’s why we built PiCO, a platform where your art stays yours. It keeps the 
 - Detailed forum interaction history and engagement analytics
 - Personalized wishlist functionality based on user likes and preferences
 - Automatic NFT labeling system that identifies and tags whether content was AI-generated or manually created
+- Recommendation System Forum Post using AI Agent
 
 
 # Architecture Diagram
