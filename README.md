@@ -226,7 +226,7 @@ URLs:
   - token_contract: https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=f6l2q-wyaaa-aaaap-qp4ma-cai
 
 # Note
-- We really suggest you to use it locally to get all functionality that we created. Some of feature has a bug.
+- We really suggest you to use it locally to get all functionality that we created. Some of feature has a bug in production.
 - Http outcalls to open AI sora in production is a dummy due to errors http outcalls. Local server run perfectly fine.
 
 # Bug / Fix
