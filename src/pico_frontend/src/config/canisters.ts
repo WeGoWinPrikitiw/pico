@@ -44,7 +44,8 @@ const canisterIds: CanisterConfig = {
 // The `getCanisterId` function retrieves the canister ID based on the provided `canisterName`. It first checks for an environment variable override (`CANISTER_ID_MY_CANISTER`) before falling back to the `canisterIds` object.
 export const getCanisterId = (canisterName: keyof CanisterConfig): string => {
   const envKey = `CANISTER_ID_${canisterName.toUpperCase()}`;
-  const envValue = process.env[envKey];
+  // Use import.meta.env for Vite/browser environment instead of process.env
+  const envValue = (typeof window !== 'undefined' && (import.meta as any)?.env) ? (import.meta as any).env[envKey] : undefined;
 
   if (envValue) {
     return envValue;
