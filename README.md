@@ -2,7 +2,8 @@
 We're suggesting to you to read the power point and watch video to better understanding about our products.
 
 Power Point: [PowerPoints](https://www.figma.com/slides/mH7sUwO1O5SNGH1NeXvPhp/Pitch-Deck-PiCO)  <br/>
-Video Demo: [Demo Link](https://youtu.be/skKyzt4q8SQ)
+Pitch Video: [Pitch Video Link](https://youtu.be/skKyzt4q8SQ)
+Demo Video + Technical (Walkthrough) Explanation: [Demo Video Link](https://youtu.be/vy0Z0DfJp68)
 
 # PICO
 Pico is a social media platform and NFT marketplace designed to empower artists in this rapidly evolving landscape by prioritizing authorship, authenticity, and transparency.
