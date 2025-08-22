@@ -27,3 +27,4 @@ dist/
 .env
 deps/
 .mops
+*canister_ids.json
