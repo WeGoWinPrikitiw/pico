@@ -185,7 +185,7 @@ This architecture ensures scalability, security, and true decentralization while
 
 7. Run this function to set your Open AI Api Key by running this in terminal:
    ```
-   dfx canister call pico_backend init_openai_api_key '("YOUR_OPEN_AI_API_KEY")
+   dfx canister call nft_contract init_openai_api_key '("YOUR_OPEN_AI_API_KEY")
    ```
 8. If you want `hot reload` frontend development, you can run this on terminal
     ```
