@@ -21,11 +21,13 @@ That’s why we built PiCO, a platform where your art stays yours. It keeps the 
 
 # Community Platform - Social Media (@hello__pico on Instagram)
 We chose Instagram because it aligns with our target demographic of young creators, who are already highly active on the platform. At present, our content focuses on educational carousels and interactive games, breaking down complex ideas into digestible, engaging formats. As the community grows, we will expand into Reels and short-form video content to reach wider audiences and foster stronger interaction. Over time, PiCO’s social presence will evolve into a trusted hub for creators — a place to learn, share perspectives, and feel valued in the digital era.
+
 Current Focus:
-Informative carousels on AI & authorship
-Interactive posts and mini-games for engagement
-Expansion into Reels for broader reach
-:globe_with_meridians: Join our community: https://www.instagram.com/hello__pico/
+- Informative carousels on AI & authorship
+- Interactive posts and mini-games for engagement
+- Expansion into Reels for broader reach
+
+Join our community: https://www.instagram.com/hello__pico/
 
 # Tech stacks & Features Implementation
 - Frontend: 
