@@ -2,7 +2,8 @@
 We're suggesting to you to read the power point and watch video to better understanding about our products.
 
 Power Point: [PowerPoints](https://www.figma.com/slides/mH7sUwO1O5SNGH1NeXvPhp/Pitch-Deck-PiCO)  <br/>
-Pitch Video: [Pitch Video Link](https://youtu.be/skKyzt4q8SQ) <br/>
+Old Pitch Video Regional Round (Pitch and Demo Video): [Old Pitch Video Link Regional](https://youtu.be/skKyzt4q8SQ) <br/>
+Pitch Video: [Pitch Video](https://youtu.be/6pAsYzreFno)<br/>
 Demo Video + Technical (Walkthrough) Explanation: [Demo Video Link](https://youtu.be/vy0Z0DfJp68)
 
 # PICO
